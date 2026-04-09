@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TCS2 Admin</title>
+<style>
+  :root {
+    --bg: #ffffff; --bg-secondary: #f5f5f4; --bg-danger: #fcebeb;
+    --bg-success: #eaf3de; --bg-info: #e6f1fb; --bg-warning: #faeeda;
+    --text: #1a1a18; --text-secondary: #5f5e5a; --text-tertiary: #888780;
+    --text-danger: #a32d2d; --text-success: #3b6d11; --text-info: #185fa5;
+    --border: rgba(0,0,0,0.12); --border-strong: rgba(0,0,0,0.25);
+    --radius: 12px; --radius-sm: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg-secondary: #2a2a28; --bg-danger: #501313;
+      --bg-success: #173404; --bg-info: #042c53; --bg-warning: #412402;
+      --text: #f0ede8; --text-secondary: #b4b2a9; --text-tertiary: #888780;
+      --text-danger: #f7c1c1; --text-success: #c0dd97; --text-info: #b5d4f4;
+      --border: rgba(255,255,255,0.1); --border-strong: rgba(255,255,255,0.22);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: var(--bg-secondary); color: var(--text); min-height: 100vh; }
+
+  /* Auth */
+  #authScreen { position: fixed; inset: 0; background: var(--bg-secondary); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .auth-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 32px 24px; width: 100%; max-width: 360px; }
+  .auth-logo { font-size: 13px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 24px; }
+  .auth-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .auth-sub { font-size: 14px; color: var(--text-secondary); margin-bottom: 28px; line-height: 1.5; }
+  .auth-btn { width: 100%; padding: 14px; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; }
+  .auth-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .auth-status { margin-top: 16px; padding: 12px 14px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.5; }
+  .auth-status.info { background: var(--bg-info); color: var(--text-info); }
+  .auth-status.err { background: var(--bg-danger); color: var(--text-danger); }
+  .auth-status.ok { background: var(--bg-success); color: var(--text-success); }
+  .hidden { display: none; }
+
+  /* Admin UI */
+  .header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .header-left { }
+  .header-title { font-size: 17px; font-weight: 600; }
+  .header-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+  .logout-btn { background: none; border: 0.5px solid var(--border-strong); border-radius: 20px; color: var(--text-secondary); font-size: 12px; padding: 5px 12px; cursor: pointer; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 20px; }
+
+  /* Stats */
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+  .stat-label { font-size: 12px; color: var(--text-tertiary); margin-bottom: 6px; }
+  .stat-val { font-size: 28px; font-weight: 700; color: var(--text); }
+  .stat-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+  /* Filter */
+  .filter-row { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
+  .filter-input { padding: 9px 12px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 14px; background: var(--bg); color: var(--text); outline: none; }
+  .filter-input:focus { border-color: var(--text); }
+  .filter-select { padding: 9px 12px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 14px; background: var(--bg); color: var(--text); outline: none; cursor: pointer; }
+  .refresh-btn { padding: 9px 16px; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; }
+
+  /* Table */
+  .table-wrap { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .table-header { display: grid; grid-template-columns: 2fr 1.2fr 1fr 1.2fr; padding: 10px 16px; background: var(--bg-secondary); border-bottom: 0.5px solid var(--border); font-size: 12px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
+  .table-row { display: grid; grid-template-columns: 2fr 1.2fr 1fr 1.2fr; padding: 12px 16px; border-bottom: 0.5px solid var(--border); font-size: 13px; align-items: center; }
+  .table-row:last-child { border-bottom: none; }
+  .table-row:hover { background: var(--bg-secondary); }
+  .badge-type { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; }
+  .badge-type.new { background: var(--bg-info); color: var(--text-info); }
+  .badge-type.auto { background: var(--bg-success); color: var(--text-success); }
+  .empty-state { text-align: center; padding: 48px; color: var(--text-tertiary); font-size: 14px; }
+  .loading-state { text-align: center; padding: 48px; color: var(--text-secondary); font-size: 14px; }
+  .count-info { font-size: 13px; color: var(--text-tertiary); margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<!-- Auth -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">CTK TCS · Admin</div>
+    <div class="auth-title">관리자 로그인</div>
+    <div class="auth-sub" id="authSubText">관리자 이메일로 인증 링크를 받아 로그인하세요.</div>
+    <div id="emailInputWrap">
+      <input type="text" id="emailInput" placeholder="이메일 주소 입력" style="width:100%;padding:12px 14px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:16px;background:var(--bg);color:var(--text);outline:none;margin-bottom:12px;" oninput="onEmailInput()" onkeydown="if(event.key==='Enter') sendLink()">
+    </div>
+    <button class="auth-btn" id="authBtn" onclick="sendLink()" disabled>인증 링크 보내기</button>
+    <div id="authStatus" class="hidden auth-status"></div>
+  </div>
+</div>
+
+<!-- Admin UI -->
+<div id="adminApp" class="hidden">
+  <div class="header">
+    <div class="header-left">
+      <div class="header-title">접속 로그 관리</div>
+      <div class="header-sub" id="adminEmail"></div>
+    </div>
+    <button class="logout-btn" onclick="logout()">로그아웃</button>
+  </div>
+
+  <div class="wrap">
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">전체 접속</div>
+        <div class="stat-val" id="statTotal">—</div>
+        <div class="stat-sub">누적 로그 수</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">오늘 접속</div>
+        <div class="stat-val" id="statToday">—</div>
+        <div class="stat-sub" id="statTodayDate">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">접속 사용자</div>
+        <div class="stat-val" id="statUsers">—</div>
+        <div class="stat-sub">고유 이메일 수</div>
+      </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="filter-row">
+      <input type="text" class="filter-input" id="filterEmail" placeholder="이메일 검색..." oninput="applyFilter()" style="flex:1; min-width:180px;">
+      <select class="filter-select" id="filterType" onchange="applyFilter()">
+        <option value="">전체 유형</option>
+        <option value="이메일링크인증">이메일링크인증</option>
+        <option value="자동로그인">자동로그인</option>
+      </select>
+      <button class="refresh-btn" onclick="loadLogs()">↻ 새로고침</button>
+    </div>
+
+    <div class="count-info" id="countInfo"></div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <div>이메일</div>
+        <div>접속 시각</div>
+        <div>유형</div>
+        <div>기기</div>
+      </div>
+      <div id="logTable">
+        <div class="loading-state">로딩 중...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, getDocs, orderBy, query, limit } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAdMirLtm3ytvYdDOJbCQ2ihQQljfgfS-Y",
+  authDomain: "tcs2-216e3.firebaseapp.com",
+  projectId: "tcs2-216e3",
+  storageBucket: "tcs2-216e3.firebasestorage.app",
+  messagingSenderId: "182917773948",
+  appId: "1:182917773948:web:225057df74bf56ff92e7f9"
+};
+
+const ADMIN_EMAIL = 'jaehong.park@continental.com';
+const ACTION_CODE_SETTINGS = { url: window.location.href, handleCodeInApp: true };
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let allLogs = [];
+
+// ── Auth ──────────────────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    if (user.email !== ADMIN_EMAIL) {
+      await signOut(auth);
+      showAuthError('관리자 계정만 접근 가능합니다.');
+      return;
+    }
+    showAdmin(user.email);
+  } else {
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      let email = window.localStorage.getItem('adminEmailForSignIn');
+      if (!email) email = window.prompt('이메일 주소를 입력하세요:');
+      if (email) {
+        try {
+          const result = await signInWithEmailLink(auth, email, window.location.href);
+          window.localStorage.removeItem('adminEmailForSignIn');
+          if (result.user.email !== ADMIN_EMAIL) {
+            await signOut(auth);
+            showAuthError('관리자 계정만 접근 가능합니다.');
+            return;
+          }
+          showAdmin(result.user.email);
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch(e) {
+          showAuthError('인증 링크가 유효하지 않습니다. 다시 시도해주세요.');
+        }
+      }
+    }
+  }
+});
+
+function showAdmin(email) {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('adminApp').classList.remove('hidden');
+  document.getElementById('adminEmail').textContent = email;
+  loadLogs();
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('authStatus');
+  el.className = 'auth-status err';
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+window.sendLink = async function() {
+  const email = document.getElementById('emailInput').value.trim();
+  if (email !== ADMIN_EMAIL) {
+    showAuthError('관리자 계정만 접근 가능합니다.');
+    return;
+  }
+  const btn = document.getElementById('authBtn');
+  btn.disabled = true;
+  btn.textContent = '전송 중...';
+  try {
+    await sendSignInLinkToEmail(auth, email, ACTION_CODE_SETTINGS);
+    window.localStorage.setItem('adminEmailForSignIn', email);
+    const el = document.getElementById('authStatus');
+    el.className = 'auth-status ok';
+    el.textContent = `✓ ${email} 로 인증 링크를 보냈습니다.`;
+    el.classList.remove('hidden');
+    document.getElementById('authSubText').textContent = '이메일을 확인하고 링크를 클릭해주세요.';
+    document.getElementById('emailInputWrap').classList.add('hidden');
+    btn.classList.add('hidden');
+  } catch(e) {
+    showAuthError('전송 실패: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '인증 링크 보내기';
+  }
+};
+
+window.onEmailInput = function() {
+  const email = document.getElementById('emailInput').value.trim();
+  document.getElementById('authBtn').disabled = !email.includes('@');
+};
+
+window.logout = async function() {
+  await signOut(auth);
+  location.reload();
+};
+
+// ── Logs ──────────────────────────────────────────────────────
+window.loadLogs = async function() {
+  document.getElementById('logTable').innerHTML = '<div class="loading-state">로딩 중...</div>';
+  try {
+    const q = query(collection(db, 'access_logs'), orderBy('timestamp', 'desc'), limit(500));
+    const snap = await getDocs(q);
+    allLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    updateStats();
+    applyFilter();
+  } catch(e) {
+    document.getElementById('logTable').innerHTML = `<div class="empty-state">로그를 불러올 수 없습니다: ${e.message}</div>`;
+  }
+};
+
+function updateStats() {
+  document.getElementById('statTotal').textContent = allLogs.length.toLocaleString();
+  const today = new Date().toLocaleDateString('ko-KR');
+  const todayCount = allLogs.filter(l => {
+    if (!l.timestamp) return false;
+    return l.timestamp.toDate().toLocaleDateString('ko-KR') === today;
+  }).length;
+  document.getElementById('statToday').textContent = todayCount;
+  document.getElementById('statTodayDate').textContent = today;
+  const uniqueUsers = new Set(allLogs.map(l => l.email)).size;
+  document.getElementById('statUsers').textContent = uniqueUsers;
+}
+
+window.applyFilter = function() {
+  const emailQ = document.getElementById('filterEmail').value.trim().toLowerCase();
+  const typeQ = document.getElementById('filterType').value;
+  const filtered = allLogs.filter(l => {
+    const emailMatch = !emailQ || (l.email && l.email.toLowerCase().includes(emailQ));
+    const typeMatch = !typeQ || l.type === typeQ;
+    return emailMatch && typeMatch;
+  });
+  document.getElementById('countInfo').textContent = `${filtered.length}개 표시 중 (전체 ${allLogs.length}개)`;
+  if (!filtered.length) {
+    document.getElementById('logTable').innerHTML = '<div class="empty-state">해당하는 로그가 없습니다</div>';
+    return;
+  }
+  document.getElementById('logTable').innerHTML = filtered.map(l => {
+    const ts = l.timestamp ? l.timestamp.toDate().toLocaleString('ko-KR') : '—';
+    const ua = l.userAgent || '';
+    const device = ua.includes('iPhone') ? '📱 iPhone' : ua.includes('Android') ? '📱 Android' : ua.includes('iPad') ? '📱 iPad' : '💻 Desktop';
+    const typeBadge = l.type === '이메일링크인증'
+      ? '<span class="badge-type new">신규인증</span>'
+      : '<span class="badge-type auto">자동로그인</span>';
+    return `<div class="table-row">
+      <div style="font-size:13px;font-weight:500;">${l.email || '—'}</div>
+      <div style="font-size:12px;color:var(--text-secondary);">${ts}</div>
+      <div>${typeBadge}</div>
+      <div style="font-size:12px;color:var(--text-secondary);">${device}</div>
+    </div>`;
+  }).join('');
+};
+</script>
+</body>
+</html>
