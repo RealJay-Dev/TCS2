@@ -316,28 +316,6 @@
 
 <!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- Firebase SDK (로그 저장용) -->
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-const fbApp = initializeApp({
-  apiKey: "AIzaSyAdMirLtm3ytvYdDOJbCQ2ihQQljfgfS-Y",
-  authDomain: "tcs2-216e3.firebaseapp.com",
-  projectId: "tcs2-216e3",
-  storageBucket: "tcs2-216e3.firebasestorage.app",
-  messagingSenderId: "182917773948",
-  appId: "1:182917773948:web:225057df74bf56ff92e7f9"
-});
-const db_fire = getFirestore(fbApp);
-window._logAccess = async function(email, type) {
-  try {
-    await addDoc(collection(db_fire, 'access_logs'), {
-      email, type, timestamp: serverTimestamp(),
-      userAgent: navigator.userAgent, platform: navigator.platform,
-    });
-  } catch(e) { console.warn('로그 저장 실패:', e); }
-};
-</script>
 
 <script>
 // ── Supabase OTP Auth ─────────────────────────────────────────
@@ -348,12 +326,23 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }
 });
 
+// 접속 로그 저장
+async function logAccess(email, type) {
+  try {
+    await _supabase.from('access_logs').insert({
+      email, type,
+      user_agent: navigator.userAgent,
+      platform: navigator.platform,
+    });
+  } catch(e) { console.warn('로그 저장 실패:', e); }
+}
+
 // 페이지 로드 시 세션 확인
 (async () => {
   const { data: { session } } = await _supabase.auth.getSession();
   if (session && session.user.email.endsWith('@' + ALLOWED_DOMAIN)) {
     showApp(session.user.email);
-    if (window._logAccess) window._logAccess(session.user.email, '세션유지');
+    logAccess(session.user.email, '세션유지');
   } else {
     showAuthScreen();
   }
@@ -428,7 +417,7 @@ window.verifyOTP = async function() {
     const { data, error } = await _supabase.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
     showApp(data.user.email);
-    if (window._logAccess) window._logAccess(data.user.email, 'OTP인증');
+    logAccess(data.user.email, 'OTP인증');
   } catch(e) {
     showAuthError('코드가 올바르지 않거나 만료되었습니다. 다시 시도해주세요.');
     btn.disabled = false;

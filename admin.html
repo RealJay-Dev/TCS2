@@ -158,20 +158,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, getDocs, orderBy, query, limit } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-
-const fbApp = initializeApp({
-  apiKey: "AIzaSyAdMirLtm3ytvYdDOJbCQ2ihQQljfgfS-Y",
-  authDomain: "tcs2-216e3.firebaseapp.com",
-  projectId: "tcs2-216e3",
-  storageBucket: "tcs2-216e3.firebasestorage.app",
-  messagingSenderId: "182917773948",
-  appId: "1:182917773948:web:225057df74bf56ff92e7f9"
-});
-const db = getFirestore(fbApp);
-
+<script>
 const SUPABASE_URL = 'https://thosddtgtffapakvmrhn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_HmrBU9WFhkCTM_TquLM31g_IPovXtXm';
 const ADMIN_EMAIL = 'jaehong.park@continental.com';
@@ -219,21 +206,14 @@ window.onEmailInput = function() {
   const email = document.getElementById('emailInput').value.trim();
   document.getElementById('authBtn').disabled = !email.includes('@');
 };
-
 window.onOTPInput = function() {
-  const otp = document.getElementById('otpInput').value.trim();
-  document.getElementById('otpBtn').disabled = otp.length !== 6;
+  document.getElementById('otpBtn').disabled = document.getElementById('otpInput').value.trim().length !== 6;
 };
-
 window.sendOTP = async function() {
   const email = document.getElementById('emailInput').value.trim();
-  if (email !== ADMIN_EMAIL) {
-    showAuthError('관리자 계정만 접근 가능합니다.');
-    return;
-  }
+  if (email !== ADMIN_EMAIL) { showAuthError('관리자 계정만 접근 가능합니다.'); return; }
   const btn = document.getElementById('authBtn');
-  btn.disabled = true;
-  btn.textContent = '전송 중...';
+  btn.disabled = true; btn.textContent = '전송 중...';
   try {
     const { error } = await _supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
     if (error) throw error;
@@ -244,49 +224,42 @@ window.sendOTP = async function() {
     document.getElementById('otpInput').focus();
   } catch(e) {
     showAuthError('전송 실패: ' + e.message);
-    btn.disabled = false;
-    btn.textContent = '인증 코드 받기';
+    btn.disabled = false; btn.textContent = '인증 코드 받기';
   }
 };
-
 window.verifyOTP = async function() {
   const email = document.getElementById('emailInput').value.trim();
   const token = document.getElementById('otpInput').value.trim();
   const btn = document.getElementById('otpBtn');
-  btn.disabled = true;
-  btn.textContent = '확인 중...';
+  btn.disabled = true; btn.textContent = '확인 중...';
   try {
     const { data, error } = await _supabase.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
     if (data.user.email !== ADMIN_EMAIL) {
       await _supabase.auth.signOut();
       showAuthError('관리자 계정만 접근 가능합니다.');
-      btn.disabled = false;
-      btn.textContent = '확인';
-      return;
+      btn.disabled = false; btn.textContent = '확인'; return;
     }
     showAdmin(data.user.email);
   } catch(e) {
     showAuthError('코드가 올바르지 않거나 만료되었습니다.');
-    btn.disabled = false;
-    btn.textContent = '확인';
+    btn.disabled = false; btn.textContent = '확인';
   }
 };
-
-window.logout = async function() {
-  await _supabase.auth.signOut();
-  location.reload();
-};
-
+window.logout = async function() { await _supabase.auth.signOut(); location.reload(); };
 window.resetAuth = resetAuth;
 
 // ── Logs ──────────────────────────────────────────────────────
 window.loadLogs = async function() {
   document.getElementById('logTable').innerHTML = '<div class="loading-state">로딩 중...</div>';
   try {
-    const q = query(collection(db, 'access_logs'), orderBy('timestamp', 'desc'), limit(500));
-    const snap = await getDocs(q);
-    allLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const { data, error } = await _supabase
+      .from('access_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (error) throw error;
+    allLogs = data;
     updateStats();
     applyFilter();
   } catch(e) {
@@ -297,7 +270,7 @@ window.loadLogs = async function() {
 function updateStats() {
   document.getElementById('statTotal').textContent = allLogs.length.toLocaleString();
   const today = new Date().toLocaleDateString('ko-KR');
-  const todayCount = allLogs.filter(l => l.timestamp && l.timestamp.toDate().toLocaleDateString('ko-KR') === today).length;
+  const todayCount = allLogs.filter(l => l.created_at && new Date(l.created_at).toLocaleDateString('ko-KR') === today).length;
   document.getElementById('statToday').textContent = todayCount;
   document.getElementById('statTodayDate').textContent = today;
   document.getElementById('statUsers').textContent = new Set(allLogs.map(l => l.email)).size;
@@ -317,14 +290,12 @@ window.applyFilter = function() {
     return;
   }
   document.getElementById('logTable').innerHTML = filtered.map(l => {
-    const ts = l.timestamp ? l.timestamp.toDate().toLocaleString('ko-KR') : '—';
-    const ua = l.userAgent || '';
+    const ts = l.created_at ? new Date(l.created_at).toLocaleString('ko-KR') : '—';
+    const ua = l.user_agent || '';
     const device = ua.includes('iPhone') ? '📱 iPhone' : ua.includes('Android') ? '📱 Android' : ua.includes('iPad') ? '📱 iPad' : '💻 Desktop';
     const typeBadge = l.type === 'OTP인증'
       ? '<span class="badge-type new">OTP인증</span>'
-      : l.type === '세션유지'
-      ? '<span class="badge-type auto">세션유지</span>'
-      : `<span class="badge-type auto">${l.type}</span>`;
+      : `<span class="badge-type auto">${l.type || '—'}</span>`;
     return `<div class="table-row">
       <div style="font-size:13px;font-weight:500;">${l.email || '—'}</div>
       <div style="font-size:12px;color:var(--text-secondary);">${ts}</div>
@@ -334,5 +305,6 @@ window.applyFilter = function() {
   }).join('');
 };
 </script>
+
 </body>
 </html>
