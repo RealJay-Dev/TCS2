@@ -438,7 +438,7 @@ window.logout = async function() {
 
 window.onEmailInput = function() {
   const email = document.getElementById('emailInput').value.trim();
-  document.getElementById('authBtn').disabled = !email.includes('@');
+  document.getElementById('authBtn').disabled = !email.endsWith('@continental.com');
 };
 
 </script>
