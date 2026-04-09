@@ -215,7 +215,7 @@ window.sendOTP = async function() {
   const btn = document.getElementById('authBtn');
   btn.disabled = true; btn.textContent = '전송 중...';
   try {
-    const { error } = await _supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+    const { error } = await _supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: null } });
     if (error) throw error;
     document.getElementById('emailStep').classList.add('hidden');
     document.getElementById('otpStep').classList.remove('hidden');
