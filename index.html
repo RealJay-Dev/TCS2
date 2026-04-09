@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Claim Calc Pro">
+<title>Tire Claim Calculator Pro</title>
+<style>
+  :root {
+    --bg: #ffffff; --bg-secondary: #f5f5f4; --bg-success: #eaf3de;
+    --bg-warning: #faeeda; --bg-danger: #fcebeb; --bg-info: #e6f1fb;
+    --text: #1a1a18; --text-secondary: #5f5e5a; --text-tertiary: #888780;
+    --text-success: #3b6d11; --text-warning: #854f0b; --text-danger: #a32d2d;
+    --text-info: #185fa5; --border: rgba(0,0,0,0.12); --border-strong: rgba(0,0,0,0.25);
+    --radius: 12px; --radius-sm: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg-secondary: #2a2a28; --bg-success: #173404;
+      --bg-warning: #412402; --bg-danger: #501313; --bg-info: #042c53;
+      --text: #f0ede8; --text-secondary: #b4b2a9; --text-tertiary: #888780;
+      --text-success: #c0dd97; --text-warning: #fac775; --text-danger: #f7c1c1;
+      --text-info: #b5d4f4; --border: rgba(255,255,255,0.1); --border-strong: rgba(255,255,255,0.22);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: var(--bg-secondary); color: var(--text); min-height: 100vh; }
+
+  /* ── Auth Screen ── */
+  #authScreen { position: fixed; inset: 0; background: var(--bg-secondary); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .auth-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 32px 24px; width: 100%; max-width: 360px; }
+  .auth-logo { font-size: 13px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 24px; }
+  .auth-title { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .auth-sub { font-size: 14px; color: var(--text-secondary); margin-bottom: 28px; line-height: 1.5; }
+  .auth-input-wrap { margin-bottom: 12px; }
+  .auth-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+  .auth-domain { font-size: 13px; color: var(--text-tertiary); margin-top: 6px; }
+  .auth-btn { width: 100%; padding: 14px; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+  .auth-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .auth-btn:active:not(:disabled) { opacity: 0.8; }
+  .auth-status { margin-top: 16px; padding: 12px 14px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.5; }
+  .auth-status.info { background: var(--bg-info); color: var(--text-info); }
+  .auth-status.err { background: var(--bg-danger); color: var(--text-danger); }
+  .auth-status.ok { background: var(--bg-success); color: var(--text-success); }
+
+  /* ── User bar ── */
+  .user-bar { background: var(--bg-info); border-bottom: 0.5px solid var(--border); padding: 8px 20px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--text-info); }
+  .user-bar-email { font-weight: 500; }
+  .logout-btn { background: none; border: 0.5px solid var(--text-info); border-radius: 20px; color: var(--text-info); font-size: 11px; padding: 3px 10px; cursor: pointer; }
+
+  /* ── Main ── */
+  .header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 16px 20px 14px; position: sticky; top: 0; z-index: 100; }
+  .header-title { font-size: 17px; font-weight: 600; color: var(--text); }
+  .header-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 16px; }
+  .section { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .section.disabled { opacity: 0.38; pointer-events: none; }
+  .step-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .step-num { width: 24px; height: 24px; border-radius: 50%; background: var(--bg-secondary); border: 0.5px solid var(--border-strong); font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); flex-shrink: 0; transition: all 0.2s; }
+  .step-num.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .step-num.done { background: var(--bg-success); color: var(--text-success); border-color: transparent; font-size: 0; }
+  .step-num.done::after { content: '✓'; font-size: 13px; }
+  .step-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .db-status { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: var(--radius-sm); font-size: 14px; }
+  .db-status.loading { background: var(--bg-secondary); color: var(--text-secondary); }
+  .db-status.ok { background: var(--bg-success); color: var(--text-success); }
+  .db-status.err { background: var(--bg-danger); color: var(--text-danger); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .loading-dot { animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .db-meta { font-size: 12px; color: var(--text-tertiary); margin-top: 6px; }
+  .db-meta.warn { color: var(--text-warning); }
+  .refresh-btn { display: inline-block; font-size: 12px; padding: 5px 10px; border: 0.5px solid var(--border-strong); border-radius: 20px; background: none; color: var(--text-secondary); cursor: pointer; margin-top: 8px; }
+  .search-wrap { position: relative; }
+  .search-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .search-tab { flex: 1; padding: 8px; font-size: 13px; font-weight: 500; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); background: none; color: var(--text-secondary); cursor: pointer; text-align: center; transition: all 0.15s; }
+  .search-tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  input[type=text], input[type=number] { width: 100%; padding: 12px 14px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 16px; background: var(--bg); color: var(--text); outline: none; transition: border-color 0.15s; -webkit-appearance: none; }
+  input:focus { border-color: var(--text); }
+  input::placeholder { color: var(--text-tertiary); }
+  .dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg); border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); z-index: 50; max-height: 240px; overflow-y: auto; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
+  .dropdown-item { padding: 12px 14px; font-size: 14px; font-weight: 500; cursor: pointer; border-bottom: 0.5px solid var(--border); }
+  .dropdown-item:last-child { border-bottom: none; }
+  .dropdown-item:active { background: var(--bg-secondary); }
+  .dropdown-item span { display: block; font-size: 12px; color: var(--text-secondary); font-weight: 400; margin-top: 3px; }
+  .dropdown-item mark { background: none; color: var(--text); font-weight: 700; }
+  .info-box { background: var(--bg-secondary); border-radius: var(--radius-sm); padding: 2px 0; margin-top: 12px; }
+  .info-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 0.5px solid var(--border); }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { font-size: 13px; color: var(--text-secondary); }
+  .info-val { font-size: 14px; font-weight: 500; color: var(--text); text-align: right; max-width: 60%; }
+  .confirm-box { margin-top: 12px; border: 1px solid #ef9f27; border-radius: var(--radius-sm); padding: 12px 14px; background: var(--bg-warning); transition: all 0.2s; }
+  .confirm-box.confirmed { border-color: #639922; background: var(--bg-success); }
+  .confirm-label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 13px; color: var(--text-warning); line-height: 1.5; }
+  .confirm-label.confirmed { color: var(--text-success); }
+  .confirm-label input[type=checkbox] { width: 18px; height: 18px; margin-top: 1px; flex-shrink: 0; cursor: pointer; accent-color: #639922; }
+  .label { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+  .input-row { display: flex; gap: 10px; }
+  .input-row > div { flex: 1; }
+  .sub-label { font-size: 12px; color: var(--text-tertiary); margin-top: 5px; }
+  .field-warn { font-size: 13px; color: var(--text-danger); margin-top: 8px; background: var(--bg-danger); padding: 8px 12px; border-radius: var(--radius-sm); }
+  /* Grade selector */
+  .grade-select { width: 100%; padding: 12px 14px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 16px; background: var(--bg); color: var(--text); outline: none; -webkit-appearance: none; appearance: none; cursor: pointer; }
+  .grade-select:focus { border-color: var(--text); }
+  /* Result */
+  .result-card { background: var(--bg-secondary); border-radius: var(--radius-sm); padding: 24px 20px; text-align: center; }
+  .result-pct { font-size: 64px; font-weight: 700; color: var(--text); line-height: 1; letter-spacing: -2px; }
+  .result-sub { font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
+  .result-raw { font-size: 12px; color: var(--text-tertiary); margin-top: 5px; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 20px; margin-top: 12px; }
+  .badge.full { background: var(--bg-success); color: var(--text-success); }
+  .badge.high { background: var(--bg-info); color: var(--text-info); }
+  .badge.mid { background: var(--bg-warning); color: var(--text-warning); }
+  .badge.low { background: var(--bg-danger); color: var(--text-danger); }
+  .formula { font-size: 12px; color: var(--text-tertiary); text-align: center; margin-top: 14px; font-family: monospace; }
+  /* Price result box */
+  .price-box { margin-top: 14px; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+  .price-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; border-bottom: 0.5px solid var(--border); font-size: 14px; }
+  .price-row:last-child { border-bottom: none; }
+  .price-row.highlight { background: var(--bg-success); }
+  .price-label { color: var(--text-secondary); }
+  .price-val { font-weight: 600; color: var(--text); }
+  .price-row.highlight .price-label { color: var(--text-success); }
+  .price-row.highlight .price-val { color: var(--text-success); font-size: 16px; }
+  .hidden { display: none; }
+  .footer { margin-top: 24px; font-size: 12px; color: #888; text-align: center; line-height: 1.6; padding-bottom: 32px; }
+</style>
+</head>
+<body>
+
+<!-- ── Auth Screen ── -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">CTK TCS · Internal Tool</div>
+    <div class="auth-title">로그인</div>
+    <div class="auth-sub" id="authSubText">Continental 이메일로 인증 링크를 받아 로그인하세요.</div>
+    <div class="auth-input-wrap" id="emailInputWrap">
+      <div class="auth-label">이메일 주소</div>
+      <input type="text" id="emailInput" placeholder="이름@continental.com" autocomplete="email" oninput="onEmailInput()" onkeydown="if(event.key==='Enter') sendLink()">
+      <div class="auth-domain">@continental.com 계정만 사용 가능합니다</div>
+    </div>
+    <button class="auth-btn" id="authBtn" onclick="sendLink()" disabled>인증 링크 보내기</button>
+    <div id="authStatus" class="hidden"></div>
+  </div>
+</div>
+
+<!-- ── User bar ── -->
+<div id="userBar" class="user-bar hidden">
+  <span class="user-bar-email" id="userEmail"></span>
+  <button class="logout-btn" onclick="logout()">로그아웃</button>
+</div>
+
+<!-- ── Main App ── -->
+<div id="mainApp" class="hidden">
+  <div class="header">
+    <div class="header-title">Tire Claim Calculator</div>
+    <div class="header-sub">Pro-rata compensation · with price</div>
+  </div>
+
+  <div class="wrap">
+
+    <!-- STEP 1: DB -->
+    <div class="section" id="sec1">
+      <div class="step-header">
+        <div class="step-num active" id="num1">1</div>
+        <div class="step-title">아티클 DB</div>
+      </div>
+      <div class="db-status loading" id="dbStatus">
+        <div class="dot loading-dot"></div>
+        데이터 불러오는 중...
+      </div>
+      <div class="db-meta hidden" id="dbMeta"></div>
+      <button class="refresh-btn hidden" id="refreshBtn" onclick="loadData()">↻ 다시 불러오기</button>
+    </div>
+
+    <!-- STEP 2: Search -->
+    <div class="section disabled" id="sec2">
+      <div class="step-header">
+        <div class="step-num" id="num2">2</div>
+        <div class="step-title">아티클 검색</div>
+      </div>
+      <div class="search-tabs">
+        <button class="search-tab active" id="tab-article" onclick="setSearchMode('article')">아티클 번호</button>
+        <button class="search-tab" id="tab-ps" onclick="setSearchMode('ps')">패턴 + 사이즈</button>
+      </div>
+      <!-- Mode A -->
+      <div id="mode-article">
+        <div class="search-wrap">
+          <input type="text" id="articleInput" placeholder="아티클 번호 입력..." autocomplete="off" oninput="onSearchInput()" onfocus="onSearchInput()">
+          <div class="dropdown hidden" id="dropdown"></div>
+        </div>
+      </div>
+      <!-- Mode B -->
+      <div id="mode-ps" class="hidden">
+        <div class="label" style="margin-bottom:6px;">① 패턴명</div>
+        <div class="search-wrap" style="margin-bottom:10px;">
+          <input type="text" id="patternInput" placeholder="패턴명 일부 입력... (예: Sport)" autocomplete="off" oninput="onPatternInput()" onfocus="onPatternInput()">
+          <div class="dropdown hidden" id="dropdown-pattern"></div>
+        </div>
+        <div id="size-step" style="opacity:0.38; pointer-events:none; transition: opacity 0.2s;">
+          <div class="label" style="margin-bottom:6px;">② 사이즈</div>
+          <div class="search-wrap">
+            <input type="text" id="sizeInput" placeholder="사이즈 일부 입력... (예: 225 또는 45)" autocomplete="off" oninput="onSizeInput()" onfocus="onSizeInput()">
+            <div class="dropdown hidden" id="dropdown-size"></div>
+          </div>
+        </div>
+      </div>
+      <div id="articleInfo" class="hidden">
+        <div class="info-box">
+          <div class="info-row"><span class="info-label">아티클</span><span class="info-val" id="selArticle"></span></div>
+          <div class="info-row"><span class="info-label">사이즈</span><span class="info-val" id="selSize"></span></div>
+          <div class="info-row"><span class="info-label">패턴</span><span class="info-val" id="selPattern"></span></div>
+          <div class="info-row"><span class="info-label">NTD</span><span class="info-val" id="selNTD"></span></div>
+          <div class="info-row"><span class="info-label">List Price</span><span class="info-val" id="selListPrice"></span></div>
+        </div>
+        <div class="confirm-box" id="confirmBox">
+          <label class="confirm-label" id="confirmLabel">
+            <input type="checkbox" id="confirmCheck" onchange="onConfirm()">
+            실물 타이어 사이드월과 사이즈·패턴을 직접 확인했으며 아티클번호가 동일함을 확인합니다
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Measurement + Grade -->
+    <div class="section disabled" id="sec3">
+      <div class="step-header">
+        <div class="step-num" id="num3">3</div>
+        <div class="step-title">측정값 및 딜러 등급</div>
+      </div>
+      <div class="input-row" style="margin-bottom:14px;">
+        <div>
+          <div class="label">RTD (현재 트레드깊이, mm)</div>
+          <input type="number" id="rtdInput" placeholder="예: 4.5" min="0" step="0.1" oninput="calculate()">
+        </div>
+        <div>
+          <div class="label">MTD (법적 최소, mm)</div>
+          <input type="number" id="mtdInput" value="1.6" min="0" step="0.1" oninput="calculate()">
+          <div class="sub-label">기본값 1.6mm</div>
+        </div>
+      </div>
+      <div>
+        <div class="label">딜러 등급</div>
+        <select class="grade-select" id="gradeSelect" onchange="calculate()">
+          <option value="">등급 선택...</option>
+          <option value="g1">CPP / CP / C1</option>
+          <option value="g2">C3</option>
+          <option value="g3">C4</option>
+        </select>
+      </div>
+      <div id="rtdWarn" class="field-warn hidden"></div>
+    </div>
+
+    <!-- STEP 4: Result -->
+    <div class="section hidden" id="sec4">
+      <div class="step-header">
+        <div class="step-num active" id="num4">4</div>
+        <div class="step-title">보상 비율 및 금액</div>
+      </div>
+      <div class="result-card">
+        <div class="result-pct" id="resultPct">—</div>
+        <div class="result-sub">보상 비율 (nearest 5% 반올림 적용)</div>
+        <div class="result-raw" id="resultRaw"></div>
+        <div id="resultBadge"></div>
+      </div>
+      <div class="formula" id="calcFormula"></div>
+      <!-- Price breakdown -->
+      <div class="price-box" id="priceBox">
+        <div class="price-row">
+          <span class="price-label">List Price</span>
+          <span class="price-val" id="priceList">—</span>
+        </div>
+        <div class="price-row">
+          <span class="price-label">딜러 할인율</span>
+          <span class="price-val" id="priceDisc">—</span>
+        </div>
+        <div class="price-row">
+          <span class="price-label">Invoice Price (추정)</span>
+          <span class="price-val" id="priceInvoice">—</span>
+        </div>
+        <div class="price-row highlight">
+          <span class="price-label">보상 금액 (추정)</span>
+          <span class="price-val" id="priceCredit">—</span>
+        </div>
+      </div>
+      <div style="font-size:11px; color:var(--text-tertiary); margin-top:8px; line-height:1.5;">
+        ※ 보상 금액은 List Price 기준 추정값입니다. 실제 invoice 가격과 다를 수 있습니다.
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    Developed by CTK TCS.<br>
+    Any unauthorized commercial use, modification, or distribution of this tool is strictly prohibited.<br>
+    본 도구는 CTK 내부활용을 목적으로 개발되었으며 상업적 활용 및 무단 변조/배포를 엄격히 금지합니다.
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAdMirLtm3ytvYdDOJbCQ2ihQQljfgfS-Y",
+  authDomain: "tcs2-216e3.firebaseapp.com",
+  projectId: "tcs2-216e3",
+  storageBucket: "tcs2-216e3.firebasestorage.app",
+  messagingSenderId: "182917773948",
+  appId: "1:182917773948:web:225057df74bf56ff92e7f9"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db_fire = getFirestore(app);
+
+const ALLOWED_DOMAIN = 'continental.com';
+const ACTION_CODE_SETTINGS = {
+  url: window.location.href,
+  handleCodeInApp: true,
+};
+
+// ── Auth state ────────────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    // 도메인 체크
+    if (!user.email.endsWith('@' + ALLOWED_DOMAIN)) {
+      await signOut(auth);
+      showAuthError('허가되지 않은 이메일 도메인입니다. @continental.com 계정만 사용 가능합니다.');
+      return;
+    }
+    showApp(user.email);
+    await logAccess(user.email, '자동로그인');
+  } else {
+    // 이메일 링크 로그인 처리
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      let email = window.localStorage.getItem('emailForSignIn');
+      if (!email) {
+        email = window.prompt('인증을 완료하려면 이메일 주소를 입력하세요:');
+      }
+      if (email) {
+        try {
+          const result = await signInWithEmailLink(auth, email, window.location.href);
+          window.localStorage.removeItem('emailForSignIn');
+          // 30일 세션 유지 (Firebase 기본 persistence가 로컬이라 자동 처리)
+          showApp(result.user.email);
+          await logAccess(result.user.email, '이메일링크인증');
+          // URL 정리
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch(e) {
+          showAuthError('인증 링크가 유효하지 않거나 만료되었습니다. 다시 시도해주세요.');
+        }
+      }
+    } else {
+      showAuthScreen();
+    }
+  }
+});
+
+// ── Log access to Firestore ───────────────────────────────────
+async function logAccess(email, type) {
+  try {
+    await addDoc(collection(db_fire, 'access_logs'), {
+      email,
+      type, // '이메일링크인증' | '자동로그인'
+      timestamp: serverTimestamp(),
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+    });
+  } catch(e) {
+    console.warn('로그 저장 실패:', e);
+  }
+}
+
+// ── Auth UI ───────────────────────────────────────────────────
+function showAuthScreen() {
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('userBar').classList.add('hidden');
+}
+
+function showApp(email) {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('mainApp').classList.remove('hidden');
+  document.getElementById('userBar').classList.remove('hidden');
+  document.getElementById('userEmail').textContent = email;
+  loadData();
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('authStatus');
+  el.className = 'auth-status err';
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+// ── Expose to global scope ────────────────────────────────────
+window.sendLink = async function() {
+  const email = document.getElementById('emailInput').value.trim();
+  if (!email.endsWith('@' + ALLOWED_DOMAIN)) {
+    showAuthError('@continental.com 이메일만 사용 가능합니다.');
+    return;
+  }
+  const btn = document.getElementById('authBtn');
+  btn.disabled = true;
+  btn.textContent = '전송 중...';
+  try {
+    await sendSignInLinkToEmail(auth, email, ACTION_CODE_SETTINGS);
+    window.localStorage.setItem('emailForSignIn', email);
+    const el = document.getElementById('authStatus');
+    el.className = 'auth-status ok';
+    el.textContent = `✓ ${email} 로 인증 링크를 보냈습니다. 이메일을 확인해주세요.`;
+    el.classList.remove('hidden');
+    document.getElementById('authSubText').textContent = '받은 편지함을 확인하고 링크를 클릭하면 자동으로 로그인됩니다.';
+    document.getElementById('emailInputWrap').classList.add('hidden');
+    btn.classList.add('hidden');
+  } catch(e) {
+    showAuthError('전송 실패: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '인증 링크 보내기';
+  }
+};
+
+window.logout = async function() {
+  await signOut(auth);
+  showAuthScreen();
+  document.getElementById('emailInput').value = '';
+  document.getElementById('authStatus').classList.add('hidden');
+  document.getElementById('emailInputWrap').classList.remove('hidden');
+  document.getElementById('authBtn').classList.remove('hidden');
+  document.getElementById('authBtn').disabled = true;
+  document.getElementById('authSubText').textContent = 'Continental 이메일로 인증 링크를 받아 로그인하세요.';
+};
+
+window.onEmailInput = function() {
+  const email = document.getElementById('emailInput').value.trim();
+  document.getElementById('authBtn').disabled = !email.includes('@');
+};
+
+</script>
+
+<script>
+// ── App data & config ─────────────────────────────────────────
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/1coZmNHe5oMw-xcjwPdPFyBchXKjXFL33Jk3ZZNw9aU4/export?format=csv&gid=654494156';
+
+let db = {}, selected = null, searchMode = 'article', selectedPattern = null;
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#mode-article')) document.getElementById('dropdown').classList.add('hidden');
+  if (!e.target.closest('#mode-ps')) {
+    document.getElementById('dropdown-pattern').classList.add('hidden');
+    document.getElementById('dropdown-size').classList.add('hidden');
+  }
+});
+
+// ── Data loading ──────────────────────────────────────────────
+async function loadData() {
+  const s = document.getElementById('dbStatus');
+  const m = document.getElementById('dbMeta');
+  const r = document.getElementById('refreshBtn');
+  s.className = 'db-status loading';
+  s.innerHTML = '<div class="dot loading-dot"></div> 데이터 불러오는 중...';
+  m.classList.add('hidden');
+  r.classList.add('hidden');
+  try {
+    const res = await fetch(CSV_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    parseCSV(await res.text());
+  } catch(e) {
+    s.className = 'db-status err';
+    s.innerHTML = '<div class="dot"></div> 데이터를 불러올 수 없습니다';
+    m.textContent = '구글 시트 공유 설정을 확인하거나 다시 시도해주세요';
+    m.className = 'db-meta';
+    m.classList.remove('hidden');
+    r.classList.remove('hidden');
+  }
+}
+
+function parseCSVRow(line) {
+  const cells = [];
+  let cur = '', inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuote) {
+      if (ch === '"') { if (line[i+1] === '"') { cur += '"'; i++; } else inQuote = false; }
+      else cur += ch;
+    } else {
+      if (ch === '"') inQuote = true;
+      else if (ch === ',') { cells.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+  }
+  cells.push(cur.trim());
+  return cells;
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+
+  // 1행: 날짜
+  const dateRaw = parseCSVRow(lines[0])[0].replace(/"/g,'').trim();
+  const dateParts = dateRaw.replace(/\s/g,'').split('.');
+  let dbDateStr = dateRaw;
+  if (dateParts.length === 3) {
+    dbDateStr = `${dateParts[0]}.${dateParts[1].padStart(2,'0')}.${dateParts[2].padStart(2,'0')}`;
+  }
+
+  // 2행: 헤더
+  const headers = parseCSVRow(lines[1]).map(h => h.replace(/"/g,'').trim());
+  const hl = headers.map(h => h.toLowerCase());
+  const ai = hl.findIndex(h => h.includes('article'));
+  const ni = hl.findIndex(h => h === 'ntd' || h === 'otd' || h.includes('depth'));
+  const si = hl.findIndex(h => h.includes('size'));
+  const pi = hl.findIndex(h => h.includes('pattern'));
+  const li = hl.findIndex(h => h.includes('list'));
+  const g1i = hl.findIndex(h => h.includes('group1') || h.includes('group 1'));
+  const g2i = hl.findIndex(h => h.includes('group2') || h.includes('group 2'));
+  const g3i = hl.findIndex(h => h.includes('group3') || h.includes('group 3'));
+
+  if (ai < 0 || ni < 0) { showDbErr('Article 또는 NTD 컬럼을 찾을 수 없습니다'); return; }
+
+  // 3행~: 데이터
+  db = {};
+  for (let i = 2; i < lines.length; i++) {
+    const c = parseCSVRow(lines[i]);
+    const art = c[ai]; const ntd = parseFloat(c[ni]);
+    if (!art || isNaN(ntd)) continue;
+    db[art] = {
+      ntd,
+      size: si>=0 ? c[si] : '',
+      pattern: pi>=0 ? c[pi] : '',
+      listPrice: li>=0 ? parseFloat(c[li]) : NaN,
+      discG1: g1i>=0 ? parseFloat(c[g1i]) : NaN,
+      discG2: g2i>=0 ? parseFloat(c[g2i]) : NaN,
+      discG3: g3i>=0 ? parseFloat(c[g3i]) : NaN,
+    };
+  }
+
+  const cnt = Object.keys(db).length;
+  const s = document.getElementById('dbStatus');
+  s.className = 'db-status ok';
+  s.innerHTML = `<div class="dot"></div> ${cnt}개 아티클 로드 완료`;
+  const m = document.getElementById('dbMeta');
+  const pp = dbDateStr.split('.');
+  const diff = Math.floor((new Date() - new Date(+pp[0], +pp[1]-1, +pp[2])) / 86400000);
+  m.textContent = diff > 30
+    ? `⚠ DB 기준일: ${dbDateStr} — ${diff}일 경과. 시트 업데이트 필요`
+    : `DB 기준일: ${dbDateStr} · 구글 시트 연동`;
+  m.className = diff > 30 ? 'db-meta warn' : 'db-meta';
+  m.classList.remove('hidden');
+  document.getElementById('refreshBtn').classList.remove('hidden');
+  document.getElementById('sec2').classList.remove('disabled');
+  document.getElementById('num1').classList.replace('active','done');
+}
+
+function showDbErr(msg) {
+  const s = document.getElementById('dbStatus');
+  s.className = 'db-status err';
+  s.innerHTML = `<div class="dot"></div> ${msg}`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function highlight(text, q) {
+  if (!q || !text) return text || '';
+  const idx = text.toLowerCase().indexOf(q.toLowerCase());
+  if (idx < 0) return text;
+  return text.slice(0, idx) + '<mark>' + text.slice(idx, idx + q.length) + '</mark>' + text.slice(idx + q.length);
+}
+
+function fmt(num) {
+  if (isNaN(num)) return '—';
+  return num.toLocaleString('ko-KR') + '원';
+}
+
+// ── Search mode ───────────────────────────────────────────────
+function setSearchMode(mode) {
+  searchMode = mode;
+  document.getElementById('tab-article').classList.toggle('active', mode === 'article');
+  document.getElementById('tab-ps').classList.toggle('active', mode === 'ps');
+  document.getElementById('mode-article').classList.toggle('hidden', mode !== 'article');
+  document.getElementById('mode-ps').classList.toggle('hidden', mode !== 'ps');
+  selectedPattern = null;
+  document.getElementById('articleInput').value = '';
+  document.getElementById('patternInput').value = '';
+  document.getElementById('sizeInput').value = '';
+  document.getElementById('dropdown').classList.add('hidden');
+  document.getElementById('dropdown-pattern').classList.add('hidden');
+  document.getElementById('dropdown-size').classList.add('hidden');
+  document.getElementById('size-step').style.opacity = '0.38';
+  document.getElementById('size-step').style.pointerEvents = 'none';
+  document.getElementById('articleInfo').classList.add('hidden');
+  document.getElementById('sec3').classList.add('disabled');
+  document.getElementById('sec4').classList.add('hidden');
+  selected = null;
+  if (mode === 'article') document.getElementById('articleInput').focus();
+  else document.getElementById('patternInput').focus();
+}
+
+function onSearchInput() {
+  const q = document.getElementById('articleInput').value.trim();
+  const dd = document.getElementById('dropdown');
+  resetSelection();
+  if (!q || !Object.keys(db).length) { dd.classList.add('hidden'); return; }
+  const ql = q.toLowerCase();
+  const matches = Object.keys(db).filter(k => k.toLowerCase().includes(ql)).slice(0, 10);
+  if (!matches.length) { dd.classList.add('hidden'); return; }
+  dd.innerHTML = matches.map(k => {
+    const d = db[k];
+    return `<div class="dropdown-item" onclick="selectArticle('${k}')">
+      ${highlight(k, q)}<span>${[d.pattern, d.size].filter(Boolean).join(' · ')} — NTD ${d.ntd}mm</span>
+    </div>`;
+  }).join('');
+  dd.classList.remove('hidden');
+}
+
+function onPatternInput() {
+  const q = document.getElementById('patternInput').value.trim();
+  const dd = document.getElementById('dropdown-pattern');
+  selectedPattern = null;
+  document.getElementById('sizeInput').value = '';
+  document.getElementById('size-step').style.opacity = '0.38';
+  document.getElementById('size-step').style.pointerEvents = 'none';
+  document.getElementById('dropdown-size').classList.add('hidden');
+  resetSelection();
+  if (!q) { dd.classList.add('hidden'); return; }
+  const ql = q.toLowerCase();
+  const patterns = [...new Set(Object.values(db).map(v => v.pattern).filter(p => p && p.toLowerCase().includes(ql)))].slice(0, 10);
+  if (!patterns.length) {
+    dd.innerHTML = '<div class="dropdown-item" style="color:var(--text-tertiary);cursor:default;">검색 결과 없음</div>';
+    dd.classList.remove('hidden'); return;
+  }
+  dd.innerHTML = patterns.map(p =>
+    `<div class="dropdown-item" onclick="selectPattern('${p.replace(/'/g,"\\'")}')">
+      ${highlight(p, q)}
+    </div>`
+  ).join('');
+  dd.classList.remove('hidden');
+}
+
+function selectPattern(pattern) {
+  selectedPattern = pattern;
+  document.getElementById('patternInput').value = pattern;
+  document.getElementById('dropdown-pattern').classList.add('hidden');
+  document.getElementById('size-step').style.opacity = '1';
+  document.getElementById('size-step').style.pointerEvents = 'auto';
+  document.getElementById('sizeInput').value = '';
+  document.getElementById('dropdown-size').classList.add('hidden');
+  resetSelection();
+  document.getElementById('sizeInput').focus();
+}
+
+function onSizeInput() {
+  if (!selectedPattern) return;
+  const q = document.getElementById('sizeInput').value.trim();
+  const dd = document.getElementById('dropdown-size');
+  resetSelection();
+  const candidates = Object.entries(db).filter(([k, v]) => v.pattern === selectedPattern);
+  const list = q
+    ? candidates.filter(([k, v]) => v.size && v.size.toLowerCase().includes(q.toLowerCase()))
+    : candidates;
+  const items = list.slice(0, 15);
+  if (!items.length) {
+    dd.innerHTML = '<div class="dropdown-item" style="color:var(--text-tertiary);cursor:default;">해당 사이즈 없음</div>';
+    dd.classList.remove('hidden'); return;
+  }
+  dd.innerHTML = items.map(([k, v]) =>
+    `<div class="dropdown-item" onclick="selectArticle('${k}')">
+      ${highlight(v.size, q)}<span>${k} — NTD ${v.ntd}mm</span>
+    </div>`
+  ).join('');
+  dd.classList.remove('hidden');
+}
+
+function resetSelection() {
+  document.getElementById('articleInfo').classList.add('hidden');
+  document.getElementById('sec4').classList.add('hidden');
+  document.getElementById('sec3').classList.add('disabled');
+  selected = null;
+}
+
+function selectArticle(art) {
+  selected = art;
+  document.getElementById('articleInput').value = art;
+  document.getElementById('dropdown').classList.add('hidden');
+  document.getElementById('selArticle').textContent = art;
+  document.getElementById('selSize').textContent = db[art].size || '—';
+  document.getElementById('selPattern').textContent = db[art].pattern || '—';
+  document.getElementById('selNTD').textContent = db[art].ntd + ' mm';
+  const lp = db[art].listPrice;
+  document.getElementById('selListPrice').textContent = isNaN(lp) ? '정보 없음' : fmt(lp);
+  document.getElementById('confirmCheck').checked = false;
+  document.getElementById('confirmBox').classList.remove('confirmed');
+  document.getElementById('confirmLabel').classList.remove('confirmed');
+  document.getElementById('articleInfo').classList.remove('hidden');
+  document.getElementById('sec3').classList.add('disabled');
+  document.getElementById('sec4').classList.add('hidden');
+  document.getElementById('rtdInput').value = '';
+  document.getElementById('gradeSelect').value = '';
+  document.getElementById('num2').classList.add('active');
+  document.getElementById('num2').classList.remove('done');
+  document.getElementById('num3').classList.remove('active','done');
+}
+
+function onConfirm() {
+  const checked = document.getElementById('confirmCheck').checked;
+  document.getElementById('confirmBox').classList.toggle('confirmed', checked);
+  document.getElementById('confirmLabel').classList.toggle('confirmed', checked);
+  if (checked) {
+    document.getElementById('sec3').classList.remove('disabled');
+    document.getElementById('num2').classList.replace('active','done');
+    document.getElementById('num3').classList.add('active');
+    document.getElementById('rtdInput').focus();
+  } else {
+    document.getElementById('sec3').classList.add('disabled');
+    document.getElementById('sec4').classList.add('hidden');
+    document.getElementById('num2').classList.add('active');
+    document.getElementById('num2').classList.remove('done');
+    document.getElementById('num3').classList.remove('active','done');
+  }
+}
+
+// ── Calculate ─────────────────────────────────────────────────
+function roundNearest5(val) { return Math.round(val / 5) * 5; }
+
+function calculate() {
+  if (!selected) return;
+  const rtd = parseFloat(document.getElementById('rtdInput').value);
+  const mtd = parseFloat(document.getElementById('mtdInput').value) || 1.6;
+  const grade = document.getElementById('gradeSelect').value;
+  const ntd = db[selected].ntd;
+  const warn = document.getElementById('rtdWarn');
+
+  if (isNaN(rtd)) { document.getElementById('sec4').classList.add('hidden'); warn.classList.add('hidden'); return; }
+  if (rtd > ntd) { warn.textContent = 'RTD가 NTD보다 클 수 없습니다'; warn.classList.remove('hidden'); document.getElementById('sec4').classList.add('hidden'); return; }
+  if (rtd < mtd) { warn.textContent = `RTD가 법적 최소깊이(${mtd}mm)보다 낮습니다`; warn.classList.remove('hidden'); document.getElementById('sec4').classList.add('hidden'); return; }
+  if (!grade) { document.getElementById('sec4').classList.add('hidden'); warn.classList.add('hidden'); return; }
+  warn.classList.add('hidden');
+
+  const raw = Math.round(((rtd - mtd) / (ntd - mtd) * 100) * 10000) / 10000;
+
+  let rounded, note;
+  if (raw > 86) {
+    rounded = 100;
+    note = `계산값 86.0% 초과 (${raw.toFixed(5)}%) → 100% 처리`;
+  } else {
+    rounded = roundNearest5(raw);
+    if (rounded > 100) rounded = 100;
+    note = `계산값: ${raw.toFixed(5)}% → nearest 5% 반올림 적용`;
+  }
+
+  document.getElementById('resultPct').textContent = rounded + '%';
+  document.getElementById('resultRaw').textContent = note;
+  const cfg = rounded===100?['full','전액 보상']:rounded>=60?['high','고비율 보상']:rounded>=30?['mid','중간 보상']:['low','저비율 보상'];
+  document.getElementById('resultBadge').innerHTML = `<span class="badge ${cfg[0]}">${cfg[1]}</span>`;
+  document.getElementById('calcFormula').textContent = `( ${rtd} − ${mtd} ) ÷ ( ${ntd} − ${mtd} ) × 100 = ${raw.toFixed(5)}%`;
+
+  // Price calculation
+  const listPrice = db[selected].listPrice;
+  const discMap = { g1: db[selected].discG1, g2: db[selected].discG2, g3: db[selected].discG3 };
+  const disc = discMap[grade];
+
+  if (!isNaN(listPrice) && !isNaN(disc)) {
+    const invoicePrice = listPrice * (1 - disc / 100);
+    const creditAmt = invoicePrice * (rounded / 100);
+    document.getElementById('priceList').textContent = fmt(listPrice);
+    document.getElementById('priceDisc').textContent = disc + '%';
+    document.getElementById('priceInvoice').textContent = fmt(Math.round(invoicePrice));
+    document.getElementById('priceCredit').textContent = fmt(Math.round(creditAmt));
+  } else {
+    document.getElementById('priceList').textContent = '정보 없음';
+    document.getElementById('priceDisc').textContent = '—';
+    document.getElementById('priceInvoice').textContent = '—';
+    document.getElementById('priceCredit').textContent = '—';
+  }
+
+  document.getElementById('sec4').classList.remove('hidden');
+  document.getElementById('num3').classList.replace('active','done');
+  document.getElementById('num4').classList.add('active');
+}
+</script>
+</body>
+</html>
