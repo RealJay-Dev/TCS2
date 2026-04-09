@@ -303,6 +303,80 @@
       <div style="font-size:11px; color:var(--text-tertiary); margin-top:8px; line-height:1.5;">
         ※ 보상 금액은 List Price 기준 추정값입니다. 실제 invoice 가격과 다를 수 있습니다.
       </div>
+      <!-- 교환 제품 체크박스 -->
+      <div class="confirm-box" id="exchangeCheckBox" style="margin-top:14px; border-color: var(--border-strong); background: var(--bg-secondary);">
+        <label class="confirm-label" style="color:var(--text-secondary);">
+          <input type="checkbox" id="exchangeCheck" onchange="onExchangeCheck()" style="width:18px;height:18px;flex-shrink:0;cursor:pointer;accent-color:#639922;">
+          다른 제품으로 교환하는 경우
+        </label>
+      </div>
+    </div>
+
+    <!-- STEP 5: Exchange product -->
+    <div class="section hidden" id="sec5">
+      <div class="step-header">
+        <div class="step-num active" id="num5">5</div>
+        <div class="step-title">교환 제품 선택</div>
+      </div>
+      <!-- Search tabs -->
+      <div class="search-tabs">
+        <button class="search-tab active" id="tab-ex-article" onclick="setExSearchMode('article')">아티클 번호</button>
+        <button class="search-tab" id="tab-ex-ps" onclick="setExSearchMode('ps')">패턴 + 사이즈</button>
+      </div>
+      <!-- Mode A -->
+      <div id="ex-mode-article">
+        <div class="search-wrap">
+          <input type="text" id="exArticleInput" placeholder="아티클 번호 입력..." autocomplete="off" oninput="onExSearchInput()" onfocus="onExSearchInput()">
+          <div class="dropdown hidden" id="ex-dropdown"></div>
+        </div>
+      </div>
+      <!-- Mode B -->
+      <div id="ex-mode-ps" class="hidden">
+        <div class="label" style="margin-bottom:6px;">① 패턴명</div>
+        <div class="search-wrap" style="margin-bottom:10px;">
+          <input type="text" id="exPatternInput" placeholder="패턴명 일부 입력..." autocomplete="off" oninput="onExPatternInput()" onfocus="onExPatternInput()">
+          <div class="dropdown hidden" id="ex-dropdown-pattern"></div>
+        </div>
+        <div id="ex-size-step" style="opacity:0.38; pointer-events:none; transition: opacity 0.2s;">
+          <div class="label" style="margin-bottom:6px;">② 사이즈</div>
+          <div class="search-wrap">
+            <input type="text" id="exSizeInput" placeholder="사이즈 일부 입력..." autocomplete="off" oninput="onExSizeInput()" onfocus="onExSizeInput()">
+            <div class="dropdown hidden" id="ex-dropdown-size"></div>
+          </div>
+        </div>
+      </div>
+      <!-- 교환 제품 정보 -->
+      <div id="exArticleInfo" class="hidden">
+        <div class="info-box">
+          <div class="info-row"><span class="info-label">아티클</span><span class="info-val" id="exSelArticle"></span></div>
+          <div class="info-row"><span class="info-label">사이즈</span><span class="info-val" id="exSelSize"></span></div>
+          <div class="info-row"><span class="info-label">패턴</span><span class="info-val" id="exSelPattern"></span></div>
+          <div class="info-row"><span class="info-label">NTD</span><span class="info-val" id="exSelNTD"></span></div>
+          <div class="info-row"><span class="info-label">List Price</span><span class="info-val" id="exSelListPrice"></span></div>
+        </div>
+        <!-- 교환 계산 결과 -->
+        <div class="price-box" style="margin-top:12px;">
+          <div class="price-row">
+            <span class="price-label">교환 제품 List Price</span>
+            <span class="price-val" id="exPriceList">—</span>
+          </div>
+          <div class="price-row">
+            <span class="price-label">교환 제품 Invoice (추정)</span>
+            <span class="price-val" id="exPriceInvoice">—</span>
+          </div>
+          <div class="price-row">
+            <span class="price-label">보상 금액 차감</span>
+            <span class="price-val" id="exPriceCredit">—</span>
+          </div>
+          <div class="price-row highlight">
+            <span class="price-label">소비자 부담 차액 (추정)</span>
+            <span class="price-val" id="exPriceDiff">—</span>
+          </div>
+        </div>
+        <div style="font-size:11px; color:var(--text-tertiary); margin-top:8px; line-height:1.5;">
+          ※ 실제 invoice 가격과 다를 수 있으며, 장착비·밸런스·얼라인먼트 비용은 소비자 개별 부담입니다.
+        </div>
+      </div>
     </div>
 
   </div>
@@ -775,7 +849,178 @@ function calculate() {
   document.getElementById('sec4').classList.remove('hidden');
   document.getElementById('num3').classList.replace('active','done');
   document.getElementById('num4').classList.add('active');
+  // 교환 체크박스 초기화
+  document.getElementById('exchangeCheck').checked = false;
+  document.getElementById('sec5').classList.add('hidden');
+  resetExSelection();
 }
+
+// ── Step 5: Exchange product ──────────────────────────────────
+let exSelected = null, exSelectedPattern = null, exSearchMode = 'article';
+
+function onExchangeCheck() {
+  const checked = document.getElementById('exchangeCheck').checked;
+  if (checked) {
+    document.getElementById('sec5').classList.remove('hidden');
+    document.getElementById('num5').classList.add('active');
+  } else {
+    document.getElementById('sec5').classList.add('hidden');
+    document.getElementById('num5').classList.remove('active');
+    resetExSelection();
+  }
+}
+
+function resetExSelection() {
+  exSelected = null;
+  exSelectedPattern = null;
+  document.getElementById('exArticleInput').value = '';
+  document.getElementById('exPatternInput').value = '';
+  document.getElementById('exSizeInput').value = '';
+  document.getElementById('ex-dropdown').classList.add('hidden');
+  document.getElementById('ex-dropdown-pattern').classList.add('hidden');
+  document.getElementById('ex-dropdown-size').classList.add('hidden');
+  document.getElementById('ex-size-step').style.opacity = '0.38';
+  document.getElementById('ex-size-step').style.pointerEvents = 'none';
+  document.getElementById('exArticleInfo').classList.add('hidden');
+}
+
+function setExSearchMode(mode) {
+  exSearchMode = mode;
+  document.getElementById('tab-ex-article').classList.toggle('active', mode === 'article');
+  document.getElementById('tab-ex-ps').classList.toggle('active', mode === 'ps');
+  document.getElementById('ex-mode-article').classList.toggle('hidden', mode !== 'article');
+  document.getElementById('ex-mode-ps').classList.toggle('hidden', mode !== 'ps');
+  resetExSelection();
+  if (mode === 'article') document.getElementById('exArticleInput').focus();
+  else document.getElementById('exPatternInput').focus();
+}
+
+function onExSearchInput() {
+  const q = document.getElementById('exArticleInput').value.trim();
+  const dd = document.getElementById('ex-dropdown');
+  exSelected = null;
+  document.getElementById('exArticleInfo').classList.add('hidden');
+  if (!q) { dd.classList.add('hidden'); return; }
+  const ql = q.toLowerCase();
+  const matches = Object.keys(db).filter(k => k.toLowerCase().includes(ql)).slice(0, 10);
+  if (!matches.length) { dd.classList.add('hidden'); return; }
+  dd.innerHTML = matches.map(k => {
+    const d = db[k];
+    return `<div class="dropdown-item" onclick="selectExArticle('${k}')">
+      ${highlight(k, q)}<span>${[d.pattern, d.size].filter(Boolean).join(' · ')} — NTD ${d.ntd}mm</span>
+    </div>`;
+  }).join('');
+  dd.classList.remove('hidden');
+}
+
+function onExPatternInput() {
+  const q = document.getElementById('exPatternInput').value.trim();
+  const dd = document.getElementById('ex-dropdown-pattern');
+  exSelectedPattern = null;
+  document.getElementById('exSizeInput').value = '';
+  document.getElementById('ex-size-step').style.opacity = '0.38';
+  document.getElementById('ex-size-step').style.pointerEvents = 'none';
+  document.getElementById('ex-dropdown-size').classList.add('hidden');
+  document.getElementById('exArticleInfo').classList.add('hidden');
+  if (!q) { dd.classList.add('hidden'); return; }
+  const ql = q.toLowerCase();
+  const patterns = [...new Set(Object.values(db).map(v => v.pattern).filter(p => p && p.toLowerCase().includes(ql)))].slice(0, 10);
+  if (!patterns.length) { dd.classList.add('hidden'); return; }
+  dd.innerHTML = patterns.map(p =>
+    `<div class="dropdown-item" onclick="selectExPattern('${p.replace(/'/g,"\\'")}')">
+      ${highlight(p, q)}
+    </div>`
+  ).join('');
+  dd.classList.remove('hidden');
+}
+
+function selectExPattern(pattern) {
+  exSelectedPattern = pattern;
+  document.getElementById('exPatternInput').value = pattern;
+  document.getElementById('ex-dropdown-pattern').classList.add('hidden');
+  document.getElementById('ex-size-step').style.opacity = '1';
+  document.getElementById('ex-size-step').style.pointerEvents = 'auto';
+  document.getElementById('exSizeInput').value = '';
+  document.getElementById('ex-dropdown-size').classList.add('hidden');
+  document.getElementById('exSizeInput').focus();
+}
+
+function onExSizeInput() {
+  if (!exSelectedPattern) return;
+  const q = document.getElementById('exSizeInput').value.trim();
+  const dd = document.getElementById('ex-dropdown-size');
+  document.getElementById('exArticleInfo').classList.add('hidden');
+  const candidates = Object.entries(db).filter(([k, v]) => v.pattern === exSelectedPattern);
+  const list = q ? candidates.filter(([k, v]) => v.size && v.size.toLowerCase().includes(q.toLowerCase())) : candidates;
+  const items = list.slice(0, 15);
+  if (!items.length) {
+    dd.innerHTML = '<div class="dropdown-item" style="color:var(--text-tertiary);cursor:default;">해당 사이즈 없음</div>';
+    dd.classList.remove('hidden'); return;
+  }
+  dd.innerHTML = items.map(([k, v]) =>
+    `<div class="dropdown-item" onclick="selectExArticle('${k}')">
+      ${highlight(v.size, q)}<span>${k} — NTD ${v.ntd}mm</span>
+    </div>`
+  ).join('');
+  dd.classList.remove('hidden');
+}
+
+function selectExArticle(art) {
+  exSelected = art;
+  document.getElementById('exArticleInput').value = art;
+  document.getElementById('ex-dropdown').classList.add('hidden');
+  document.getElementById('ex-dropdown-size').classList.add('hidden');
+  document.getElementById('exSelArticle').textContent = art;
+  document.getElementById('exSelSize').textContent = db[art].size || '—';
+  document.getElementById('exSelPattern').textContent = db[art].pattern || '—';
+  document.getElementById('exSelNTD').textContent = db[art].ntd + ' mm';
+  const lp = db[art].listPrice;
+  document.getElementById('exSelListPrice').textContent = isNaN(lp) ? '정보 없음' : fmt(lp);
+  document.getElementById('exArticleInfo').classList.remove('hidden');
+  calculateExchange();
+}
+
+function calculateExchange() {
+  if (!exSelected || !selected) return;
+  const grade = document.getElementById('gradeSelect').value;
+  if (!grade) return;
+
+  const discMap = { g1: db[selected].discG1, g2: db[selected].discG2, g3: db[selected].discG3 };
+  const disc = discMap[grade];
+
+  // 원래 제품 보상금액
+  const origInvoice = db[selected].listPrice * (1 - disc / 100);
+  const rounded = parseInt(document.getElementById('resultPct').textContent);
+  const creditAmt = Math.round(origInvoice * (rounded / 100));
+
+  // 교환 제품
+  const exListPrice = db[exSelected].listPrice;
+  const exDiscMap = { g1: db[exSelected].discG1, g2: db[exSelected].discG2, g3: db[exSelected].discG3 };
+  const exDisc = exDiscMap[grade];
+
+  if (!isNaN(exListPrice) && !isNaN(exDisc)) {
+    const exInvoice = Math.round(exListPrice * (1 - exDisc / 100));
+    const diff = exInvoice - creditAmt;
+    document.getElementById('exPriceList').textContent = fmt(exListPrice);
+    document.getElementById('exPriceInvoice').textContent = fmt(exInvoice);
+    document.getElementById('exPriceCredit').textContent = `- ${fmt(creditAmt)}`;
+    document.getElementById('exPriceDiff').textContent = diff > 0 ? fmt(diff) : '0원 (보상금액이 교환가격 이상)';
+  } else {
+    document.getElementById('exPriceList').textContent = '정보 없음';
+    document.getElementById('exPriceInvoice').textContent = '—';
+    document.getElementById('exPriceCredit').textContent = '—';
+    document.getElementById('exPriceDiff').textContent = '—';
+  }
+}
+
+// click outside for exchange dropdowns
+document.addEventListener('click', e => {
+  if (!e.target.closest('#ex-mode-article')) document.getElementById('ex-dropdown').classList.add('hidden');
+  if (!e.target.closest('#ex-mode-ps')) {
+    document.getElementById('ex-dropdown-pattern').classList.add('hidden');
+    document.getElementById('ex-dropdown-size').classList.add('hidden');
+  }
+});
 </script>
 </body>
 </html>
