@@ -135,13 +135,28 @@
   <div class="auth-card">
     <div class="auth-logo">CTK TCS · Internal Tool</div>
     <div class="auth-title">로그인</div>
-    <div class="auth-sub" id="authSubText">Continental 이메일로 인증 링크를 받아 로그인하세요.</div>
-    <div class="auth-input-wrap" id="emailInputWrap">
-      <div class="auth-label">이메일 주소</div>
-      <input type="text" id="emailInput" placeholder="이름@continental.com" autocomplete="email" oninput="onEmailInput()" onkeydown="if(event.key==='Enter') sendLink()">
-      <div class="auth-domain">@continental.com 계정만 사용 가능합니다</div>
+    <div class="auth-sub" id="authSubText">Continental 이메일로 인증 코드를 받아 로그인하세요.</div>
+    <!-- Step 1: Email -->
+    <div id="emailStep">
+      <div class="auth-input-wrap">
+        <div class="auth-label">이메일 주소</div>
+        <input type="text" id="emailInput" placeholder="이름@continental.com" autocomplete="email" oninput="onEmailInput()" onkeydown="if(event.key==='Enter') sendOTP()">
+        <div class="auth-domain">@continental.com 계정만 사용 가능합니다</div>
+      </div>
+      <button class="auth-btn" id="authBtn" onclick="sendOTP()" disabled>인증 코드 받기</button>
     </div>
-    <button class="auth-btn" id="authBtn" onclick="sendLink()" disabled>인증 링크 보내기</button>
+    <!-- Step 2: OTP -->
+    <div id="otpStep" class="hidden">
+      <div class="auth-input-wrap">
+        <div class="auth-label">인증 코드 (6자리)</div>
+        <input type="text" id="otpInput" placeholder="123456" maxlength="6" autocomplete="one-time-code" inputmode="numeric" oninput="onOTPInput()" onkeydown="if(event.key==='Enter') verifyOTP()" style="letter-spacing:0.3em; font-size:22px; text-align:center;">
+        <div class="auth-domain" id="otpSentTo"></div>
+      </div>
+      <button class="auth-btn" id="otpBtn" onclick="verifyOTP()" disabled>확인</button>
+      <div style="text-align:center; margin-top:12px;">
+        <button onclick="resetAuth()" style="background:none;border:none;color:var(--text-tertiary);font-size:13px;cursor:pointer;text-decoration:underline;">이메일 다시 입력</button>
+      </div>
+    </div>
     <div id="authStatus" class="hidden"></div>
   </div>
 </div>
@@ -299,93 +314,56 @@
   </div>
 </div>
 
-<!-- Firebase SDK -->
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Firebase SDK (로그 저장용) -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut, browserSessionPersistence, setPersistence } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-
-const firebaseConfig = {
+const fbApp = initializeApp({
   apiKey: "AIzaSyAdMirLtm3ytvYdDOJbCQ2ihQQljfgfS-Y",
   authDomain: "tcs2-216e3.firebaseapp.com",
   projectId: "tcs2-216e3",
   storageBucket: "tcs2-216e3.firebasestorage.app",
   messagingSenderId: "182917773948",
   appId: "1:182917773948:web:225057df74bf56ff92e7f9"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db_fire = getFirestore(app);
-
-// 탭/브라우저 닫으면 로그아웃 (세션 지속성)
-setPersistence(auth, browserSessionPersistence);
-
-const ALLOWED_DOMAIN = 'continental.com';
-const ACTION_CODE_SETTINGS = {
-  url: window.location.href,
-  handleCodeInApp: true,
-};
-
-// ── Auth state ────────────────────────────────────────────────
-onAuthStateChanged(auth, async user => {
-  if (user) {
-    // 도메인 체크
-    if (!user.email.endsWith('@' + ALLOWED_DOMAIN)) {
-      await signOut(auth);
-      showAuthError('허가되지 않은 이메일 도메인입니다. @continental.com 계정만 사용 가능합니다.');
-      return;
-    }
-    showApp(user.email);
-    await logAccess(user.email, '자동로그인');
-  } else {
-    // 이메일 링크 로그인 처리
-    if (isSignInWithEmailLink(auth, window.location.href)) {
-      let email = window.localStorage.getItem('emailForSignIn');
-      if (!email) {
-        email = window.prompt('인증을 완료하려면 이메일 주소를 입력하세요:');
-      }
-      if (email) {
-        try {
-          const result = await signInWithEmailLink(auth, email, window.location.href);
-          window.localStorage.removeItem('emailForSignIn');
-          // 30일 세션 유지 (Firebase 기본 persistence가 로컬이라 자동 처리)
-          showApp(result.user.email);
-          await logAccess(result.user.email, '이메일링크인증');
-          // URL 정리
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } catch(e) {
-          showAuthError('인증 링크가 유효하지 않거나 만료되었습니다. 다시 시도해주세요.');
-        }
-      }
-    } else {
-      showAuthScreen();
-    }
-  }
 });
-
-// ── Log access to Firestore ───────────────────────────────────
-async function logAccess(email, type) {
+const db_fire = getFirestore(fbApp);
+window._logAccess = async function(email, type) {
   try {
     await addDoc(collection(db_fire, 'access_logs'), {
-      email,
-      type, // '이메일링크인증' | '자동로그인'
-      timestamp: serverTimestamp(),
-      userAgent: navigator.userAgent,
-      platform: navigator.platform,
+      email, type, timestamp: serverTimestamp(),
+      userAgent: navigator.userAgent, platform: navigator.platform,
     });
-  } catch(e) {
-    console.warn('로그 저장 실패:', e);
-  }
-}
+  } catch(e) { console.warn('로그 저장 실패:', e); }
+};
+</script>
 
-// ── Auth UI ───────────────────────────────────────────────────
+<script>
+// ── Supabase OTP Auth ─────────────────────────────────────────
+const SUPABASE_URL = 'https://thosddtgtffapakvmrhn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_HmrBU9WFhkCTM_TquLM31g_IPovXtXm';
+const ALLOWED_DOMAIN = 'continental.com';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: false }
+});
+
+// 페이지 로드 시 세션 확인
+(async () => {
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (session && session.user.email.endsWith('@' + ALLOWED_DOMAIN)) {
+    showApp(session.user.email);
+    if (window._logAccess) window._logAccess(session.user.email, '세션유지');
+  } else {
+    showAuthScreen();
+  }
+})();
+
 function showAuthScreen() {
   document.getElementById('authScreen').style.display = 'flex';
   document.getElementById('mainApp').classList.add('hidden');
   document.getElementById('userBar').classList.add('hidden');
 }
-
 function showApp(email) {
   document.getElementById('authScreen').style.display = 'none';
   document.getElementById('mainApp').classList.remove('hidden');
@@ -393,16 +371,30 @@ function showApp(email) {
   document.getElementById('userEmail').textContent = email;
   loadData();
 }
-
 function showAuthError(msg) {
   const el = document.getElementById('authStatus');
   el.className = 'auth-status err';
   el.textContent = msg;
   el.classList.remove('hidden');
 }
-
-// ── Expose to global scope ────────────────────────────────────
-window.sendLink = async function() {
+function resetAuth() {
+  document.getElementById('emailStep').classList.remove('hidden');
+  document.getElementById('otpStep').classList.add('hidden');
+  document.getElementById('authStatus').classList.add('hidden');
+  document.getElementById('emailInput').value = '';
+  document.getElementById('otpInput').value = '';
+  document.getElementById('authBtn').disabled = true;
+  document.getElementById('authSubText').textContent = 'Continental 이메일로 인증 코드를 받아 로그인하세요.';
+}
+window.onEmailInput = function() {
+  const email = document.getElementById('emailInput').value.trim();
+  document.getElementById('authBtn').disabled = !email.endsWith('@' + ALLOWED_DOMAIN);
+};
+window.onOTPInput = function() {
+  const otp = document.getElementById('otpInput').value.trim();
+  document.getElementById('otpBtn').disabled = otp.length !== 6;
+};
+window.sendOTP = async function() {
   const email = document.getElementById('emailInput').value.trim();
   if (!email.endsWith('@' + ALLOWED_DOMAIN)) {
     showAuthError('@continental.com 이메일만 사용 가능합니다.');
@@ -412,38 +404,43 @@ window.sendLink = async function() {
   btn.disabled = true;
   btn.textContent = '전송 중...';
   try {
-    await sendSignInLinkToEmail(auth, email, ACTION_CODE_SETTINGS);
-    window.localStorage.setItem('emailForSignIn', email);
-    const el = document.getElementById('authStatus');
-    el.className = 'auth-status ok';
-    el.textContent = `✓ ${email} 로 인증 링크를 보냈습니다. 이메일을 확인해주세요.`;
-    el.classList.remove('hidden');
-    document.getElementById('authSubText').textContent = '받은 편지함을 확인하고 링크를 클릭하면 자동으로 로그인됩니다.';
-    document.getElementById('emailInputWrap').classList.add('hidden');
-    btn.classList.add('hidden');
+    const { error } = await _supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+    if (error) throw error;
+    document.getElementById('emailStep').classList.add('hidden');
+    document.getElementById('otpStep').classList.remove('hidden');
+    document.getElementById('otpSentTo').textContent = `${email} 으로 6자리 코드를 보냈습니다`;
+    document.getElementById('authSubText').textContent = '이메일로 받은 6자리 코드를 입력하세요.';
+    document.getElementById('authStatus').classList.add('hidden');
+    document.getElementById('otpInput').focus();
   } catch(e) {
     showAuthError('전송 실패: ' + e.message);
     btn.disabled = false;
-    btn.textContent = '인증 링크 보내기';
+    btn.textContent = '인증 코드 받기';
   }
 };
-
-window.logout = async function() {
-  await signOut(auth);
-  showAuthScreen();
-  document.getElementById('emailInput').value = '';
-  document.getElementById('authStatus').classList.add('hidden');
-  document.getElementById('emailInputWrap').classList.remove('hidden');
-  document.getElementById('authBtn').classList.remove('hidden');
-  document.getElementById('authBtn').disabled = true;
-  document.getElementById('authSubText').textContent = 'Continental 이메일로 인증 링크를 받아 로그인하세요.';
-};
-
-window.onEmailInput = function() {
+window.verifyOTP = async function() {
   const email = document.getElementById('emailInput').value.trim();
-  document.getElementById('authBtn').disabled = !email.endsWith('@continental.com');
+  const token = document.getElementById('otpInput').value.trim();
+  const btn = document.getElementById('otpBtn');
+  btn.disabled = true;
+  btn.textContent = '확인 중...';
+  try {
+    const { data, error } = await _supabase.auth.verifyOtp({ email, token, type: 'email' });
+    if (error) throw error;
+    showApp(data.user.email);
+    if (window._logAccess) window._logAccess(data.user.email, 'OTP인증');
+  } catch(e) {
+    showAuthError('코드가 올바르지 않거나 만료되었습니다. 다시 시도해주세요.');
+    btn.disabled = false;
+    btn.textContent = '확인';
+  }
 };
-
+window.logout = async function() {
+  await _supabase.auth.signOut();
+  showAuthScreen();
+  resetAuth();
+};
+window.resetAuth = resetAuth;
 </script>
 
 <script>

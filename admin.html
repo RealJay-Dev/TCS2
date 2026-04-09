@@ -82,11 +82,19 @@
   <div class="auth-card">
     <div class="auth-logo">CTK TCS · Admin</div>
     <div class="auth-title">관리자 로그인</div>
-    <div class="auth-sub" id="authSubText">관리자 이메일로 인증 링크를 받아 로그인하세요.</div>
-    <div id="emailInputWrap">
-      <input type="text" id="emailInput" placeholder="이메일 주소 입력" style="width:100%;padding:12px 14px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:16px;background:var(--bg);color:var(--text);outline:none;margin-bottom:12px;" oninput="onEmailInput()" onkeydown="if(event.key==='Enter') sendLink()">
+    <div class="auth-sub" id="authSubText">관리자 이메일로 인증 코드를 받아 로그인하세요.</div>
+    <div id="emailStep">
+      <input type="text" id="emailInput" placeholder="이메일 주소 입력" style="width:100%;padding:12px 14px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:16px;background:var(--bg);color:var(--text);outline:none;margin-bottom:12px;" oninput="onEmailInput()" onkeydown="if(event.key==='Enter') sendOTP()">
+      <button class="auth-btn" id="authBtn" onclick="sendOTP()" disabled>인증 코드 받기</button>
     </div>
-    <button class="auth-btn" id="authBtn" onclick="sendLink()" disabled>인증 링크 보내기</button>
+    <div id="otpStep" class="hidden">
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;" id="otpSentTo"></div>
+      <input type="text" id="otpInput" placeholder="6자리 코드 입력" maxlength="6" inputmode="numeric" style="width:100%;padding:12px 14px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:22px;background:var(--bg);color:var(--text);outline:none;margin-bottom:12px;letter-spacing:0.3em;text-align:center;" oninput="onOTPInput()" onkeydown="if(event.key==='Enter') verifyOTP()">
+      <button class="auth-btn" id="otpBtn" onclick="verifyOTP()" disabled>확인</button>
+      <div style="text-align:center;margin-top:12px;">
+        <button onclick="resetAuth()" style="background:none;border:none;color:var(--text-tertiary);font-size:13px;cursor:pointer;text-decoration:underline;">이메일 다시 입력</button>
+      </div>
+    </div>
     <div id="authStatus" class="hidden auth-status"></div>
   </div>
 </div>
@@ -149,60 +157,40 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, collection, getDocs, orderBy, query, limit } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-const firebaseConfig = {
+const fbApp = initializeApp({
   apiKey: "AIzaSyAdMirLtm3ytvYdDOJbCQ2ihQQljfgfS-Y",
   authDomain: "tcs2-216e3.firebaseapp.com",
   projectId: "tcs2-216e3",
   storageBucket: "tcs2-216e3.firebasestorage.app",
   messagingSenderId: "182917773948",
   appId: "1:182917773948:web:225057df74bf56ff92e7f9"
-};
+});
+const db = getFirestore(fbApp);
 
+const SUPABASE_URL = 'https://thosddtgtffapakvmrhn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_HmrBU9WFhkCTM_TquLM31g_IPovXtXm';
 const ADMIN_EMAIL = 'jaehong.park@continental.com';
-const ACTION_CODE_SETTINGS = { url: window.location.href, handleCodeInApp: true };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: false }
+});
 
 let allLogs = [];
 
-// ── Auth ──────────────────────────────────────────────────────
-onAuthStateChanged(auth, async user => {
-  if (user) {
-    if (user.email !== ADMIN_EMAIL) {
-      await signOut(auth);
-      showAuthError('관리자 계정만 접근 가능합니다.');
-      return;
-    }
-    showAdmin(user.email);
+// 페이지 로드 시 세션 확인
+(async () => {
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (session && session.user.email === ADMIN_EMAIL) {
+    showAdmin(session.user.email);
   } else {
-    if (isSignInWithEmailLink(auth, window.location.href)) {
-      let email = window.localStorage.getItem('adminEmailForSignIn');
-      if (!email) email = window.prompt('이메일 주소를 입력하세요:');
-      if (email) {
-        try {
-          const result = await signInWithEmailLink(auth, email, window.location.href);
-          window.localStorage.removeItem('adminEmailForSignIn');
-          if (result.user.email !== ADMIN_EMAIL) {
-            await signOut(auth);
-            showAuthError('관리자 계정만 접근 가능합니다.');
-            return;
-          }
-          showAdmin(result.user.email);
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } catch(e) {
-          showAuthError('인증 링크가 유효하지 않습니다. 다시 시도해주세요.');
-        }
-      }
-    }
+    document.getElementById('authScreen').style.display = 'flex';
   }
-});
+})();
 
 function showAdmin(email) {
   document.getElementById('authScreen').style.display = 'none';
@@ -218,7 +206,26 @@ function showAuthError(msg) {
   el.classList.remove('hidden');
 }
 
-window.sendLink = async function() {
+function resetAuth() {
+  document.getElementById('emailStep').classList.remove('hidden');
+  document.getElementById('otpStep').classList.add('hidden');
+  document.getElementById('authStatus').classList.add('hidden');
+  document.getElementById('emailInput').value = '';
+  document.getElementById('otpInput').value = '';
+  document.getElementById('authBtn').disabled = true;
+}
+
+window.onEmailInput = function() {
+  const email = document.getElementById('emailInput').value.trim();
+  document.getElementById('authBtn').disabled = !email.includes('@');
+};
+
+window.onOTPInput = function() {
+  const otp = document.getElementById('otpInput').value.trim();
+  document.getElementById('otpBtn').disabled = otp.length !== 6;
+};
+
+window.sendOTP = async function() {
   const email = document.getElementById('emailInput').value.trim();
   if (email !== ADMIN_EMAIL) {
     showAuthError('관리자 계정만 접근 가능합니다.');
@@ -228,31 +235,50 @@ window.sendLink = async function() {
   btn.disabled = true;
   btn.textContent = '전송 중...';
   try {
-    await sendSignInLinkToEmail(auth, email, ACTION_CODE_SETTINGS);
-    window.localStorage.setItem('adminEmailForSignIn', email);
-    const el = document.getElementById('authStatus');
-    el.className = 'auth-status ok';
-    el.textContent = `✓ ${email} 로 인증 링크를 보냈습니다.`;
-    el.classList.remove('hidden');
-    document.getElementById('authSubText').textContent = '이메일을 확인하고 링크를 클릭해주세요.';
-    document.getElementById('emailInputWrap').classList.add('hidden');
-    btn.classList.add('hidden');
+    const { error } = await _supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+    if (error) throw error;
+    document.getElementById('emailStep').classList.add('hidden');
+    document.getElementById('otpStep').classList.remove('hidden');
+    document.getElementById('otpSentTo').textContent = `${email} 으로 6자리 코드를 보냈습니다`;
+    document.getElementById('authStatus').classList.add('hidden');
+    document.getElementById('otpInput').focus();
   } catch(e) {
     showAuthError('전송 실패: ' + e.message);
     btn.disabled = false;
-    btn.textContent = '인증 링크 보내기';
+    btn.textContent = '인증 코드 받기';
   }
 };
 
-window.onEmailInput = function() {
+window.verifyOTP = async function() {
   const email = document.getElementById('emailInput').value.trim();
-  document.getElementById('authBtn').disabled = !email.includes('@');
+  const token = document.getElementById('otpInput').value.trim();
+  const btn = document.getElementById('otpBtn');
+  btn.disabled = true;
+  btn.textContent = '확인 중...';
+  try {
+    const { data, error } = await _supabase.auth.verifyOtp({ email, token, type: 'email' });
+    if (error) throw error;
+    if (data.user.email !== ADMIN_EMAIL) {
+      await _supabase.auth.signOut();
+      showAuthError('관리자 계정만 접근 가능합니다.');
+      btn.disabled = false;
+      btn.textContent = '확인';
+      return;
+    }
+    showAdmin(data.user.email);
+  } catch(e) {
+    showAuthError('코드가 올바르지 않거나 만료되었습니다.');
+    btn.disabled = false;
+    btn.textContent = '확인';
+  }
 };
 
 window.logout = async function() {
-  await signOut(auth);
+  await _supabase.auth.signOut();
   location.reload();
 };
+
+window.resetAuth = resetAuth;
 
 // ── Logs ──────────────────────────────────────────────────────
 window.loadLogs = async function() {
@@ -271,14 +297,10 @@ window.loadLogs = async function() {
 function updateStats() {
   document.getElementById('statTotal').textContent = allLogs.length.toLocaleString();
   const today = new Date().toLocaleDateString('ko-KR');
-  const todayCount = allLogs.filter(l => {
-    if (!l.timestamp) return false;
-    return l.timestamp.toDate().toLocaleDateString('ko-KR') === today;
-  }).length;
+  const todayCount = allLogs.filter(l => l.timestamp && l.timestamp.toDate().toLocaleDateString('ko-KR') === today).length;
   document.getElementById('statToday').textContent = todayCount;
   document.getElementById('statTodayDate').textContent = today;
-  const uniqueUsers = new Set(allLogs.map(l => l.email)).size;
-  document.getElementById('statUsers').textContent = uniqueUsers;
+  document.getElementById('statUsers').textContent = new Set(allLogs.map(l => l.email)).size;
 }
 
 window.applyFilter = function() {
@@ -298,9 +320,11 @@ window.applyFilter = function() {
     const ts = l.timestamp ? l.timestamp.toDate().toLocaleString('ko-KR') : '—';
     const ua = l.userAgent || '';
     const device = ua.includes('iPhone') ? '📱 iPhone' : ua.includes('Android') ? '📱 Android' : ua.includes('iPad') ? '📱 iPad' : '💻 Desktop';
-    const typeBadge = l.type === '이메일링크인증'
-      ? '<span class="badge-type new">신규인증</span>'
-      : '<span class="badge-type auto">자동로그인</span>';
+    const typeBadge = l.type === 'OTP인증'
+      ? '<span class="badge-type new">OTP인증</span>'
+      : l.type === '세션유지'
+      ? '<span class="badge-type auto">세션유지</span>'
+      : `<span class="badge-type auto">${l.type}</span>`;
     return `<div class="table-row">
       <div style="font-size:13px;font-weight:500;">${l.email || '—'}</div>
       <div style="font-size:12px;color:var(--text-secondary);">${ts}</div>
