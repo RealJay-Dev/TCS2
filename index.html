@@ -533,10 +533,10 @@ function parseCSV(text) {
       ntd,
       size: si>=0 ? c[si] : '',
       pattern: pi>=0 ? c[pi] : '',
-      listPrice: li>=0 ? parseFloat(c[li]) : NaN,
-      discG1: g1i>=0 ? parseFloat(c[g1i]) : NaN,
-      discG2: g2i>=0 ? parseFloat(c[g2i]) : NaN,
-      discG3: g3i>=0 ? parseFloat(c[g3i]) : NaN,
+      listPrice: li>=0 ? parseFloat(c[li].replace(/,/g,'')) : NaN,
+      discG1: g1i>=0 ? parseFloat(c[g1i].replace(/,/g,'')) : NaN,
+      discG2: g2i>=0 ? parseFloat(c[g2i].replace(/,/g,'')) : NaN,
+      discG3: g3i>=0 ? parseFloat(c[g3i].replace(/,/g,'')) : NaN,
     };
   }
 
