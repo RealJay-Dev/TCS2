@@ -783,7 +783,7 @@ function selectArticle(art) {
   document.getElementById('selSize').textContent = db[art].size || '—';
   document.getElementById('selPattern').textContent = db[art].pattern || '—';
   document.getElementById('selLoadSpeed').textContent = db[art].loadSpeed || '—';
-  document.getElementById('selNTD').textContent = db[art].ntd + ' mm';
+  document.getElementById('selNTD').textContent = db[art].ntd.toFixed(1) + ' mm';
   const lp = db[art].listPrice;
   document.getElementById('selListPrice').textContent = isNaN(lp) ? '정보 없음' : fmt(lp);
   document.getElementById('confirmCheck').checked = false;
@@ -1005,7 +1005,7 @@ function selectExArticle(art) {
   document.getElementById('exSelSize').textContent = db[art].size || '—';
   document.getElementById('exSelPattern').textContent = db[art].pattern || '—';
   document.getElementById('exSelLoadSpeed').textContent = db[art].loadSpeed || '—';
-  document.getElementById('exSelNTD').textContent = db[art].ntd + ' mm';
+  document.getElementById('exSelNTD').textContent = db[art].ntd.toFixed(1) + ' mm';
   const lp = db[art].listPrice;
   document.getElementById('exSelListPrice').textContent = isNaN(lp) ? '정보 없음' : fmt(lp);
   document.getElementById('exArticleInfo').classList.remove('hidden');
