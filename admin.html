@@ -141,6 +141,7 @@
       <div style="display:flex; gap:8px; margin-bottom:14px;">
         <button class="search-tab active" id="tab-access" onclick="switchTab('access')" style="flex:none;padding:8px 20px;">접속 로그</button>
         <button class="search-tab" id="tab-action" onclick="switchTab('action')" style="flex:none;padding:8px 20px;">액션 로그</button>
+        <button class="search-tab" id="tab-stats" onclick="switchTab('stats')" style="flex:none;padding:8px 20px;">📊 통계 · KPI</button>
         <button class="refresh-btn" onclick="loadAll()" style="margin-left:auto;">↻ 새로고침</button>
       </div>
 
@@ -164,6 +165,11 @@
           </div>
           <div id="actionTable"><div class="loading-state">로딩 중...</div></div>
         </div>
+      </div>
+
+      <!-- 통계 / KPI -->
+      <div id="panel-stats" class="hidden">
+        <div id="statsPanel"><div class="loading-state">로딩 중...</div></div>
       </div>
     </div>
   </div>
@@ -263,12 +269,13 @@ window.resetAuth = resetAuth;
 // ── Tab ───────────────────────────────────────────────────────
 window.switchTab = function(tab) {
   currentTab = tab;
-  document.getElementById('tab-access').classList.toggle('active', tab === 'access');
-  document.getElementById('tab-action').classList.toggle('active', tab === 'action');
-  document.getElementById('panel-access').classList.toggle('hidden', tab !== 'access');
-  document.getElementById('panel-action').classList.toggle('hidden', tab !== 'action');
+  ['access','action','stats'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+    document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
+  });
   if (tab === 'access') renderAccessLogs();
-  else renderActionLogs();
+  else if (tab === 'action') renderActionLogs();
+  else renderStats();
 };
 
 // ── Load all ──────────────────────────────────────────────────
@@ -276,14 +283,23 @@ window.loadAll = async function() {
   document.getElementById('logTable').innerHTML = '<div class="loading-state">로딩 중...</div>';
   document.getElementById('actionTable').innerHTML = '<div class="loading-state">로딩 중...</div>';
   try {
-    const [accessRes, actionRes] = await Promise.all([
+    const [accessRes, actionRes, sessionRes] = await Promise.all([
       _supabase.from('access_logs').select('*').order('created_at', { ascending: false }).limit(500),
-      _supabase.from('action_logs').select('*').order('created_at', { ascending: false }).limit(500)
+      _supabase.from('action_logs').select('*').order('created_at', { ascending: false }).limit(500),
+      _supabase.from('sessions').select('*').order('session_start', { ascending: false }).limit(500)
     ]);
     if (accessRes.error) throw accessRes.error;
     if (actionRes.error) throw actionRes.error;
     allLogs = accessRes.data;
     allActions = actionRes.data;
+    allSessions = sessionRes.error ? [] : sessionRes.data;
+
+    // banned users 로드
+    const bannedRes = await _supabase.from('banned_users').select('email');
+    if (!bannedRes.error) {
+      bannedUsers.clear();
+      bannedRes.data.forEach(b => bannedUsers.add(b.email));
+    }
     updateStats();
     renderUserList();
     renderAccessLogs();
@@ -293,23 +309,76 @@ window.loadAll = async function() {
   }
 };
 
-// ── User list (slicer) ────────────────────────────────────────
+// ── User list (slicer) with Ban ───────────────────────────────
 function renderUserList() {
   const users = [...new Set(allLogs.map(l => l.email).filter(Boolean))].sort();
+  const activeUsers = users.filter(u => !bannedUsers.has(u));
+  const banned = users.filter(u => bannedUsers.has(u));
   const ul = document.getElementById('userList');
-  ul.innerHTML = `<div onclick="selectUser(null)" style="padding:10px 16px;font-size:13px;cursor:pointer;color:${!selectedUser?'var(--text)':'var(--text-secondary)'};font-weight:${!selectedUser?'600':'400'};border-left:3px solid ${!selectedUser?'var(--text)':'transparent'};">전체 (${allLogs.length})</div>`;
-  users.forEach(u => {
+
+  let html = `<div onclick="selectUser(null)" style="padding:10px 16px;font-size:13px;cursor:pointer;color:${!selectedUser?'var(--text)':'var(--text-secondary)'};font-weight:${!selectedUser?'600':'400'};border-left:3px solid ${!selectedUser?'var(--text)':'transparent'};">전체 (${activeUsers.length}명)</div>`;
+
+  activeUsers.forEach(u => {
     const cnt = allLogs.filter(l => l.email === u).length;
     const isSelected = selectedUser === u;
-    ul.innerHTML += `<div onclick="selectUser('${u}')" style="padding:10px 16px;font-size:12px;cursor:pointer;color:${isSelected?'var(--text)':'var(--text-secondary)'};font-weight:${isSelected?'600':'400'};border-left:3px solid ${isSelected?'var(--text)':'transparent'};word-break:break-all;line-height:1.4;">${u}<span style="display:block;font-size:11px;color:var(--text-tertiary);">${cnt}회 접속</span></div>`;
+    html += `
+      <div style="border-left:3px solid ${isSelected?'var(--text)':'transparent'};">
+        <div onclick="selectUser('${u}')" style="padding:10px 16px 4px;font-size:12px;cursor:pointer;color:${isSelected?'var(--text)':'var(--text-secondary)'};font-weight:${isSelected?'600':'400'};word-break:break-all;line-height:1.4;">
+          ${u}
+          <span style="display:block;font-size:11px;color:var(--text-tertiary);">${cnt}회 접속</span>
+        </div>
+        <div style="padding:0 16px 8px;">
+          <button onclick="toggleBan('${u}', false)" style="font-size:11px;padding:2px 8px;border-radius:20px;border:0.5px solid var(--text-danger);background:none;color:var(--text-danger);cursor:pointer;">Ban</button>
+        </div>
+      </div>`;
   });
+
+  // Banned Users 섹션
+  if (banned.length > 0) {
+    html += `<div style="margin:12px 16px 6px;font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;border-top:0.5px solid var(--border);padding-top:12px;">🚫 Banned (${banned.length})</div>`;
+    banned.forEach(u => {
+      const cnt = allLogs.filter(l => l.email === u).length;
+      html += `
+        <div style="opacity:0.5;border-left:3px solid transparent;">
+          <div style="padding:8px 16px 4px;font-size:12px;color:var(--text-tertiary);word-break:break-all;line-height:1.4;">
+            ${u}
+            <span style="display:block;font-size:11px;">${cnt}회 접속</span>
+          </div>
+          <div style="padding:0 16px 8px;">
+            <button onclick="toggleBan('${u}', true)" style="font-size:11px;padding:2px 8px;border-radius:20px;border:0.5px solid var(--text-success);background:none;color:var(--text-success);cursor:pointer;">Ban 해제</button>
+          </div>
+        </div>`;
+    });
+  }
+
+  ul.innerHTML = html;
 }
+
+const bannedUsers = new Set();
+window.toggleBan = async function(email, isBanned) {
+  if (!confirm(`${email} 을 ${isBanned?'Ban 해제':'Ban'} 하시겠습니까?`)) return;
+  if (isBanned) {
+    bannedUsers.delete(email);
+  } else {
+    bannedUsers.add(email);
+  }
+  // Supabase Auth에서 직접 ban은 Admin API 필요 — 여기선 banned_users 테이블로 관리
+  try {
+    if (isBanned) {
+      await _supabase.from('banned_users').delete().eq('email', email);
+    } else {
+      await _supabase.from('banned_users').insert({ email });
+    }
+  } catch(e) { console.warn('Ban 처리 실패 (테이블 없을 수 있음):', e); }
+  renderUserList();
+};
 
 window.selectUser = function(user) {
   selectedUser = user;
   renderUserList();
   renderAccessLogs();
   renderActionLogs();
+  if (currentTab === 'stats') renderStats();
 };
 
 // ── Stats ─────────────────────────────────────────────────────
@@ -359,6 +428,66 @@ function renderActionLogs() {
       <div style="font-size:11px;color:var(--text-secondary);">${ts}</div>
     </div>`;
   }).join('');
+}
+
+// ── Stats / KPI ───────────────────────────────────────────────
+let allSessions = [];
+const MINS_SAVED_PER_CALC = 2;
+
+function renderStats() {
+  const sessions = selectedUser ? allSessions.filter(s => s.email === selectedUser) : allSessions;
+  const actions = selectedUser ? allActions.filter(a => a.email === selectedUser) : allActions;
+  const users = [...new Set(allLogs.map(l => l.email).filter(Boolean))];
+
+  // 전체 KPI
+  const totalCalcs = actions.length;
+  const totalTimeSaved = totalCalcs * MINS_SAVED_PER_CALC;
+  const totalSessions = sessions.length;
+  const avgDuration = sessions.length > 0 ? sessions.reduce((sum, s) => {
+    if (!s.session_start || !s.last_seen) return sum;
+    return sum + (new Date(s.last_seen) - new Date(s.session_start)) / 60000;
+  }, 0) / sessions.length : 0;
+
+  // 유저별 통계
+  const userStats = users.map(u => {
+    const uSessions = allSessions.filter(s => s.email === u);
+    const uActions = allActions.filter(a => a.email === u);
+    const uCalcs = uActions.length;
+    const uTimeSaved = uCalcs * MINS_SAVED_PER_CALC;
+    const uAvgDur = uSessions.length > 0 ? uSessions.reduce((sum, s) => {
+      if (!s.session_start || !s.last_seen) return sum;
+      return sum + (new Date(s.last_seen) - new Date(s.session_start)) / 60000;
+    }, 0) / uSessions.length : 0;
+    // 일별 평균 접속
+    const days = new Set(uSessions.map(s => s.session_start?.slice(0,10))).size || 1;
+    const dailyAvg = (uSessions.length / days).toFixed(1);
+    return { email: u, sessions: uSessions.length, calcs: uCalcs, timeSaved: uTimeSaved, avgDur: uAvgDur, dailyAvg };
+  }).filter(u => !selectedUser || u.email === selectedUser);
+
+  const el = document.getElementById('statsPanel');
+  el.innerHTML = `
+    <!-- 전체 KPI -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+      <div class="stat-card"><div class="stat-label">총 계산 횟수</div><div class="stat-val">${totalCalcs}</div><div class="stat-sub">누적</div></div>
+      <div class="stat-card"><div class="stat-label">절약 시간</div><div class="stat-val">${totalTimeSaved}분</div><div class="stat-sub">계산 1회 = 2분 절약</div></div>
+      <div class="stat-card"><div class="stat-label">총 세션</div><div class="stat-val">${totalSessions}</div><div class="stat-sub">누적</div></div>
+      <div class="stat-card"><div class="stat-label">평균 세션 시간</div><div class="stat-val">${avgDuration.toFixed(1)}분</div><div class="stat-sub">포그라운드 기준</div></div>
+    </div>
+    <!-- 유저별 테이블 -->
+    <div class="table-wrap">
+      <div class="table-header" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;">
+        <div>이메일</div><div>총 접속</div><div>일평균 접속</div><div>평균 세션</div><div>계산 횟수</div><div>절약 시간</div>
+      </div>
+      ${userStats.map(u => `
+        <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;">
+          <div style="font-size:13px;font-weight:500;">${u.email}</div>
+          <div style="font-size:13px;">${u.sessions}회</div>
+          <div style="font-size:13px;">${u.dailyAvg}회/일</div>
+          <div style="font-size:13px;">${u.avgDur.toFixed(1)}분</div>
+          <div style="font-size:13px;font-weight:600;">${u.calcs}회</div>
+          <div style="font-size:13px;color:var(--text-success);font-weight:600;">${u.timeSaved}분</div>
+        </div>`).join('')}
+    </div>`;
 }
 </script>
 

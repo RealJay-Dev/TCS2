@@ -415,17 +415,48 @@ async function logAccess(email, type) {
 
 // 액션 로그 저장
 let _currentEmail = null;
-let _sessionStart = null;
+let _sessionId = null;
+let _heartbeatTimer = null;
+let _isVisible = true;
 
 async function logAction(data) {
   if (!_currentEmail) return;
   try {
     await _supabase.from('action_logs').insert({
-      email: _currentEmail,
-      ...data
+      email: _currentEmail, ...data
     });
+    // 세션 calc_count 증가
+    if (_sessionId) {
+      await _supabase.rpc('increment_calc_count', { session_id: _sessionId });
+    }
   } catch(e) { console.warn('액션 로그 저장 실패:', e); }
 }
+
+// 세션 시작
+async function startSession(email) {
+  try {
+    const { data } = await _supabase.from('sessions').insert({
+      email, session_start: new Date().toISOString(), last_seen: new Date().toISOString(), calc_count: 0
+    }).select('id').single();
+    if (data) _sessionId = data.id;
+  } catch(e) { console.warn('세션 시작 실패:', e); }
+}
+
+// Heartbeat (10초마다 last_seen 업데이트, 포그라운드일 때만)
+function startHeartbeat() {
+  if (_heartbeatTimer) clearInterval(_heartbeatTimer);
+  _heartbeatTimer = setInterval(async () => {
+    if (!_sessionId || !_isVisible) return;
+    try {
+      await _supabase.from('sessions').update({ last_seen: new Date().toISOString() }).eq('id', _sessionId);
+    } catch(e) {}
+  }, 10000);
+}
+
+// Page Visibility API — 백그라운드/포그라운드 감지
+document.addEventListener('visibilitychange', () => {
+  _isVisible = document.visibilityState === 'visible';
+});
 
 // 페이지 로드 시 세션 확인
 (async () => {
@@ -445,11 +476,12 @@ function showAuthScreen() {
 }
 function showApp(email) {
   _currentEmail = email;
-  _sessionStart = new Date();
   document.getElementById('authScreen').style.display = 'none';
   document.getElementById('mainApp').classList.remove('hidden');
   document.getElementById('userBar').classList.remove('hidden');
   document.getElementById('userEmail').textContent = email;
+  startSession(email);
+  startHeartbeat();
   loadData();
 }
 function showAuthError(msg) {
@@ -514,6 +546,14 @@ window.verifyOTP = async function() {
   try {
     const { data, error } = await _supabase.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
+    // Ban 체크
+    const { data: banData } = await _supabase.from('banned_users').select('email').eq('email', data.user.email).maybeSingle();
+    if (banData) {
+      showAuthError('접근이 제한된 계정입니다. 관리자에게 문의하세요.');
+      btn.disabled = false;
+      btn.textContent = '확인';
+      return;
+    }
     showApp(data.user.email);
     logAccess(data.user.email, 'OTP인증');
   } catch(e) {
