@@ -172,7 +172,7 @@ let allLogs = [];
 // 페이지 로드 시 세션 확인
 (async () => {
   const { data: { session } } = await _supabase.auth.getSession();
-  if (session && session.user.email === ADMIN_EMAIL) {
+  if (session && session.user.email.toLowerCase() === ADMIN_EMAIL) {
     showAdmin(session.user.email);
   } else {
     document.getElementById('authScreen').style.display = 'flex';
@@ -211,7 +211,7 @@ window.onOTPInput = function() {
 };
 window.sendOTP = async function() {
   const email = document.getElementById('emailInput').value.trim();
-  if (email !== ADMIN_EMAIL) { showAuthError('관리자 계정만 접근 가능합니다.'); return; }
+  if (email.toLowerCase() !== ADMIN_EMAIL) { showAuthError('관리자 계정만 접근 가능합니다.'); return; }
   const btn = document.getElementById('authBtn');
   btn.disabled = true; btn.textContent = '전송 중...';
   try {
@@ -235,7 +235,7 @@ window.verifyOTP = async function() {
   try {
     const { data, error } = await _supabase.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
-    if (data.user.email !== ADMIN_EMAIL) {
+    if (data.user.email.toLowerCase() !== ADMIN_EMAIL) {
       await _supabase.auth.signOut();
       showAuthError('관리자 계정만 접근 가능합니다.');
       btn.disabled = false; btn.textContent = '확인'; return;
