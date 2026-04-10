@@ -413,6 +413,20 @@ async function logAccess(email, type) {
   } catch(e) { console.warn('로그 저장 실패:', e); }
 }
 
+// 액션 로그 저장
+let _currentEmail = null;
+let _sessionStart = null;
+
+async function logAction(data) {
+  if (!_currentEmail) return;
+  try {
+    await _supabase.from('action_logs').insert({
+      email: _currentEmail,
+      ...data
+    });
+  } catch(e) { console.warn('액션 로그 저장 실패:', e); }
+}
+
 // 페이지 로드 시 세션 확인
 (async () => {
   const { data: { session } } = await _supabase.auth.getSession();
@@ -430,6 +444,8 @@ function showAuthScreen() {
   document.getElementById('userBar').classList.add('hidden');
 }
 function showApp(email) {
+  _currentEmail = email;
+  _sessionStart = new Date();
   document.getElementById('authScreen').style.display = 'none';
   document.getElementById('mainApp').classList.remove('hidden');
   document.getElementById('userBar').classList.remove('hidden');
@@ -846,6 +862,22 @@ function calculate() {
   document.getElementById('exchangeCheck').checked = false;
   document.getElementById('sec5').classList.add('hidden');
   resetExSelection();
+
+  // 액션 로그
+  const discMap2 = { g1: db[selected].discG1, g2: db[selected].discG2, g3: db[selected].discG3 };
+  const disc2 = discMap2[grade];
+  const creditAmt2 = !isNaN(db[selected].listPrice) && !isNaN(disc2)
+    ? Math.round(db[selected].listPrice * (1 - disc2/100) * (rounded/100)) : null;
+  logAction({
+    action_type: '보상계산',
+    article: selected,
+    pattern: db[selected].pattern || null,
+    size: db[selected].size || null,
+    rtd,
+    mtd,
+    result_pct: rounded,
+    credit_amt: creditAmt2
+  });
 }
 
 // ── Step 5: Exchange product ──────────────────────────────────

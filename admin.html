@@ -103,55 +103,67 @@
 <div id="adminApp" class="hidden">
   <div class="header">
     <div class="header-left">
-      <div class="header-title">접속 로그 관리</div>
+      <div class="header-title">TCS Pro 관리자</div>
       <div class="header-sub" id="adminEmail"></div>
     </div>
     <button class="logout-btn" onclick="logout()">로그아웃</button>
   </div>
 
-  <div class="wrap">
-    <!-- Stats -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">전체 접속</div>
-        <div class="stat-val" id="statTotal">—</div>
-        <div class="stat-sub">누적 로그 수</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">오늘 접속</div>
-        <div class="stat-val" id="statToday">—</div>
-        <div class="stat-sub" id="statTodayDate">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">접속 사용자</div>
-        <div class="stat-val" id="statUsers">—</div>
-        <div class="stat-sub">고유 이메일 수</div>
-      </div>
+  <div style="display:flex; height:calc(100vh - 53px);">
+    <!-- 왼쪽 유저 슬라이서 -->
+    <div style="width:220px; flex-shrink:0; background:var(--bg); border-right:0.5px solid var(--border); overflow-y:auto; padding:16px 0;">
+      <div style="padding:0 16px 10px; font-size:12px; font-weight:600; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.05em;">사용자</div>
+      <div id="userList"></div>
     </div>
 
-    <!-- Filter -->
-    <div class="filter-row">
-      <input type="text" class="filter-input" id="filterEmail" placeholder="이메일 검색..." oninput="applyFilter()" style="flex:1; min-width:180px;">
-      <select class="filter-select" id="filterType" onchange="applyFilter()">
-        <option value="">전체 유형</option>
-        <option value="OTP인증">OTP인증</option>
-        <option value="세션유지">세션유지</option>
-      </select>
-      <button class="refresh-btn" onclick="loadLogs()">↻ 새로고침</button>
-    </div>
-
-    <div class="count-info" id="countInfo"></div>
-
-    <!-- Table -->
-    <div class="table-wrap">
-      <div class="table-header">
-        <div>이메일</div>
-        <div>접속 시각</div>
-        <div>유형</div>
-        <div>기기</div>
+    <!-- 오른쪽 메인 -->
+    <div style="flex:1; overflow-y:auto; padding:20px;">
+      <!-- Stats -->
+      <div class="stats-grid" style="margin-bottom:16px;">
+        <div class="stat-card">
+          <div class="stat-label">전체 접속</div>
+          <div class="stat-val" id="statTotal">—</div>
+          <div class="stat-sub">누적 로그 수</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">오늘 접속</div>
+          <div class="stat-val" id="statToday">—</div>
+          <div class="stat-sub" id="statTodayDate">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">접속 사용자</div>
+          <div class="stat-val" id="statUsers">—</div>
+          <div class="stat-sub">고유 이메일 수</div>
+        </div>
       </div>
-      <div id="logTable">
-        <div class="loading-state">로딩 중...</div>
+
+      <!-- 탭 -->
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        <button class="search-tab active" id="tab-access" onclick="switchTab('access')" style="flex:none;padding:8px 20px;">접속 로그</button>
+        <button class="search-tab" id="tab-action" onclick="switchTab('action')" style="flex:none;padding:8px 20px;">액션 로그</button>
+        <button class="refresh-btn" onclick="loadAll()" style="margin-left:auto;">↻ 새로고침</button>
+      </div>
+
+      <!-- 접속 로그 -->
+      <div id="panel-access">
+        <div class="count-info" id="countInfo"></div>
+        <div class="table-wrap">
+          <div class="table-header" style="grid-template-columns:2fr 1.2fr 1fr 1.2fr;">
+            <div>이메일</div><div>접속 시각</div><div>유형</div><div>기기</div>
+          </div>
+          <div id="logTable"><div class="loading-state">로딩 중...</div></div>
+        </div>
+      </div>
+
+      <!-- 액션 로그 -->
+      <div id="panel-action" class="hidden">
+        <div class="count-info" id="actionCountInfo"></div>
+        <div class="table-wrap">
+          <div class="table-header" style="grid-template-columns:1.5fr 1.5fr 1fr 0.8fr 0.8fr 1fr 1fr;">
+            <div>이메일</div><div>아티클</div><div>패턴</div><div>RTD</div><div>결과%</div><div>보상금액</div><div>시각</div>
+          </div>
+          <div id="actionTable"><div class="loading-state">로딩 중...</div></div>
+        </div>
       </div>
     </div>
   </div>
@@ -167,7 +179,7 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }
 });
 
-let allLogs = [];
+let allLogs = [], allActions = [], selectedUser = null, currentTab = 'access';
 
 // 페이지 로드 시 세션 확인
 (async () => {
@@ -183,7 +195,7 @@ function showAdmin(email) {
   document.getElementById('authScreen').style.display = 'none';
   document.getElementById('adminApp').classList.remove('hidden');
   document.getElementById('adminEmail').textContent = email;
-  loadLogs();
+  loadAll();
 }
 
 function showAuthError(msg) {
@@ -203,8 +215,7 @@ function resetAuth() {
 }
 
 window.onEmailInput = function() {
-  const email = document.getElementById('emailInput').value.trim();
-  document.getElementById('authBtn').disabled = !email.includes('@');
+  document.getElementById('authBtn').disabled = !document.getElementById('emailInput').value.trim().includes('@');
 };
 window.onOTPInput = function() {
   document.getElementById('otpBtn').disabled = document.getElementById('otpInput').value.trim().length !== 6;
@@ -249,24 +260,59 @@ window.verifyOTP = async function() {
 window.logout = async function() { await _supabase.auth.signOut(); location.reload(); };
 window.resetAuth = resetAuth;
 
-// ── Logs ──────────────────────────────────────────────────────
-window.loadLogs = async function() {
+// ── Tab ───────────────────────────────────────────────────────
+window.switchTab = function(tab) {
+  currentTab = tab;
+  document.getElementById('tab-access').classList.toggle('active', tab === 'access');
+  document.getElementById('tab-action').classList.toggle('active', tab === 'action');
+  document.getElementById('panel-access').classList.toggle('hidden', tab !== 'access');
+  document.getElementById('panel-action').classList.toggle('hidden', tab !== 'action');
+  if (tab === 'access') renderAccessLogs();
+  else renderActionLogs();
+};
+
+// ── Load all ──────────────────────────────────────────────────
+window.loadAll = async function() {
   document.getElementById('logTable').innerHTML = '<div class="loading-state">로딩 중...</div>';
+  document.getElementById('actionTable').innerHTML = '<div class="loading-state">로딩 중...</div>';
   try {
-    const { data, error } = await _supabase
-      .from('access_logs')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(500);
-    if (error) throw error;
-    allLogs = data;
+    const [accessRes, actionRes] = await Promise.all([
+      _supabase.from('access_logs').select('*').order('created_at', { ascending: false }).limit(500),
+      _supabase.from('action_logs').select('*').order('created_at', { ascending: false }).limit(500)
+    ]);
+    if (accessRes.error) throw accessRes.error;
+    if (actionRes.error) throw actionRes.error;
+    allLogs = accessRes.data;
+    allActions = actionRes.data;
     updateStats();
-    applyFilter();
+    renderUserList();
+    renderAccessLogs();
+    renderActionLogs();
   } catch(e) {
-    document.getElementById('logTable').innerHTML = `<div class="empty-state">로그를 불러올 수 없습니다: ${e.message}</div>`;
+    document.getElementById('logTable').innerHTML = `<div class="empty-state">오류: ${e.message}</div>`;
   }
 };
 
+// ── User list (slicer) ────────────────────────────────────────
+function renderUserList() {
+  const users = [...new Set(allLogs.map(l => l.email).filter(Boolean))].sort();
+  const ul = document.getElementById('userList');
+  ul.innerHTML = `<div onclick="selectUser(null)" style="padding:10px 16px;font-size:13px;cursor:pointer;color:${!selectedUser?'var(--text)':'var(--text-secondary)'};font-weight:${!selectedUser?'600':'400'};border-left:3px solid ${!selectedUser?'var(--text)':'transparent'};">전체 (${allLogs.length})</div>`;
+  users.forEach(u => {
+    const cnt = allLogs.filter(l => l.email === u).length;
+    const isSelected = selectedUser === u;
+    ul.innerHTML += `<div onclick="selectUser('${u}')" style="padding:10px 16px;font-size:12px;cursor:pointer;color:${isSelected?'var(--text)':'var(--text-secondary)'};font-weight:${isSelected?'600':'400'};border-left:3px solid ${isSelected?'var(--text)':'transparent'};word-break:break-all;line-height:1.4;">${u}<span style="display:block;font-size:11px;color:var(--text-tertiary);">${cnt}회 접속</span></div>`;
+  });
+}
+
+window.selectUser = function(user) {
+  selectedUser = user;
+  renderUserList();
+  renderAccessLogs();
+  renderActionLogs();
+};
+
+// ── Stats ─────────────────────────────────────────────────────
 function updateStats() {
   document.getElementById('statTotal').textContent = allLogs.length.toLocaleString();
   const today = new Date().toLocaleDateString('ko-KR');
@@ -276,34 +322,44 @@ function updateStats() {
   document.getElementById('statUsers').textContent = new Set(allLogs.map(l => l.email)).size;
 }
 
-window.applyFilter = function() {
-  const emailQ = document.getElementById('filterEmail').value.trim().toLowerCase();
-  const typeQ = document.getElementById('filterType').value;
-  const filtered = allLogs.filter(l => {
-    const emailMatch = !emailQ || (l.email && l.email.toLowerCase().includes(emailQ));
-    const typeMatch = !typeQ || l.type === typeQ;
-    return emailMatch && typeMatch;
-  });
+// ── Access logs ───────────────────────────────────────────────
+function renderAccessLogs() {
+  const filtered = selectedUser ? allLogs.filter(l => l.email === selectedUser) : allLogs;
   document.getElementById('countInfo').textContent = `${filtered.length}개 표시 중 (전체 ${allLogs.length}개)`;
-  if (!filtered.length) {
-    document.getElementById('logTable').innerHTML = '<div class="empty-state">해당하는 로그가 없습니다</div>';
-    return;
-  }
+  if (!filtered.length) { document.getElementById('logTable').innerHTML = '<div class="empty-state">로그 없음</div>'; return; }
   document.getElementById('logTable').innerHTML = filtered.map(l => {
     const ts = l.created_at ? new Date(l.created_at).toLocaleString('ko-KR') : '—';
     const ua = l.user_agent || '';
     const device = ua.includes('iPhone') ? '📱 iPhone' : ua.includes('Android') ? '📱 Android' : ua.includes('iPad') ? '📱 iPad' : '💻 Desktop';
-    const typeBadge = l.type === 'OTP인증'
-      ? '<span class="badge-type new">OTP인증</span>'
-      : `<span class="badge-type auto">${l.type || '—'}</span>`;
-    return `<div class="table-row">
-      <div style="font-size:13px;font-weight:500;">${l.email || '—'}</div>
+    const typeBadge = l.type === 'OTP인증' ? '<span class="badge-type new">OTP인증</span>' : `<span class="badge-type auto">${l.type||'—'}</span>`;
+    return `<div class="table-row" style="grid-template-columns:2fr 1.2fr 1fr 1.2fr;">
+      <div style="font-size:13px;font-weight:500;">${l.email||'—'}</div>
       <div style="font-size:12px;color:var(--text-secondary);">${ts}</div>
       <div>${typeBadge}</div>
       <div style="font-size:12px;color:var(--text-secondary);">${device}</div>
     </div>`;
   }).join('');
-};
+}
+
+// ── Action logs ───────────────────────────────────────────────
+function renderActionLogs() {
+  const filtered = selectedUser ? allActions.filter(l => l.email === selectedUser) : allActions;
+  document.getElementById('actionCountInfo').textContent = `${filtered.length}개 표시 중 (전체 ${allActions.length}개)`;
+  if (!filtered.length) { document.getElementById('actionTable').innerHTML = '<div class="empty-state">액션 로그 없음</div>'; return; }
+  document.getElementById('actionTable').innerHTML = filtered.map(l => {
+    const ts = l.created_at ? new Date(l.created_at).toLocaleString('ko-KR') : '—';
+    const credit = l.credit_amt != null ? Math.round(l.credit_amt).toLocaleString('ko-KR') + '원' : '—';
+    return `<div class="table-row" style="grid-template-columns:1.5fr 1.5fr 1fr 0.8fr 0.8fr 1fr 1fr;">
+      <div style="font-size:12px;font-weight:500;">${l.email||'—'}</div>
+      <div style="font-size:12px;">${l.article||'—'}</div>
+      <div style="font-size:11px;color:var(--text-secondary);">${l.pattern||'—'}</div>
+      <div style="font-size:12px;">${l.rtd!=null?l.rtd+'mm':'—'}</div>
+      <div style="font-size:13px;font-weight:600;">${l.result_pct!=null?l.result_pct+'%':'—'}</div>
+      <div style="font-size:12px;">${credit}</div>
+      <div style="font-size:11px;color:var(--text-secondary);">${ts}</div>
+    </div>`;
+  }).join('');
+}
 </script>
 
 </body>
