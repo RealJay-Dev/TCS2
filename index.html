@@ -580,7 +580,7 @@ function parseSupabase(rows) {
   s.innerHTML = `<div class="dot"></div> ${cnt}개 아티클 로드 완료`;
   const m = document.getElementById('dbMeta');
   const latest = rows.reduce((a, b) => a.updated_at > b.updated_at ? a : b, rows[0]);
-  const dateStr = latest ? new Date(latest.updated_at).toLocaleDateString('ko-KR') : '—';
+  const dateStr = latest ? new Date(latest.updated_at).toLocaleDateString('ko-KR', {year:'numeric', month:'2-digit', day:'2-digit'}) : '—';
   m.textContent = `DB 기준일: ${dateStr} · Supabase 연동`;
   m.className = 'db-meta';
   m.classList.remove('hidden');
