@@ -516,8 +516,6 @@ window.resetAuth = resetAuth;
 
 <script>
 // ── App data & config ─────────────────────────────────────────
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/1coZmNHe5oMw-xcjwPdPFyBchXKjXFL33Jk3ZZNw9aU4/export?format=csv&gid=654494156';
-
 let db = {}, selected = null, searchMode = 'article', selectedPattern = null;
 
 document.addEventListener('click', e => {
@@ -528,7 +526,7 @@ document.addEventListener('click', e => {
   }
 });
 
-// ── Data loading ──────────────────────────────────────────────
+// ── Data loading (Supabase) ───────────────────────────────────
 async function loadData() {
   const s = document.getElementById('dbStatus');
   const m = document.getElementById('dbMeta');
@@ -538,94 +536,53 @@ async function loadData() {
   m.classList.add('hidden');
   r.classList.add('hidden');
   try {
-    const res = await fetch(CSV_URL);
+    // 인증된 사용자만 가격 포함 전체 조회
+    const session = await _supabase.auth.getSession();
+    const token = session.data.session?.access_token || SUPABASE_KEY;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/articles?select=*&limit=2000`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${token}`
+      }
+    });
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    parseCSV(await res.text());
+    const rows = await res.json();
+    parseSupabase(rows);
   } catch(e) {
     s.className = 'db-status err';
     s.innerHTML = '<div class="dot"></div> 데이터를 불러올 수 없습니다';
-    m.textContent = '구글 시트 공유 설정을 확인하거나 다시 시도해주세요';
+    m.textContent = '다시 시도해주세요';
     m.className = 'db-meta';
     m.classList.remove('hidden');
     r.classList.remove('hidden');
   }
 }
 
-function parseCSVRow(line) {
-  const cells = [];
-  let cur = '', inQuote = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuote) {
-      if (ch === '"') { if (line[i+1] === '"') { cur += '"'; i++; } else inQuote = false; }
-      else cur += ch;
-    } else {
-      if (ch === '"') inQuote = true;
-      else if (ch === ',') { cells.push(cur.trim()); cur = ''; }
-      else cur += ch;
-    }
-  }
-  cells.push(cur.trim());
-  return cells;
-}
-
-function parseCSV(text) {
-  const lines = text.trim().split(/\r?\n/);
-
-  // 1행: 날짜
-  const dateRaw = parseCSVRow(lines[0])[0].replace(/"/g,'').trim();
-  const dateParts = dateRaw.replace(/\s/g,'').split('.');
-  let dbDateStr = dateRaw;
-  if (dateParts.length === 3) {
-    dbDateStr = `${dateParts[0]}.${dateParts[1].padStart(2,'0')}.${dateParts[2].padStart(2,'0')}`;
-  }
-
-  // 2행: 헤더
-  const headers = parseCSVRow(lines[1]).map(h => h.replace(/"/g,'').trim());
-  const hl = headers.map(h => h.toLowerCase());
-  const ai = hl.findIndex(h => h.includes('article'));
-  const ni = hl.findIndex(h => h === 'ntd' || h === 'otd' || h.includes('depth'));
-  const si = hl.findIndex(h => h.includes('size'));
-  const pi = hl.findIndex(h => h.includes('pattern'));
-  const li = hl.findIndex(h => h.includes('list'));
-  const g1i = hl.findIndex(h => h.includes('group1') || h.includes('group 1'));
-  const g2i = hl.findIndex(h => h.includes('group2') || h.includes('group 2'));
-  const g3i = hl.findIndex(h => h.includes('group3') || h.includes('group 3'));
-  const di = hl.findIndex(h => h.includes('description') || h.includes('material'));
-
-  if (ai < 0 || ni < 0) { showDbErr('Article 또는 NTD 컬럼을 찾을 수 없습니다'); return; }
-
-  // 3행~: 데이터
+function parseSupabase(rows) {
   db = {};
-  for (let i = 2; i < lines.length; i++) {
-    const c = parseCSVRow(lines[i]);
-    const art = c[ai]; const ntd = parseFloat(c[ni]);
-    if (!art || isNaN(ntd)) continue;
-    const desc = di>=0 ? c[di] : '';
-    db[art] = {
-      ntd,
-      size: si>=0 ? c[si] : '',
-      pattern: pi>=0 ? c[pi] : '',
-      desc,
-      loadSpeed: parseLoadSpeed(desc, si>=0 ? c[si] : ''),
-      listPrice: li>=0 ? parseFloat(c[li].replace(/,/g,'')) : NaN,
-      discG1: g1i>=0 ? parseFloat(c[g1i].replace(/,/g,'')) : NaN,
-      discG2: g2i>=0 ? parseFloat(c[g2i].replace(/,/g,'')) : NaN,
-      discG3: g3i>=0 ? parseFloat(c[g3i].replace(/,/g,'')) : NaN,
+  for (const row of rows) {
+    if (!row.article || row.ntd == null) continue;
+    db[row.article] = {
+      ntd: parseFloat(row.ntd),
+      size: row.size || '',
+      pattern: row.pattern || '',
+      desc: row.description || '',
+      loadSpeed: parseLoadSpeed(row.description || '', row.size || ''),
+      listPrice: row.list_price != null ? parseFloat(row.list_price) : NaN,
+      discG1: row.disc_g1 != null ? parseFloat(row.disc_g1) : NaN,
+      discG2: row.disc_g2 != null ? parseFloat(row.disc_g2) : NaN,
+      discG3: row.disc_g3 != null ? parseFloat(row.disc_g3) : NaN,
     };
   }
-
   const cnt = Object.keys(db).length;
   const s = document.getElementById('dbStatus');
   s.className = 'db-status ok';
   s.innerHTML = `<div class="dot"></div> ${cnt}개 아티클 로드 완료`;
   const m = document.getElementById('dbMeta');
-  const pp = dbDateStr.split('.');
-  const diff = Math.floor((new Date() - new Date(+pp[0], +pp[1]-1, +pp[2])) / 86400000);
-  m.textContent = diff > 30
-    ? `⚠ DB 기준일: ${dbDateStr} — ${diff}일 경과. 시트 업데이트 필요`
-    : `DB 기준일: ${dbDateStr} · 구글 시트 연동`;
-  m.className = diff > 30 ? 'db-meta warn' : 'db-meta';
+  const latest = rows.reduce((a, b) => a.updated_at > b.updated_at ? a : b, rows[0]);
+  const dateStr = latest ? new Date(latest.updated_at).toLocaleDateString('ko-KR') : '—';
+  m.textContent = `DB 기준일: ${dateStr} · Supabase 연동`;
+  m.className = 'db-meta';
   m.classList.remove('hidden');
   document.getElementById('refreshBtn').classList.remove('hidden');
   document.getElementById('sec2').classList.remove('disabled');
@@ -685,9 +642,21 @@ function setSearchMode(mode) {
   else document.getElementById('patternInput').focus();
 }
 
+// ── Watermark ─────────────────────────────────────────────────
+const _CTK_TCS_BUILD = 'CTK-TCS-PRO-2026-JH';
+console.log('%c.', 'color:transparent;font-size:0px;', _CTK_TCS_BUILD);
+
 function onSearchInput() {
   const q = document.getElementById('articleInput').value.trim();
   const dd = document.getElementById('dropdown');
+  // 이스터에그
+  if (q === '012345678900') {
+    dd.innerHTML = `<div class="dropdown-item" style="color:var(--text-danger);cursor:default;font-size:13px;line-height:1.6;">
+      ⚠ 본 툴은 CTK의 자산으로 무단 위변조 및 배포, 상업적 활용은 법적 처벌을 받을 수 있습니다.
+    </div>`;
+    dd.classList.remove('hidden');
+    return;
+  }
   resetSelection();
   if (!q || !Object.keys(db).length) { dd.classList.add('hidden'); return; }
   const ql = q.toLowerCase();
