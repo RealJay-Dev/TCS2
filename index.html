@@ -579,12 +579,7 @@ function parseSupabase(rows) {
   s.className = 'db-status ok';
   s.innerHTML = `<div class="dot"></div> ${cnt}개 아티클 로드 완료`;
   const m = document.getElementById('dbMeta');
-  const latest = rows.reduce((a, b) => a.updated_at > b.updated_at ? a : b, rows[0]);
-  let dateStr = '—';
-  if (latest && latest.updated_at) {
-    const d = new Date(latest.updated_at.replace(' ', 'T'));
-    dateStr = isNaN(d) ? latest.updated_at.slice(0, 10) : d.toLocaleDateString('ko-KR', {year:'numeric', month:'2-digit', day:'2-digit'});
-  }
+  const dateStr = rows.length > 0 && rows[0].updated_at ? rows[0].updated_at.slice(0, 10) : '—';
   m.textContent = `DB 기준일: ${dateStr} · Supabase 연동`;
   m.className = 'db-meta';
   m.classList.remove('hidden');
