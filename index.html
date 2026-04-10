@@ -227,6 +227,7 @@
           <div class="info-row"><span class="info-label">아티클</span><span class="info-val" id="selArticle"></span></div>
           <div class="info-row"><span class="info-label">사이즈</span><span class="info-val" id="selSize"></span></div>
           <div class="info-row"><span class="info-label">패턴</span><span class="info-val" id="selPattern"></span></div>
+          <div class="info-row"><span class="info-label">하중·속도지수</span><span class="info-val" id="selLoadSpeed"></span></div>
           <div class="info-row"><span class="info-label">NTD</span><span class="info-val" id="selNTD"></span></div>
           <div class="info-row"><span class="info-label">List Price</span><span class="info-val" id="selListPrice"></span></div>
         </div>
@@ -252,8 +253,8 @@
         </div>
         <div>
           <div class="label">MTD (법적 최소, mm)</div>
-          <input type="number" id="mtdInput" value="1.6" min="0" step="0.1" oninput="calculate()">
-          <div class="sub-label">기본값 1.6mm</div>
+          <input type="number" id="mtdInput" value="1.6" min="0" step="0.1" oninput="calculate()" disabled style="opacity:0.5;cursor:not-allowed;">
+          <div class="sub-label">1.6mm 고정</div>
         </div>
       </div>
       <div>
@@ -351,6 +352,7 @@
           <div class="info-row"><span class="info-label">아티클</span><span class="info-val" id="exSelArticle"></span></div>
           <div class="info-row"><span class="info-label">사이즈</span><span class="info-val" id="exSelSize"></span></div>
           <div class="info-row"><span class="info-label">패턴</span><span class="info-val" id="exSelPattern"></span></div>
+          <div class="info-row"><span class="info-label">하중·속도지수</span><span class="info-val" id="exSelLoadSpeed"></span></div>
           <div class="info-row"><span class="info-label">NTD</span><span class="info-val" id="exSelNTD"></span></div>
           <div class="info-row"><span class="info-label">List Price</span><span class="info-val" id="exSelListPrice"></span></div>
         </div>
@@ -589,6 +591,7 @@ function parseCSV(text) {
   const g1i = hl.findIndex(h => h.includes('group1') || h.includes('group 1'));
   const g2i = hl.findIndex(h => h.includes('group2') || h.includes('group 2'));
   const g3i = hl.findIndex(h => h.includes('group3') || h.includes('group 3'));
+  const di = hl.findIndex(h => h.includes('description') || h.includes('material'));
 
   if (ai < 0 || ni < 0) { showDbErr('Article 또는 NTD 컬럼을 찾을 수 없습니다'); return; }
 
@@ -598,10 +601,13 @@ function parseCSV(text) {
     const c = parseCSVRow(lines[i]);
     const art = c[ai]; const ntd = parseFloat(c[ni]);
     if (!art || isNaN(ntd)) continue;
+    const desc = di>=0 ? c[di] : '';
     db[art] = {
       ntd,
       size: si>=0 ? c[si] : '',
       pattern: pi>=0 ? c[pi] : '',
+      desc,
+      loadSpeed: parseLoadSpeed(desc, si>=0 ? c[si] : ''),
       listPrice: li>=0 ? parseFloat(c[li].replace(/,/g,'')) : NaN,
       discG1: g1i>=0 ? parseFloat(c[g1i].replace(/,/g,'')) : NaN,
       discG2: g2i>=0 ? parseFloat(c[g2i].replace(/,/g,'')) : NaN,
@@ -643,6 +649,16 @@ function highlight(text, q) {
 function fmt(num) {
   if (isNaN(num)) return '—';
   return num.toLocaleString('ko-KR') + '원';
+}
+
+function parseLoadSpeed(desc, size) {
+  if (!desc || !size) return '—';
+  const sizeEscaped = size.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = desc.match(new RegExp(sizeEscaped + '\\s+([0-9]+\\/[0-9]+[A-Za-z]+|[0-9]+[A-Za-z]+)'));
+  if (match) return match[1];
+  const m2 = desc.match(/\d[\d\/]*[A-Za-z]+/);
+  if (m2) return m2[0];
+  return '—';
 }
 
 // ── Search mode ───────────────────────────────────────────────
@@ -722,14 +738,22 @@ function selectPattern(pattern) {
   document.getElementById('sizeInput').focus();
 }
 
+function normalizeSize(str) {
+  return str.replace(/[^0-9]/g, '');
+}
+
 function onSizeInput() {
   if (!selectedPattern) return;
   const q = document.getElementById('sizeInput').value.trim();
   const dd = document.getElementById('dropdown-size');
   resetSelection();
   const candidates = Object.entries(db).filter(([k, v]) => v.pattern === selectedPattern);
+  const qNum = normalizeSize(q);
   const list = q
-    ? candidates.filter(([k, v]) => v.size && v.size.toLowerCase().includes(q.toLowerCase()))
+    ? candidates.filter(([k, v]) => v.size && (
+        v.size.toLowerCase().includes(q.toLowerCase()) ||
+        (qNum && normalizeSize(v.size).includes(qNum))
+      ))
     : candidates;
   const items = list.slice(0, 15);
   if (!items.length) {
@@ -758,6 +782,7 @@ function selectArticle(art) {
   document.getElementById('selArticle').textContent = art;
   document.getElementById('selSize').textContent = db[art].size || '—';
   document.getElementById('selPattern').textContent = db[art].pattern || '—';
+  document.getElementById('selLoadSpeed').textContent = db[art].loadSpeed || '—';
   document.getElementById('selNTD').textContent = db[art].ntd + ' mm';
   const lp = db[art].listPrice;
   document.getElementById('selListPrice').textContent = isNaN(lp) ? '정보 없음' : fmt(lp);
@@ -951,7 +976,13 @@ function onExSizeInput() {
   const dd = document.getElementById('ex-dropdown-size');
   document.getElementById('exArticleInfo').classList.add('hidden');
   const candidates = Object.entries(db).filter(([k, v]) => v.pattern === exSelectedPattern);
-  const list = q ? candidates.filter(([k, v]) => v.size && v.size.toLowerCase().includes(q.toLowerCase())) : candidates;
+  const qNum = normalizeSize(q);
+  const list = q
+    ? candidates.filter(([k, v]) => v.size && (
+        v.size.toLowerCase().includes(q.toLowerCase()) ||
+        (qNum && normalizeSize(v.size).includes(qNum))
+      ))
+    : candidates;
   const items = list.slice(0, 15);
   if (!items.length) {
     dd.innerHTML = '<div class="dropdown-item" style="color:var(--text-tertiary);cursor:default;">해당 사이즈 없음</div>';
@@ -973,6 +1004,7 @@ function selectExArticle(art) {
   document.getElementById('exSelArticle').textContent = art;
   document.getElementById('exSelSize').textContent = db[art].size || '—';
   document.getElementById('exSelPattern').textContent = db[art].pattern || '—';
+  document.getElementById('exSelLoadSpeed').textContent = db[art].loadSpeed || '—';
   document.getElementById('exSelNTD').textContent = db[art].ntd + ' mm';
   const lp = db[art].listPrice;
   document.getElementById('exSelListPrice').textContent = isNaN(lp) ? '정보 없음' : fmt(lp);
