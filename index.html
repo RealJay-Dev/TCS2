@@ -899,10 +899,10 @@ function calculate() {
   const disc = discMap[grade];
 
   if (!isNaN(listPrice) && !isNaN(disc)) {
-    const invoicePrice = listPrice * (1 - disc / 100);
+    const invoicePrice = listPrice * (1 - disc);
     const creditAmt = invoicePrice * (rounded / 100);
     document.getElementById('priceList').textContent = fmt(listPrice);
-    document.getElementById('priceDisc').textContent = disc + '%';
+    document.getElementById('priceDisc').textContent = (disc * 100).toFixed(1) + '%';
     document.getElementById('priceInvoice').textContent = fmt(Math.round(invoicePrice));
     document.getElementById('priceCredit').textContent = fmt(Math.round(creditAmt));
   } else {
@@ -924,7 +924,7 @@ function calculate() {
   const discMap2 = { g1: db[selected].discG1, g2: db[selected].discG2, g3: db[selected].discG3 };
   const disc2 = discMap2[grade];
   const creditAmt2 = !isNaN(db[selected].listPrice) && !isNaN(disc2)
-    ? Math.round(db[selected].listPrice * (1 - disc2/100) * (rounded/100)) : null;
+    ? Math.round(db[selected].listPrice * (1 - disc2) * (rounded/100)) : null;
   logAction({
     action_type: '보상계산',
     article: selected,
@@ -1078,7 +1078,7 @@ function calculateExchange() {
   const disc = discMap[grade];
 
   // 원래 제품 보상금액
-  const origInvoice = db[selected].listPrice * (1 - disc / 100);
+  const origInvoice = db[selected].listPrice * (1 - disc);
   const rounded = parseInt(document.getElementById('resultPct').textContent);
   const creditAmt = Math.round(origInvoice * (rounded / 100));
 
@@ -1088,7 +1088,7 @@ function calculateExchange() {
   const exDisc = exDiscMap[grade];
 
   if (!isNaN(exListPrice) && !isNaN(exDisc)) {
-    const exInvoice = Math.round(exListPrice * (1 - exDisc / 100));
+    const exInvoice = Math.round(exListPrice * (1 - exDisc));
     const diff = exInvoice - creditAmt;
     document.getElementById('exPriceList').textContent = fmt(exListPrice);
     document.getElementById('exPriceInvoice').textContent = fmt(exInvoice);
