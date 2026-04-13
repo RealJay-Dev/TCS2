@@ -351,6 +351,7 @@ window.loadAll = async function() {
     renderUserList();
     renderAccessLogs();
     renderActionLogs();
+    await loadSettings();
   } catch(e) {
     document.getElementById('logTable').innerHTML = `<div class="empty-state">오류: ${e.message}</div>`;
   }
@@ -491,6 +492,18 @@ function renderActionLogs() {
 // ── Stats / KPI ───────────────────────────────────────────────
 let MINS_SAVED_PER_CALC = 2;
 
+// 설정값 로드
+async function loadSettings() {
+  try {
+    const { data } = await _supabase.from('settings').select('*');
+    if (data) {
+      data.forEach(s => {
+        if (s.key === 'mins_saved_per_calc') MINS_SAVED_PER_CALC = parseInt(s.value) || 2;
+      });
+    }
+  } catch(e) { console.warn('설정 로드 실패:', e); }
+}
+
 function renderStats() {
   const kpiActions = allActions.filter(a => !excludedFromKPI.has(a.email));
   const kpiSessions = allSessions.filter(s => !excludedFromKPI.has(s.email));
@@ -532,6 +545,10 @@ function renderStats() {
       <span style="font-size:13px;color:var(--text-secondary);">분</span>
       <button onclick="updateMins()" style="padding:6px 14px;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;">적용</button>
       <span style="font-size:11px;color:var(--text-tertiary);margin-left:8px;">※ KPI 제외된 유저는 통계에서 제외됩니다</span>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button onclick="exportCSV()" style="padding:6px 14px;background:none;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:13px;color:var(--text-secondary);cursor:pointer;">📥 CSV</button>
+        <button onclick="exportPDF()" style="padding:6px 14px;background:none;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:13px;color:var(--text-secondary);cursor:pointer;">🖨️ PDF</button>
+      </div>
     </div>
     <!-- 전체 KPI -->
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;">
@@ -559,11 +576,85 @@ function renderStats() {
     </div>`;
 }
 
-window.updateMins = function() {
+window.updateMins = async function() {
   const val = parseInt(document.getElementById('minsInput').value);
   if (isNaN(val) || val < 1) return;
   MINS_SAVED_PER_CALC = val;
+  try {
+    await _supabase.from('settings').upsert({ key: 'mins_saved_per_calc', value: String(val), updated_at: new Date().toISOString() });
+  } catch(e) { console.warn('설정 저장 실패:', e); }
   renderStats();
+};
+
+// ── Export ────────────────────────────────────────────────────
+window.exportCSV = function() {
+  const kpiActions = allActions.filter(a => !excludedFromKPI.has(a.email));
+  const kpiSessions = allSessions.filter(s => !excludedFromKPI.has(s.email));
+  const users = [...new Set(allLogs.map(l => l.email).filter(Boolean))].filter(u => !excludedFromKPI.has(u));
+
+  const rows = [['이메일', '총 접속', '일평균 접속', '평균 세션(분)', '보상계산 횟수', '가격조회만', '절약 시간(분)']];
+  users.forEach(u => {
+    const uSessions = kpiSessions.filter(s => s.email === u);
+    const uActions = kpiActions.filter(a => a.email === u);
+    const uCalcs = uActions.filter(a => a.action_type === '보상계산').length;
+    const uPriceOnly = uActions.filter(a => a.action_type === '가격조회').length;
+    const uTimeSaved = uCalcs * MINS_SAVED_PER_CALC;
+    const uAvgDur = uSessions.length > 0 ? (uSessions.reduce((sum, s) => {
+      if (!s.session_start || !s.last_seen) return sum;
+      return sum + (new Date(s.last_seen) - new Date(s.session_start)) / 60000;
+    }, 0) / uSessions.length).toFixed(1) : 0;
+    const days = new Set(uSessions.map(s => s.session_start?.slice(0,10))).size || 1;
+    const dailyAvg = (uSessions.length / days).toFixed(1);
+    rows.push([u, uSessions.length, dailyAvg, uAvgDur, uCalcs, uPriceOnly, uTimeSaved]);
+  });
+
+  const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `TCS_KPI_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+window.exportPDF = function() {
+  const printWin = window.open('', '_blank');
+  const kpiActions = allActions.filter(a => !excludedFromKPI.has(a.email));
+  const kpiSessions = allSessions.filter(s => !excludedFromKPI.has(s.email));
+  const users = [...new Set(allLogs.map(l => l.email).filter(Boolean))].filter(u => !excludedFromKPI.has(u));
+  const totalCalcs = kpiActions.filter(a => a.action_type === '보상계산').length;
+  const totalTimeSaved = totalCalcs * MINS_SAVED_PER_CALC;
+
+  let rows = users.map(u => {
+    const uSessions = kpiSessions.filter(s => s.email === u);
+    const uActions = kpiActions.filter(a => a.email === u);
+    const uCalcs = uActions.filter(a => a.action_type === '보상계산').length;
+    const uPriceOnly = uActions.filter(a => a.action_type === '가격조회').length;
+    const uAvgDur = uSessions.length > 0 ? (uSessions.reduce((sum, s) => {
+      if (!s.session_start || !s.last_seen) return sum;
+      return sum + (new Date(s.last_seen) - new Date(s.session_start)) / 60000;
+    }, 0) / uSessions.length).toFixed(1) : 0;
+    const days = new Set(uSessions.map(s => s.session_start?.slice(0,10))).size || 1;
+    return `<tr><td>${u}</td><td>${uSessions.length}</td><td>${(uSessions.length/days).toFixed(1)}</td><td>${uAvgDur}</td><td>${uCalcs}</td><td>${uPriceOnly}</td><td>${uCalcs * MINS_SAVED_PER_CALC}</td></tr>`;
+  }).join('');
+
+  printWin.document.write(`
+    <html><head><title>TCS KPI Report</title>
+    <style>body{font-family:sans-serif;padding:20px;}h2{margin-bottom:4px;}table{width:100%;border-collapse:collapse;margin-top:16px;}th,td{border:1px solid #ddd;padding:8px 10px;font-size:12px;text-align:left;}th{background:#f5f5f4;font-weight:600;}.summary{display:flex;gap:24px;margin:12px 0;}.kpi{background:#f5f5f4;padding:10px 16px;border-radius:6px;}</style>
+    </head><body>
+    <h2>TCS Pro · KPI Report</h2>
+    <p style="color:#888;font-size:12px;">Generated: ${new Date().toLocaleString('ko-KR')} · 계산 1회 = ${MINS_SAVED_PER_CALC}분 절약</p>
+    <div class="summary">
+      <div class="kpi"><div style="font-size:11px;color:#888;">총 보상계산</div><div style="font-size:22px;font-weight:700;">${totalCalcs}회</div></div>
+      <div class="kpi"><div style="font-size:11px;color:#888;">총 절약 시간</div><div style="font-size:22px;font-weight:700;">${totalTimeSaved}분</div></div>
+      <div class="kpi"><div style="font-size:11px;color:#888;">접속 사용자</div><div style="font-size:22px;font-weight:700;">${users.length}명</div></div>
+    </div>
+    <table><thead><tr><th>이메일</th><th>총 접속</th><th>일평균</th><th>평균 세션(분)</th><th>보상계산</th><th>가격조회만</th><th>절약 시간(분)</th></tr></thead>
+    <tbody>${rows}</tbody></table>
+    </body></html>`);
+  printWin.document.close();
+  printWin.print();
 };
 </script>
 
