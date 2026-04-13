@@ -190,6 +190,8 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }
 });
 
+let allLogs = [], allActions = [], selectedUser = null, currentTab = 'access';
+
 // ── Secret mode (logo 5번 클릭, 관리자 이메일 입력 후) ───────
 let _secretClicks = 0, _secretTimer = null, _pwMode = false;
 window.secretClick = function() {
