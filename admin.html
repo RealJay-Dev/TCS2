@@ -80,12 +80,17 @@
 <!-- Auth -->
 <div id="authScreen">
   <div class="auth-card">
-    <div class="auth-logo">CTK TCS · Admin</div>
+    <div class="auth-logo" id="authLogo" onclick="secretClick()" style="cursor:default;user-select:none;">CTK TCS · Admin</div>
     <div class="auth-title">관리자 로그인</div>
     <div class="auth-sub" id="authSubText">관리자 이메일로 인증 코드를 받아 로그인하세요.</div>
     <div id="emailStep">
       <input type="text" id="emailInput" placeholder="이메일 주소 입력" style="width:100%;padding:12px 14px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:16px;background:var(--bg);color:var(--text);outline:none;margin-bottom:12px;" oninput="onEmailInput()" onkeydown="if(event.key==='Enter') sendOTP()">
       <button class="auth-btn" id="authBtn" onclick="sendOTP()" disabled>인증 코드 받기</button>
+    </div>
+    <!-- 비밀번호 모드 -->
+    <div id="pwStep" class="hidden">
+      <input type="password" id="pwInput" placeholder="비밀번호 입력" style="width:100%;padding:12px 14px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:16px;background:var(--bg);color:var(--text);outline:none;margin-bottom:12px;" oninput="onPwInput()" onkeydown="if(event.key==='Enter') loginWithPassword()">
+      <button class="auth-btn" id="pwBtn" onclick="loginWithPassword()" disabled>로그인</button>
     </div>
     <div id="otpStep" class="hidden">
       <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;" id="otpSentTo"></div>
@@ -185,7 +190,45 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }
 });
 
-let allLogs = [], allActions = [], selectedUser = null, currentTab = 'access';
+// ── Secret mode (logo 5번 클릭, 관리자 이메일 입력 후) ───────
+let _secretClicks = 0, _secretTimer = null, _pwMode = false;
+window.secretClick = function() {
+  const email = document.getElementById('emailInput').value.trim().toLowerCase();
+  if (email !== ADMIN_EMAIL) return;
+  _secretClicks++;
+  if (_secretTimer) clearTimeout(_secretTimer);
+  _secretTimer = setTimeout(() => { _secretClicks = 0; }, 2000);
+  if (_secretClicks >= 5) {
+    _secretClicks = 0;
+    _pwMode = !_pwMode;
+    document.getElementById('emailStep').classList.toggle('hidden', _pwMode);
+    document.getElementById('pwStep').classList.toggle('hidden', !_pwMode);
+    document.getElementById('otpStep').classList.add('hidden');
+    document.getElementById('authStatus').classList.add('hidden');
+    document.getElementById('authSubText').textContent = _pwMode
+      ? '비밀번호로 로그인합니다.'
+      : '관리자 이메일로 인증 코드를 받아 로그인하세요.';
+    if (_pwMode) document.getElementById('pwInput').focus();
+  }
+};
+window.onPwInput = function() {
+  document.getElementById('pwBtn').disabled = document.getElementById('pwInput').value.trim().length < 1;
+};
+window.loginWithPassword = async function() {
+  const btn = document.getElementById('pwBtn');
+  btn.disabled = true; btn.textContent = '로그인 중...';
+  try {
+    const { data, error } = await _supabase.auth.signInWithPassword({
+      email: ADMIN_EMAIL,
+      password: document.getElementById('pwInput').value.trim()
+    });
+    if (error) throw error;
+    showAdmin(data.user.email);
+  } catch(e) {
+    showAuthError('비밀번호가 올바르지 않습니다.');
+    btn.disabled = false; btn.textContent = '로그인';
+  }
+};
 
 // 페이지 로드 시 세션 확인
 (async () => {
