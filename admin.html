@@ -190,7 +190,7 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }
 });
 
-let allLogs = [], allActions = [], selectedUser = null, currentTab = 'access';
+let allLogs = [], allActions = [], allSessions = [], selectedUser = null, currentTab = 'access';
 const bannedUsers = new Set();
 const excludedFromKPI = new Set();
 
@@ -489,7 +489,6 @@ function renderActionLogs() {
 }
 
 // ── Stats / KPI ───────────────────────────────────────────────
-let allSessions = [];
 let MINS_SAVED_PER_CALC = 2;
 
 function renderStats() {
