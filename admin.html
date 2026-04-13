@@ -191,6 +191,8 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 
 let allLogs = [], allActions = [], selectedUser = null, currentTab = 'access';
+const bannedUsers = new Set();
+const excludedFromKPI = new Set();
 
 // ── Secret mode (logo 5번 클릭, 관리자 이메일 입력 후) ───────
 let _secretClicks = 0, _secretTimer = null, _pwMode = false;
@@ -402,7 +404,6 @@ function renderUserList() {
   ul.innerHTML = html;
 }
 
-const excludedFromKPI = new Set();
 window.toggleKPI = function(email, included) {
   if (included) excludedFromKPI.delete(email);
   else excludedFromKPI.add(email);
@@ -410,7 +411,6 @@ window.toggleKPI = function(email, included) {
   if (currentTab === 'stats') renderStats();
 };
 
-const bannedUsers = new Set();
 window.toggleBan = async function(email, isBanned) {
   if (!confirm(`${email} 을 ${isBanned?'Ban 해제':'Ban'} 하시겠습니까?`)) return;
   if (isBanned) {
