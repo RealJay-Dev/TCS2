@@ -836,6 +836,19 @@ function onConfirm() {
     document.getElementById('num2').classList.replace('active','done');
     document.getElementById('num3').classList.add('active');
     document.getElementById('rtdInput').focus();
+    // 가격 조회 로그
+    if (selected) {
+      logAction({
+        action_type: '가격조회',
+        article: selected,
+        pattern: db[selected].pattern || null,
+        size: db[selected].size || null,
+        rtd: null,
+        mtd: null,
+        result_pct: null,
+        credit_amt: null
+      });
+    }
   } else {
     document.getElementById('sec3').classList.add('disabled');
     document.getElementById('sec4').classList.add('hidden');

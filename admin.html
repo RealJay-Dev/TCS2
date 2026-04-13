@@ -316,16 +316,22 @@ function renderUserList() {
   const banned = users.filter(u => bannedUsers.has(u));
   const ul = document.getElementById('userList');
 
-  let html = `<div onclick="selectUser(null)" style="padding:10px 16px;font-size:13px;cursor:pointer;color:${!selectedUser?'var(--text)':'var(--text-secondary)'};font-weight:${!selectedUser?'600':'400'};border-left:3px solid ${!selectedUser?'var(--text)':'transparent'};">전체 (${activeUsers.length}명)</div>`;
+  let html = `
+    <div style="padding:8px 16px 4px;font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;">KPI 포함 여부</div>
+    <div onclick="selectUser(null)" style="padding:8px 16px;font-size:13px;cursor:pointer;color:${!selectedUser?'var(--text)':'var(--text-secondary)'};font-weight:${!selectedUser?'600':'400'};border-left:3px solid ${!selectedUser?'var(--text)':'transparent'};">전체 (${activeUsers.length}명)</div>`;
 
   activeUsers.forEach(u => {
     const cnt = allLogs.filter(l => l.email === u).length;
     const isSelected = selectedUser === u;
+    const isExcluded = excludedFromKPI.has(u);
     html += `
       <div style="border-left:3px solid ${isSelected?'var(--text)':'transparent'};">
-        <div onclick="selectUser('${u}')" style="padding:10px 16px 4px;font-size:12px;cursor:pointer;color:${isSelected?'var(--text)':'var(--text-secondary)'};font-weight:${isSelected?'600':'400'};word-break:break-all;line-height:1.4;">
-          ${u}
-          <span style="display:block;font-size:11px;color:var(--text-tertiary);">${cnt}회 접속</span>
+        <div style="padding:8px 16px 2px;display:flex;align-items:flex-start;gap:8px;">
+          <input type="checkbox" ${isExcluded?'':'checked'} onchange="toggleKPI('${u}', this.checked)" style="margin-top:2px;flex-shrink:0;cursor:pointer;" title="KPI에 포함">
+          <div onclick="selectUser('${u}')" style="font-size:12px;cursor:pointer;color:${isSelected?'var(--text)':'var(--text-secondary)'};font-weight:${isSelected?'600':'400'};word-break:break-all;line-height:1.4;${isExcluded?'opacity:0.4;':''}">
+            ${u}
+            <span style="display:block;font-size:11px;color:var(--text-tertiary);">${cnt}회 접속</span>
+          </div>
         </div>
         <div style="padding:0 16px 8px;">
           <button onclick="toggleBan('${u}', false)" style="font-size:11px;padding:2px 8px;border-radius:20px;border:0.5px solid var(--text-danger);background:none;color:var(--text-danger);cursor:pointer;">Ban</button>
@@ -333,7 +339,6 @@ function renderUserList() {
       </div>`;
   });
 
-  // Banned Users 섹션
   if (banned.length > 0) {
     html += `<div style="margin:12px 16px 6px;font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;border-top:0.5px solid var(--border);padding-top:12px;">🚫 Banned (${banned.length})</div>`;
     banned.forEach(u => {
@@ -341,8 +346,7 @@ function renderUserList() {
       html += `
         <div style="opacity:0.5;border-left:3px solid transparent;">
           <div style="padding:8px 16px 4px;font-size:12px;color:var(--text-tertiary);word-break:break-all;line-height:1.4;">
-            ${u}
-            <span style="display:block;font-size:11px;">${cnt}회 접속</span>
+            ${u}<span style="display:block;font-size:11px;">${cnt}회 접속</span>
           </div>
           <div style="padding:0 16px 8px;">
             <button onclick="toggleBan('${u}', true)" style="font-size:11px;padding:2px 8px;border-radius:20px;border:0.5px solid var(--text-success);background:none;color:var(--text-success);cursor:pointer;">Ban 해제</button>
@@ -350,9 +354,16 @@ function renderUserList() {
         </div>`;
     });
   }
-
   ul.innerHTML = html;
 }
+
+const excludedFromKPI = new Set();
+window.toggleKPI = function(email, included) {
+  if (included) excludedFromKPI.delete(email);
+  else excludedFromKPI.add(email);
+  renderUserList();
+  if (currentTab === 'stats') renderStats();
+};
 
 const bannedUsers = new Set();
 window.toggleBan = async function(email, isBanned) {
@@ -434,15 +445,18 @@ function renderActionLogs() {
 
 // ── Stats / KPI ───────────────────────────────────────────────
 let allSessions = [];
-const MINS_SAVED_PER_CALC = 2;
+let MINS_SAVED_PER_CALC = 2;
 
 function renderStats() {
-  const sessions = selectedUser ? allSessions.filter(s => s.email === selectedUser) : allSessions;
-  const actions = selectedUser ? allActions.filter(a => a.email === selectedUser) : allActions;
-  const users = [...new Set(allLogs.map(l => l.email).filter(Boolean))];
+  const kpiActions = allActions.filter(a => !excludedFromKPI.has(a.email));
+  const kpiSessions = allSessions.filter(s => !excludedFromKPI.has(s.email));
 
-  // 전체 KPI
-  const totalCalcs = actions.length;
+  const sessions = selectedUser ? kpiSessions.filter(s => s.email === selectedUser) : kpiSessions;
+  const actions = selectedUser ? kpiActions.filter(a => a.email === selectedUser) : kpiActions;
+  const users = [...new Set(allLogs.map(l => l.email).filter(Boolean))].filter(u => !excludedFromKPI.has(u));
+
+  const totalCalcs = actions.filter(a => a.action_type === '보상계산').length;
+  const totalPriceOnly = actions.filter(a => a.action_type === '가격조회').length;
   const totalTimeSaved = totalCalcs * MINS_SAVED_PER_CALC;
   const totalSessions = sessions.length;
   const avgDuration = sessions.length > 0 ? sessions.reduce((sum, s) => {
@@ -450,47 +464,64 @@ function renderStats() {
     return sum + (new Date(s.last_seen) - new Date(s.session_start)) / 60000;
   }, 0) / sessions.length : 0;
 
-  // 유저별 통계
   const userStats = users.map(u => {
-    const uSessions = allSessions.filter(s => s.email === u);
-    const uActions = allActions.filter(a => a.email === u);
-    const uCalcs = uActions.length;
+    const uSessions = kpiSessions.filter(s => s.email === u);
+    const uActions = kpiActions.filter(a => a.email === u);
+    const uCalcs = uActions.filter(a => a.action_type === '보상계산').length;
+    const uPriceOnly = uActions.filter(a => a.action_type === '가격조회').length;
     const uTimeSaved = uCalcs * MINS_SAVED_PER_CALC;
     const uAvgDur = uSessions.length > 0 ? uSessions.reduce((sum, s) => {
       if (!s.session_start || !s.last_seen) return sum;
       return sum + (new Date(s.last_seen) - new Date(s.session_start)) / 60000;
     }, 0) / uSessions.length : 0;
-    // 일별 평균 접속
     const days = new Set(uSessions.map(s => s.session_start?.slice(0,10))).size || 1;
     const dailyAvg = (uSessions.length / days).toFixed(1);
-    return { email: u, sessions: uSessions.length, calcs: uCalcs, timeSaved: uTimeSaved, avgDur: uAvgDur, dailyAvg };
+    return { email: u, sessions: uSessions.length, calcs: uCalcs, priceOnly: uPriceOnly, timeSaved: uTimeSaved, avgDur: uAvgDur, dailyAvg };
   }).filter(u => !selectedUser || u.email === selectedUser);
 
   const el = document.getElementById('statsPanel');
   el.innerHTML = `
+    <!-- 절약 시간 설정 -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:12px 16px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-sm);">
+      <span style="font-size:13px;color:var(--text-secondary);">계산 1회당 절약 시간:</span>
+      <input type="number" id="minsInput" value="${MINS_SAVED_PER_CALC}" min="1" max="60" style="width:60px;padding:6px 10px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:14px;background:var(--bg);color:var(--text);">
+      <span style="font-size:13px;color:var(--text-secondary);">분</span>
+      <button onclick="updateMins()" style="padding:6px 14px;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;">적용</button>
+      <span style="font-size:11px;color:var(--text-tertiary);margin-left:8px;">※ KPI 제외된 유저는 통계에서 제외됩니다</span>
+    </div>
     <!-- 전체 KPI -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
-      <div class="stat-card"><div class="stat-label">총 계산 횟수</div><div class="stat-val">${totalCalcs}</div><div class="stat-sub">누적</div></div>
-      <div class="stat-card"><div class="stat-label">절약 시간</div><div class="stat-val">${totalTimeSaved}분</div><div class="stat-sub">계산 1회 = 2분 절약</div></div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;">
+      <div class="stat-card"><div class="stat-label">보상계산 횟수</div><div class="stat-val">${totalCalcs}</div><div class="stat-sub">누적</div></div>
+      <div class="stat-card"><div class="stat-label">가격조회만</div><div class="stat-val" style="color:var(--text-danger);">${totalPriceOnly}</div><div class="stat-sub">보상계산 없이 종료</div></div>
+      <div class="stat-card"><div class="stat-label">절약 시간</div><div class="stat-val">${totalTimeSaved}분</div><div class="stat-sub">계산 1회 = ${MINS_SAVED_PER_CALC}분</div></div>
       <div class="stat-card"><div class="stat-label">총 세션</div><div class="stat-val">${totalSessions}</div><div class="stat-sub">누적</div></div>
       <div class="stat-card"><div class="stat-label">평균 세션 시간</div><div class="stat-val">${avgDuration.toFixed(1)}분</div><div class="stat-sub">포그라운드 기준</div></div>
     </div>
     <!-- 유저별 테이블 -->
     <div class="table-wrap">
-      <div class="table-header" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;">
-        <div>이메일</div><div>총 접속</div><div>일평균 접속</div><div>평균 세션</div><div>계산 횟수</div><div>절약 시간</div>
+      <div class="table-header" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;">
+        <div>이메일</div><div>총 접속</div><div>일평균</div><div>평균 세션</div><div>보상계산</div><div>가격조회만</div><div>절약 시간</div>
       </div>
       ${userStats.map(u => `
-        <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;">
+        <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;">
           <div style="font-size:13px;font-weight:500;">${u.email}</div>
           <div style="font-size:13px;">${u.sessions}회</div>
           <div style="font-size:13px;">${u.dailyAvg}회/일</div>
           <div style="font-size:13px;">${u.avgDur.toFixed(1)}분</div>
           <div style="font-size:13px;font-weight:600;">${u.calcs}회</div>
+          <div style="font-size:13px;color:${u.priceOnly>0?'var(--text-danger)':'var(--text-tertiary)'};">${u.priceOnly}회</div>
           <div style="font-size:13px;color:var(--text-success);font-weight:600;">${u.timeSaved}분</div>
         </div>`).join('')}
     </div>`;
 }
+}
+
+window.updateMins = function() {
+  const val = parseInt(document.getElementById('minsInput').value);
+  if (isNaN(val) || val < 1) return;
+  MINS_SAVED_PER_CALC = val;
+  renderStats();
+};
 </script>
 
 </body>
