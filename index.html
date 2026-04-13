@@ -133,10 +133,10 @@
 <!-- ── Auth Screen ── -->
 <div id="authScreen">
   <div class="auth-card">
-    <div class="auth-logo">CTK TCS · INTERNAL TOOL <span style="display:inline-block;background:#f5a623;color:#1a1a18;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:0.05em;vertical-align:middle;margin-left:4px;">PRO</span></div>
+    <div class="auth-logo" id="authLogo" onclick="secretClick()" style="cursor:default;user-select:none;">CTK TCS · INTERNAL TOOL <span style="display:inline-block;background:#f5a623;color:#1a1a18;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:0.05em;vertical-align:middle;margin-left:4px;">PRO</span></div>
     <div class="auth-title">로그인</div>
     <div class="auth-sub" id="authSubText">Continental 이메일로 인증 코드를 받아 로그인하세요.</div>
-    <!-- Step 1: Email -->
+    <!-- Step 1: Email (OTP mode) -->
     <div id="emailStep">
       <div class="auth-input-wrap">
         <div class="auth-label">이메일 주소</div>
@@ -144,6 +144,19 @@
         <div class="auth-domain">@continental.com 계정만 사용 가능합니다</div>
       </div>
       <button class="auth-btn" id="authBtn" onclick="sendOTP()" disabled>인증 코드 받기</button>
+    </div>
+    <!-- Step 1b: Password mode (hidden) -->
+    <div id="pwStep" class="hidden">
+      <div class="auth-input-wrap">
+        <div class="auth-label">이메일 주소</div>
+        <input type="text" id="pwEmailInput" placeholder="이름@continental.com" autocomplete="email" oninput="onPwEmailInput()" onkeydown="if(event.key==='Enter') document.getElementById('pwInput').focus()">
+        <div class="auth-domain">@continental.com 계정만 사용 가능합니다</div>
+      </div>
+      <div class="auth-input-wrap" style="margin-top:10px;">
+        <div class="auth-label">비밀번호</div>
+        <input type="password" id="pwInput" placeholder="비밀번호 입력" autocomplete="current-password" oninput="onPwInput()" onkeydown="if(event.key==='Enter') loginWithPassword()">
+      </div>
+      <button class="auth-btn" id="pwBtn" onclick="loginWithPassword()" disabled>로그인</button>
     </div>
     <!-- Step 2: OTP -->
     <div id="otpStep" class="hidden">
@@ -531,13 +544,18 @@ function showAuthError(msg) {
   el.classList.remove('hidden');
 }
 function resetAuth() {
-  document.getElementById('emailStep').classList.remove('hidden');
   document.getElementById('otpStep').classList.add('hidden');
   document.getElementById('authStatus').classList.add('hidden');
   document.getElementById('emailInput').value = '';
   document.getElementById('otpInput').value = '';
   document.getElementById('authBtn').disabled = true;
-  document.getElementById('authSubText').textContent = 'Continental 이메일로 인증 코드를 받아 로그인하세요.';
+  if (_pwMode) {
+    document.getElementById('pwStep').classList.remove('hidden');
+    document.getElementById('emailStep').classList.add('hidden');
+  } else {
+    document.getElementById('emailStep').classList.remove('hidden');
+    document.getElementById('pwStep').classList.add('hidden');
+  }
 }
 window.onEmailInput = function() {
   const email = document.getElementById('emailInput').value.trim();
@@ -730,7 +748,57 @@ function setSearchMode(mode) {
   else document.getElementById('patternInput').focus();
 }
 
-// ── Watermark ─────────────────────────────────────────────────
+// ── Secret mode (logo 5번 클릭, 관리자 이메일 입력 후에만) ───
+let _secretClicks = 0, _secretTimer = null, _pwMode = false;
+window.secretClick = function() {
+  const email = document.getElementById('emailInput').value.trim().toLowerCase();
+  if (email !== 'jaehong.park@continental.com') return;
+  _secretClicks++;
+  if (_secretTimer) clearTimeout(_secretTimer);
+  _secretTimer = setTimeout(() => { _secretClicks = 0; }, 2000);
+  if (_secretClicks >= 5) {
+    _secretClicks = 0;
+    _pwMode = !_pwMode;
+    document.getElementById('emailStep').classList.toggle('hidden', _pwMode);
+    document.getElementById('pwStep').classList.toggle('hidden', !_pwMode);
+    document.getElementById('otpStep').classList.add('hidden');
+    document.getElementById('authStatus').classList.add('hidden');
+    document.getElementById('authSubText').textContent = _pwMode
+      ? '비밀번호로 로그인합니다.'
+      : 'Continental 이메일로 인증 코드를 받아 로그인하세요.';
+    if (_pwMode) {
+      document.getElementById('pwEmailInput').value = 'jaehong.park@continental.com';
+      document.getElementById('pwInput').focus();
+    }
+  }
+};
+window.onPwEmailInput = function() {
+  const e = document.getElementById('pwEmailInput').value.trim();
+  const p = document.getElementById('pwInput').value.trim();
+  document.getElementById('pwBtn').disabled = !e.includes('@') || p.length < 1;
+};
+window.onPwInput = function() {
+  const e = document.getElementById('pwEmailInput').value.trim();
+  const p = document.getElementById('pwInput').value.trim();
+  document.getElementById('pwBtn').disabled = !e.includes('@') || p.length < 1;
+};
+window.loginWithPassword = async function() {
+  const email = document.getElementById('pwEmailInput').value.trim();
+  const password = document.getElementById('pwInput').value.trim();
+  const btn = document.getElementById('pwBtn');
+  btn.disabled = true; btn.textContent = '로그인 중...';
+  try {
+    const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    const { data: banData } = await _supabase.from('banned_users').select('email').eq('email', data.user.email).maybeSingle();
+    if (banData) { showAuthError('접근이 제한된 계정입니다.'); btn.disabled = false; btn.textContent = '로그인'; return; }
+    showApp(data.user.email);
+    logAccess(data.user.email, 'OTP인증');
+  } catch(e) {
+    showAuthError('이메일 또는 비밀번호가 올바르지 않습니다.');
+    btn.disabled = false; btn.textContent = '로그인';
+  }
+};
 const _CTK_TCS_BUILD = 'CTK-TCS-PRO-2026-JH';
 console.log('%c.', 'color:transparent;font-size:0px;', _CTK_TCS_BUILD);
 
