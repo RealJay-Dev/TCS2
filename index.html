@@ -190,7 +190,7 @@
       <button class="refresh-btn hidden" id="refreshBtn" onclick="loadData()">↻ 다시 불러오기</button>
     </div>
 
-    <!-- STEP 2: Search -->
+    <!-- STEP 2: Search + Grade + Invoice -->
     <div class="section disabled" id="sec2">
       <div class="step-header">
         <div class="step-num" id="num2">2</div>
@@ -222,6 +222,7 @@
           </div>
         </div>
       </div>
+      <!-- 아티클 정보 + 딜러 등급 + Invoice -->
       <div id="articleInfo" class="hidden">
         <div class="info-box">
           <div class="info-row"><span class="info-label">아티클</span><span class="info-val" id="selArticle"></span></div>
@@ -231,22 +232,56 @@
           <div class="info-row"><span class="info-label">NTD</span><span class="info-val" id="selNTD"></span></div>
           <div class="info-row"><span class="info-label">List Price</span><span class="info-val" id="selListPrice"></span></div>
         </div>
-        <div class="confirm-box" id="confirmBox">
-          <label class="confirm-label" id="confirmLabel">
-            <input type="checkbox" id="confirmCheck" onchange="onConfirm()">
-            실물 타이어 사이드월과 사이즈·패턴을 직접 확인했으며 아티클번호가 동일함을 확인합니다
-          </label>
+        <!-- 딜러 등급 선택 -->
+        <div style="margin-top:12px;">
+          <div class="label">딜러 등급</div>
+          <select class="grade-select" id="gradeSelect" onchange="onGradeSelect()">
+            <option value="">등급 선택...</option>
+            <option value="g1">CPP / CP / C1</option>
+            <option value="g2">C3</option>
+            <option value="g3">C4</option>
+          </select>
+        </div>
+        <!-- Invoice Price (등급 선택 후 표시) -->
+        <div id="invoiceBox" class="hidden" style="margin-top:12px;">
+          <div class="price-box">
+            <div class="price-row">
+              <span class="price-label">딜러 할인율</span>
+              <span class="price-val" id="selDisc">—</span>
+            </div>
+            <div class="price-row highlight">
+              <span class="price-label">Invoice Price (추정)</span>
+              <span class="price-val" id="selInvoice">—</span>
+            </div>
+          </div>
+          <div style="font-size:11px; color:var(--text-tertiary); margin-top:6px; line-height:1.5;">
+            ※ 해당 가격은 최신 가격이 아닐 가능성이 있고, 잘못된 가격 적용에 대한 책임을 수반하지 않습니다. 반드시 딜러에게 적용되어야 하는 최신 할인율 및 Invoice Price 정보를 확인 후에 업무 진행하시기 바랍니다.
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- STEP 3: Measurement + Grade -->
+    <!-- STEP 3: 실물 확인 체크박스 -->
     <div class="section disabled" id="sec3">
       <div class="step-header">
         <div class="step-num" id="num3">3</div>
-        <div class="step-title">측정값 및 딜러 등급</div>
+        <div class="step-title">실물 확인</div>
       </div>
-      <div class="input-row" style="margin-bottom:14px;">
+      <div class="confirm-box" id="confirmBox">
+        <label class="confirm-label" id="confirmLabel">
+          <input type="checkbox" id="confirmCheck" onchange="onConfirm()">
+          실물 타이어 사이드월과 사이즈·패턴을 직접 확인했으며 아티클번호가 동일함을 확인합니다
+        </label>
+      </div>
+    </div>
+
+    <!-- STEP 4: RTD -->
+    <div class="section disabled" id="sec4">
+      <div class="step-header">
+        <div class="step-num" id="num4">4</div>
+        <div class="step-title">측정값 입력</div>
+      </div>
+      <div class="input-row">
         <div>
           <div class="label">RTD (현재 트레드깊이, mm)</div>
           <input type="number" id="rtdInput" placeholder="예: 4.5" min="0" step="0.1" oninput="calculate()">
@@ -257,22 +292,13 @@
           <div class="sub-label">1.6mm 고정</div>
         </div>
       </div>
-      <div>
-        <div class="label">딜러 등급</div>
-        <select class="grade-select" id="gradeSelect" onchange="calculate()">
-          <option value="">등급 선택...</option>
-          <option value="g1">CPP / CP / C1</option>
-          <option value="g2">C3</option>
-          <option value="g3">C4</option>
-        </select>
-      </div>
       <div id="rtdWarn" class="field-warn hidden"></div>
     </div>
 
-    <!-- STEP 4: Result -->
-    <div class="section hidden" id="sec4">
+    <!-- STEP 5: Result -->
+    <div class="section hidden" id="sec5">
       <div class="step-header">
-        <div class="step-num active" id="num4">4</div>
+        <div class="step-num active" id="num5">5</div>
         <div class="step-title">보상 비율 및 금액</div>
       </div>
       <div class="result-card">
@@ -313,10 +339,10 @@
       </div>
     </div>
 
-    <!-- STEP 5: Exchange product -->
-    <div class="section hidden" id="sec5">
+    <!-- STEP 6: Exchange product -->
+    <div class="section hidden" id="sec6">
       <div class="step-header">
-        <div class="step-num active" id="num5">5</div>
+        <div class="step-num active" id="num6">6</div>
         <div class="step-title">교환 제품 선택</div>
       </div>
       <!-- Search tabs -->
@@ -694,8 +720,11 @@ function setSearchMode(mode) {
   document.getElementById('size-step').style.opacity = '0.38';
   document.getElementById('size-step').style.pointerEvents = 'none';
   document.getElementById('articleInfo').classList.add('hidden');
+  document.getElementById('invoiceBox').classList.add('hidden');
   document.getElementById('sec3').classList.add('disabled');
-  document.getElementById('sec4').classList.add('hidden');
+  document.getElementById('sec4').classList.add('disabled');
+  document.getElementById('sec5').classList.add('hidden');
+  document.getElementById('sec6').classList.add('hidden');
   selected = null;
   if (mode === 'article') document.getElementById('articleInput').focus();
   else document.getElementById('patternInput').focus();
@@ -798,8 +827,11 @@ function onSizeInput() {
 
 function resetSelection() {
   document.getElementById('articleInfo').classList.add('hidden');
-  document.getElementById('sec4').classList.add('hidden');
+  document.getElementById('invoiceBox').classList.add('hidden');
   document.getElementById('sec3').classList.add('disabled');
+  document.getElementById('sec4').classList.add('disabled');
+  document.getElementById('sec5').classList.add('hidden');
+  document.getElementById('sec6').classList.add('hidden');
   selected = null;
 }
 
@@ -817,14 +849,43 @@ function selectArticle(art) {
   document.getElementById('confirmCheck').checked = false;
   document.getElementById('confirmBox').classList.remove('confirmed');
   document.getElementById('confirmLabel').classList.remove('confirmed');
+  document.getElementById('invoiceBox').classList.add('hidden');
+  document.getElementById('gradeSelect').value = '';
   document.getElementById('articleInfo').classList.remove('hidden');
   document.getElementById('sec3').classList.add('disabled');
-  document.getElementById('sec4').classList.add('hidden');
+  document.getElementById('sec4').classList.add('disabled');
+  document.getElementById('sec5').classList.add('hidden');
+  document.getElementById('sec6').classList.add('hidden');
   document.getElementById('rtdInput').value = '';
-  document.getElementById('gradeSelect').value = '';
   document.getElementById('num2').classList.add('active');
   document.getElementById('num2').classList.remove('done');
   document.getElementById('num3').classList.remove('active','done');
+  document.getElementById('num4').classList.remove('active','done');
+}
+
+function onGradeSelect() {
+  const grade = document.getElementById('gradeSelect').value;
+  if (!grade || !selected) return;
+  const discMap = { g1: db[selected].discG1, g2: db[selected].discG2, g3: db[selected].discG3 };
+  const disc = discMap[grade];
+  const lp = db[selected].listPrice;
+  if (!isNaN(lp) && !isNaN(disc)) {
+    const invoicePrice = Math.round(lp * (1 - disc));
+    document.getElementById('selDisc').textContent = (disc * 100).toFixed(1) + '%';
+    document.getElementById('selInvoice').textContent = fmt(invoicePrice);
+    document.getElementById('invoiceBox').classList.remove('hidden');
+  }
+  // 가격조회 로그
+  logAction({
+    action_type: '가격조회',
+    article: selected,
+    pattern: db[selected].pattern || null,
+    size: db[selected].size || null,
+    rtd: null, mtd: null, result_pct: null, credit_amt: null
+  });
+  // 실물확인 섹션 활성화
+  document.getElementById('sec3').classList.remove('disabled');
+  document.getElementById('num3').classList.add('active');
 }
 
 function onConfirm() {
@@ -832,29 +893,16 @@ function onConfirm() {
   document.getElementById('confirmBox').classList.toggle('confirmed', checked);
   document.getElementById('confirmLabel').classList.toggle('confirmed', checked);
   if (checked) {
-    document.getElementById('sec3').classList.remove('disabled');
-    document.getElementById('num2').classList.replace('active','done');
-    document.getElementById('num3').classList.add('active');
+    document.getElementById('sec4').classList.remove('disabled');
+    document.getElementById('num3').classList.replace('active','done');
+    document.getElementById('num4').classList.add('active');
     document.getElementById('rtdInput').focus();
-    // 가격 조회 로그
-    if (selected) {
-      logAction({
-        action_type: '가격조회',
-        article: selected,
-        pattern: db[selected].pattern || null,
-        size: db[selected].size || null,
-        rtd: null,
-        mtd: null,
-        result_pct: null,
-        credit_amt: null
-      });
-    }
   } else {
-    document.getElementById('sec3').classList.add('disabled');
-    document.getElementById('sec4').classList.add('hidden');
-    document.getElementById('num2').classList.add('active');
-    document.getElementById('num2').classList.remove('done');
-    document.getElementById('num3').classList.remove('active','done');
+    document.getElementById('sec4').classList.add('disabled');
+    document.getElementById('sec5').classList.add('hidden');
+    document.getElementById('num3').classList.add('active');
+    document.getElementById('num3').classList.remove('done');
+    document.getElementById('num4').classList.remove('active','done');
   }
 }
 
@@ -869,10 +917,10 @@ function calculate() {
   const ntd = db[selected].ntd;
   const warn = document.getElementById('rtdWarn');
 
-  if (isNaN(rtd)) { document.getElementById('sec4').classList.add('hidden'); warn.classList.add('hidden'); return; }
-  if (rtd > ntd) { warn.textContent = 'RTD가 NTD보다 클 수 없습니다'; warn.classList.remove('hidden'); document.getElementById('sec4').classList.add('hidden'); return; }
-  if (rtd < mtd) { warn.textContent = `RTD가 법적 최소깊이(${mtd}mm)보다 낮습니다`; warn.classList.remove('hidden'); document.getElementById('sec4').classList.add('hidden'); return; }
-  if (!grade) { document.getElementById('sec4').classList.add('hidden'); warn.classList.add('hidden'); return; }
+  if (isNaN(rtd)) { document.getElementById('sec5').classList.add('hidden'); warn.classList.add('hidden'); return; }
+  if (rtd > ntd) { warn.textContent = 'RTD가 NTD보다 클 수 없습니다'; warn.classList.remove('hidden'); document.getElementById('sec5').classList.add('hidden'); return; }
+  if (rtd < mtd) { warn.textContent = `RTD가 법적 최소깊이(${mtd}mm)보다 낮습니다`; warn.classList.remove('hidden'); document.getElementById('sec5').classList.add('hidden'); return; }
+  if (!grade) { document.getElementById('sec5').classList.add('hidden'); warn.classList.add('hidden'); return; }
   warn.classList.add('hidden');
 
   const raw = Math.round(((rtd - mtd) / (ntd - mtd) * 100) * 10000) / 10000;
@@ -912,12 +960,12 @@ function calculate() {
     document.getElementById('priceCredit').textContent = '—';
   }
 
-  document.getElementById('sec4').classList.remove('hidden');
-  document.getElementById('num3').classList.replace('active','done');
-  document.getElementById('num4').classList.add('active');
+  document.getElementById('sec5').classList.remove('hidden');
+  document.getElementById('num4').classList.replace('active','done');
+  document.getElementById('num5').classList.add('active');
   // 교환 체크박스 초기화
   document.getElementById('exchangeCheck').checked = false;
-  document.getElementById('sec5').classList.add('hidden');
+  document.getElementById('sec6').classList.add('hidden');
   resetExSelection();
 
   // 액션 로그
@@ -943,11 +991,11 @@ let exSelected = null, exSelectedPattern = null, exSearchMode = 'article';
 function onExchangeCheck() {
   const checked = document.getElementById('exchangeCheck').checked;
   if (checked) {
-    document.getElementById('sec5').classList.remove('hidden');
-    document.getElementById('num5').classList.add('active');
+    document.getElementById('sec6').classList.remove('hidden');
+    document.getElementById('num6').classList.add('active');
   } else {
-    document.getElementById('sec5').classList.add('hidden');
-    document.getElementById('num5').classList.remove('active');
+    document.getElementById('sec6').classList.add('hidden');
+    document.getElementById('num6').classList.remove('active');
     resetExSelection();
   }
 }
