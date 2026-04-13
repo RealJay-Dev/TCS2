@@ -152,7 +152,10 @@
 
       <!-- 접속 로그 -->
       <div id="panel-access">
-        <div class="count-info" id="countInfo"></div>
+        <div style="display:flex;align-items:center;margin-bottom:8px;">
+          <div class="count-info" id="countInfo" style="margin-bottom:0;flex:1;"></div>
+          <button onclick="exportAccessCSV()" style="padding:5px 12px;background:none;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);cursor:pointer;">📥 CSV</button>
+        </div>
         <div class="table-wrap">
           <div class="table-header" style="grid-template-columns:2fr 1.2fr 1fr 1fr 1fr;">
             <div>이메일</div><div>접속 시각</div><div>유형</div><div>기기</div><div>지역</div>
@@ -163,7 +166,10 @@
 
       <!-- 액션 로그 -->
       <div id="panel-action" class="hidden">
-        <div class="count-info" id="actionCountInfo"></div>
+        <div style="display:flex;align-items:center;margin-bottom:8px;">
+          <div class="count-info" id="actionCountInfo" style="margin-bottom:0;flex:1;"></div>
+          <button onclick="exportActionCSV()" style="padding:5px 12px;background:none;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);cursor:pointer;">📥 CSV</button>
+        </div>
         <div class="table-wrap">
           <div class="table-header" style="grid-template-columns:1.5fr 1.5fr 1fr 0.8fr 0.8fr 1fr 1fr 1fr;">
             <div>이메일</div><div>아티클</div><div>패턴</div><div>RTD</div><div>결과%</div><div>보상금액</div><div>지역</div><div>시각</div>
@@ -450,8 +456,9 @@ function updateStats() {
 
 // ── Access logs ───────────────────────────────────────────────
 function renderAccessLogs() {
-  const filtered = selectedUser ? allLogs.filter(l => l.email === selectedUser) : allLogs;
-  document.getElementById('countInfo').textContent = `${filtered.length}개 표시 중 (전체 ${allLogs.length}개)`;
+  const base = allLogs.filter(l => !excludedFromKPI.has(l.email));
+  const filtered = selectedUser ? base.filter(l => l.email === selectedUser) : base;
+  document.getElementById('countInfo').textContent = `${filtered.length}개 표시 중 (전체 ${base.length}개)`;
   if (!filtered.length) { document.getElementById('logTable').innerHTML = '<div class="empty-state">로그 없음</div>'; return; }
   document.getElementById('logTable').innerHTML = filtered.map(l => {
     const ts = l.created_at ? new Date(l.created_at).toLocaleString('ko-KR') : '—';
@@ -470,8 +477,9 @@ function renderAccessLogs() {
 
 // ── Action logs ───────────────────────────────────────────────
 function renderActionLogs() {
-  const filtered = selectedUser ? allActions.filter(l => l.email === selectedUser) : allActions;
-  document.getElementById('actionCountInfo').textContent = `${filtered.length}개 표시 중 (전체 ${allActions.length}개)`;
+  const base = allActions.filter(l => !excludedFromKPI.has(l.email));
+  const filtered = selectedUser ? base.filter(l => l.email === selectedUser) : base;
+  document.getElementById('actionCountInfo').textContent = `${filtered.length}개 표시 중 (전체 ${base.length}개)`;
   if (!filtered.length) { document.getElementById('actionTable').innerHTML = '<div class="empty-state">액션 로그 없음</div>'; return; }
   document.getElementById('actionTable').innerHTML = filtered.map(l => {
     const ts = l.created_at ? new Date(l.created_at).toLocaleString('ko-KR') : '—';
@@ -487,6 +495,40 @@ function renderActionLogs() {
       <div style="font-size:11px;color:var(--text-secondary);">${ts}</div>
     </div>`;
   }).join('');
+}
+
+window.exportAccessCSV = function() {
+  const base = allLogs.filter(l => !excludedFromKPI.has(l.email));
+  const data = selectedUser ? base.filter(l => l.email === selectedUser) : base;
+  const rows = [['이메일', '접속 시각', '유형', '기기', '지역']];
+  data.forEach(l => {
+    const ts = l.created_at ? new Date(l.created_at).toLocaleString('ko-KR') : '—';
+    const ua = l.user_agent || '';
+    const device = ua.includes('iPhone') ? 'iPhone' : ua.includes('Android') ? 'Android' : ua.includes('iPad') ? 'iPad' : 'Desktop';
+    rows.push([l.email||'—', ts, l.type||'—', device, l.location||'—']);
+  });
+  downloadCSV(rows, `TCS_Access_Log_${new Date().toISOString().slice(0,10)}.csv`);
+};
+
+window.exportActionCSV = function() {
+  const base = allActions.filter(l => !excludedFromKPI.has(l.email));
+  const data = selectedUser ? base.filter(l => l.email === selectedUser) : base;
+  const rows = [['이메일', '아티클', '패턴', '사이즈', 'RTD', '결과%', '보상금액', '지역', '시각']];
+  data.forEach(l => {
+    const ts = l.created_at ? new Date(l.created_at).toLocaleString('ko-KR') : '—';
+    const credit = l.credit_amt != null ? Math.round(l.credit_amt) : '—';
+    rows.push([l.email||'—', l.article||'—', l.pattern||'—', l.size||'—', l.rtd!=null?l.rtd+'mm':'—', l.result_pct!=null?l.result_pct+'%':'—', credit, l.location||'—', ts]);
+  });
+  downloadCSV(rows, `TCS_Action_Log_${new Date().toISOString().slice(0,10)}.csv`);
+};
+
+function downloadCSV(rows, filename) {
+  const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── Stats / KPI ───────────────────────────────────────────────
@@ -608,14 +650,7 @@ window.exportCSV = function() {
     rows.push([u, uSessions.length, dailyAvg, uAvgDur, uCalcs, uPriceOnly, uTimeSaved]);
   });
 
-  const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `TCS_KPI_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadCSV(rows, `TCS_KPI_${new Date().toISOString().slice(0,10)}.csv`);
 };
 
 window.exportPDF = function() {
