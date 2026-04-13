@@ -149,8 +149,8 @@
       <div id="panel-access">
         <div class="count-info" id="countInfo"></div>
         <div class="table-wrap">
-          <div class="table-header" style="grid-template-columns:2fr 1.2fr 1fr 1.2fr;">
-            <div>이메일</div><div>접속 시각</div><div>유형</div><div>기기</div>
+          <div class="table-header" style="grid-template-columns:2fr 1.2fr 1fr 1fr 1fr;">
+            <div>이메일</div><div>접속 시각</div><div>유형</div><div>기기</div><div>지역</div>
           </div>
           <div id="logTable"><div class="loading-state">로딩 중...</div></div>
         </div>
@@ -160,8 +160,8 @@
       <div id="panel-action" class="hidden">
         <div class="count-info" id="actionCountInfo"></div>
         <div class="table-wrap">
-          <div class="table-header" style="grid-template-columns:1.5fr 1.5fr 1fr 0.8fr 0.8fr 1fr 1fr;">
-            <div>이메일</div><div>아티클</div><div>패턴</div><div>RTD</div><div>결과%</div><div>보상금액</div><div>시각</div>
+          <div class="table-header" style="grid-template-columns:1.5fr 1.5fr 1fr 0.8fr 0.8fr 1fr 1fr 1fr;">
+            <div>이메일</div><div>아티클</div><div>패턴</div><div>RTD</div><div>결과%</div><div>보상금액</div><div>지역</div><div>시각</div>
           </div>
           <div id="actionTable"><div class="loading-state">로딩 중...</div></div>
         </div>
@@ -401,11 +401,12 @@ function renderAccessLogs() {
     const ua = l.user_agent || '';
     const device = ua.includes('iPhone') ? '📱 iPhone' : ua.includes('Android') ? '📱 Android' : ua.includes('iPad') ? '📱 iPad' : '💻 Desktop';
     const typeBadge = l.type === 'OTP인증' ? '<span class="badge-type new">OTP인증</span>' : `<span class="badge-type auto">${l.type||'—'}</span>`;
-    return `<div class="table-row" style="grid-template-columns:2fr 1.2fr 1fr 1.2fr;">
+    return `<div class="table-row" style="grid-template-columns:2fr 1.2fr 1fr 1fr 1fr;">
       <div style="font-size:13px;font-weight:500;">${l.email||'—'}</div>
       <div style="font-size:12px;color:var(--text-secondary);">${ts}</div>
       <div>${typeBadge}</div>
       <div style="font-size:12px;color:var(--text-secondary);">${device}</div>
+      <div style="font-size:12px;color:var(--text-secondary);">${l.location||'—'}</div>
     </div>`;
   }).join('');
 }
@@ -418,13 +419,14 @@ function renderActionLogs() {
   document.getElementById('actionTable').innerHTML = filtered.map(l => {
     const ts = l.created_at ? new Date(l.created_at).toLocaleString('ko-KR') : '—';
     const credit = l.credit_amt != null ? Math.round(l.credit_amt).toLocaleString('ko-KR') + '원' : '—';
-    return `<div class="table-row" style="grid-template-columns:1.5fr 1.5fr 1fr 0.8fr 0.8fr 1fr 1fr;">
+    return `<div class="table-row" style="grid-template-columns:1.5fr 1.5fr 1fr 0.8fr 0.8fr 1fr 1fr 1fr;">
       <div style="font-size:12px;font-weight:500;">${l.email||'—'}</div>
       <div style="font-size:12px;">${l.article||'—'}</div>
       <div style="font-size:11px;color:var(--text-secondary);">${l.pattern||'—'}</div>
       <div style="font-size:12px;">${l.rtd!=null?l.rtd+'mm':'—'}</div>
       <div style="font-size:13px;font-weight:600;">${l.result_pct!=null?l.result_pct+'%':'—'}</div>
       <div style="font-size:12px;">${credit}</div>
+      <div style="font-size:12px;color:var(--text-secondary);">${l.location||'—'}</div>
       <div style="font-size:11px;color:var(--text-secondary);">${ts}</div>
     </div>`;
   }).join('');

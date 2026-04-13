@@ -402,11 +402,24 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }
 });
 
+// IP 기반 지역 정보 가져오기
+let _cachedLocation = null;
+async function getLocation() {
+  if (_cachedLocation) return _cachedLocation;
+  try {
+    const res = await fetch('https://ipapi.co/json/');
+    const data = await res.json();
+    _cachedLocation = [data.city, data.region, data.country_name].filter(Boolean).join(', ');
+  } catch(e) { _cachedLocation = '—'; }
+  return _cachedLocation;
+}
+
 // 접속 로그 저장
 async function logAccess(email, type) {
   try {
+    const location = await getLocation();
     await _supabase.from('access_logs').insert({
-      email, type,
+      email, type, location,
       user_agent: navigator.userAgent,
       platform: navigator.platform,
     });
@@ -422,8 +435,9 @@ let _isVisible = true;
 async function logAction(data) {
   if (!_currentEmail) return;
   try {
+    const location = await getLocation();
     await _supabase.from('action_logs').insert({
-      email: _currentEmail, ...data
+      email: _currentEmail, location, ...data
     });
     // 세션 calc_count 증가
     if (_sessionId) {
