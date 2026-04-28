@@ -1402,8 +1402,14 @@ async function handleConsentAgree() {
   const consented_at = new Date().toISOString();
 
   try {
-    // 1. Supabase consent_logs 저장 + 철회 기록 삭제
+    // 1. 기존 동의 행 모두 철회 처리 (revoked_at 업데이트)
+    await _supabase.from('consent_logs')
+      .update({ revoked_at: consented_at })
+      .eq('email', email)
+      .is('revoked_at', null);
+    // 2. 새 동의 행 추가
     await _supabase.from('consent_logs').insert({ email, full_name, employee_id, consented_at });
+    // 3. consent_revoked에서 삭제
     await _supabase.from('consent_revoked').delete().eq('email', email);
 
     // 2. Apps Script로 알림 이메일 발송
