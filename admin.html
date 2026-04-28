@@ -738,26 +738,26 @@ window.printConsentPDF = function(c) {
       <h1 style="color:#fff;margin:0 0 4px;">Privacy Notice &amp; Consent Declaration</h1>
       <div style="font-size:11px;color:#94A3B8;">Tire Claim Calculator Pro · Continental Korea (CTK TCS Team)</div>
     </div>
-    <div class="section"><div class="sh">1. 수집하는 개인정보</div><div class="sb">이메일 주소, 세션 데이터, 접근 및 액션 로그, 위치 데이터 (IP 기반 도시/지역/국가)</div></div>
-    <div class="section"><div class="sh">2. 수집 목적</div><div class="sb">인증 및 접근 제어 · 보안 모니터링 및 이상 감지 · 사용 분석 및 어뷰징 방지 · 관리자 감독</div></div>
-    <div class="section"><div class="sh">3. 보존 기간</div><div class="sb">최대 <strong>6개월</strong> 보존 후 자동 삭제. 비식별화된 집계 통계는 KPI 목적으로 별도 보관.</div></div>
-    <div class="section"><div class="sh">4. 어드민 포털 및 모니터링</div><div class="sb">툴 사용 현황은 어드민 포털을 통해 모니터링됩니다. 접근 제한 결정은 JinSeong Kim (Marketing Manager) → Nikolaos Kyriazopoulos (Market Manager) 순차 승인 필요.</div></div>
-    <div class="section"><div class="sh">5. 국외 데이터 이전</div><div class="sb">Supabase 및 ipapi.co (글로벌 인프라, 대한민국 외) 사용. AES-256 암호화 · RLS 적용.</div></div>
-    <div class="section"><div class="sh">6. 귀하의 권리</div><div class="sb">열람·정정·삭제 요청 및 동의 철회 가능. 동의 철회 시 툴 접근 제한될 수 있음.<br>연락처: <strong>Jaehong Park</strong> · Jaehong.Park@continental.com</div></div>
+    <div class="section"><div class="sh">1. Personal Information Collected</div><div class="sb">Work email address, session data, access &amp; action logs, approximate location data (city/region/country via IP address)</div></div>
+    <div class="section"><div class="sh">2. Purpose of Processing</div><div class="sb">Authentication &amp; access control · Security monitoring &amp; anomaly detection · Usage analytics &amp; abuse prevention · Admin oversight</div></div>
+    <div class="section"><div class="sh">3. Data Retention Period</div><div class="sb">Maximum <strong>6 months</strong> retention, after which data is automatically deleted. Aggregate, non-identifiable statistics may be retained for KPI purposes.</div></div>
+    <div class="section"><div class="sh">4. Admin Portal &amp; Employee Monitoring</div><div class="sb">Tool usage is monitored via the admin portal. Any access restriction decision requires prior approval from JinSeong Kim (Marketing Manager) → Nikolaos Kyriazopoulos (Market Manager).</div></div>
+    <div class="section"><div class="sh">5. Cross-Border Data Transfer</div><div class="sb">Supabase and ipapi.co (global infrastructure, outside Republic of Korea) are used. AES-256 encryption · RLS applied.</div></div>
+    <div class="section"><div class="sh">6. Your Rights &amp; Contact</div><div class="sb">You have the right to request access, correction, or deletion of your personal information, and to withdraw consent at any time. Withdrawal of consent may result in suspension of tool access.<br>Contact: <strong>Jaehong Park</strong> · Jaehong.Park@continental.com</div></div>
     <div class="sig">
-      <div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:12px;">동의 선언</div>
-      <div class="chk">☑ 본 개인정보 처리방침을 읽고 이해하였으며, 개인정보 수집 및 처리 목적에 동의합니다.</div>
-      <div class="chk">☑ 개인정보 수집 및 처리에 동의합니다.</div>
-      <div class="chk">☑ 개인정보의 국외 이전 (Supabase 및 ipapi.co)에 동의합니다.</div>
-      <div class="chk">☑ 어드민 포털을 통한 모니터링 및 기록에 동의합니다.</div>
+      <div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:12px;">Consent Declaration</div>
+      <div class="chk">☑ I confirm that I have read and understood the Privacy Notice above, including the purposes for which my personal information is collected and processed.</div>
+      <div class="chk">☑ I consent to the collection and processing of my personal information as described in this notice.</div>
+      <div class="chk">☑ I consent to the cross-border transfer of my personal information to Supabase and ipapi.co (outside the Republic of Korea).</div>
+      <div class="chk">☑ I acknowledge that my tool usage is monitored and logged via the admin portal.</div>
       <br>
-      <div class="field"><div class="fl">성명</div><div class="fv">${c.full_name||''}</div></div>
-      <div class="field"><div class="fl">사번</div><div class="fv">${c.employee_id||''}</div></div>
-      <div class="field"><div class="fl">이메일</div><div class="fv">${c.email||''}</div></div>
-      <div class="field"><div class="fl">동의 시각</div><div class="fv">${ts}</div></div>
+      <div class="field"><div class="fl">Full Name</div><div class="fv">${c.full_name||''}</div></div>
+      <div class="field"><div class="fl">Employee ID</div><div class="fv">${c.employee_id||''}</div></div>
+      <div class="field"><div class="fl">Email</div><div class="fv">${c.email||''}</div></div>
+      <div class="field"><div class="fl">Consented At</div><div class="fv">${ts}</div></div>
     </div>
     <div style="text-align:center;margin-top:24px;font-size:10px;color:#94A3B8;">Continental Korea · CTK TCS Team · Confidential</div>
-    <div style="text-align:center;margin-top:12px;"><button onclick="window.print()" style="padding:8px 20px;background:#1B2A4A;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨️ PDF로 저장</button></div>
+    <div style="text-align:center;margin-top:12px;"><button onclick="window.print()" style="padding:8px 20px;background:#1B2A4A;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨️ Save as PDF</button></div>
     </body></html>`);
   win.document.close();
 };
