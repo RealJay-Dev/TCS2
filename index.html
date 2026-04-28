@@ -1289,13 +1289,13 @@ async function handleConsentAgree() {
     // 3. 로컬에 동의 완료 기록
     localStorage.setItem('tcs_consent_' + email, consented_at);
 
-    // 4. 팝업 닫고 앱 시작
+    // 4. Close popup and launch app
     document.getElementById('consentOverlay').style.display = 'none';
     launchApp(email);
 
   } catch(e) {
     btn.disabled = false;
-    btn.textContent = 'I Agree & Continue →';
+    btn.textContent = 'I Agree & Continue ->';
     btn.style.opacity = '1';
     alert('Error occurred. Please try again. ' + e.message);
   }
