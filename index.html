@@ -1364,7 +1364,7 @@ document.addEventListener('click', e => {
         </div>
       </div>
       <div style="display:flex;justify-content:flex-end;">
-        <button id="consentAgreeBtn" disabled onclick="handleConsentAgree()" style="padding:10px 24px;background:#1E5FA8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;opacity:0.4;transition:opacity 0.15s;">I Agree &amp; Continue →</button>
+        <button id="consentAgreeBtn" onclick="handleConsentAgree()" style="padding:10px 24px;background:#1E5FA8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;opacity:0.4;transition:opacity 0.15s;">I Agree &amp; Continue →</button>
       </div>
     </div>
   </div>
@@ -1374,20 +1374,27 @@ document.addEventListener('click', e => {
 const CONSENT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwtZJM9ZjeIwx8r_pDCniyVfbL6Vq12wEiVL-DZTmB9zJMGe0_27GnRcV8xWdQqfD5Uxg/exec';
 
 function updateConsentBtn() {
-  const allChecked = ['chk1','chk2','chk3','chk4'].every(id => document.getElementById(id).checked);
-  const hasName = document.getElementById('consentName').value.trim().length > 0;
-  const hasEmpId = document.getElementById('consentEmpId').value.trim().length > 0;
+  const c1 = document.getElementById('chk1') && document.getElementById('chk1').checked;
+  const c2 = document.getElementById('chk2') && document.getElementById('chk2').checked;
+  const c3 = document.getElementById('chk3') && document.getElementById('chk3').checked;
+  const c4 = document.getElementById('chk4') && document.getElementById('chk4').checked;
+  const nameEl = document.getElementById('consentName');
+  const empEl = document.getElementById('consentEmpId');
+  const hasName = nameEl && nameEl.value.trim().length > 0;
+  const hasEmpId = empEl && empEl.value.trim().length > 0;
   const btn = document.getElementById('consentAgreeBtn');
-  const ok = allChecked && hasName && hasEmpId;
+  if (!btn) return;
+  const ok = c1 && c2 && c3 && c4 && hasName && hasEmpId;
   btn.disabled = !ok;
   btn.style.opacity = ok ? '1' : '0.4';
   btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+  btn.style.pointerEvents = ok ? 'auto' : 'none';
 }
 
 async function handleConsentAgree() {
   const btn = document.getElementById('consentAgreeBtn');
   btn.disabled = true;
-  btn.textContent = '처리 중...';
+  btn.textContent = 'Processing...';
 
   const email = _currentEmail;
   const full_name = document.getElementById('consentName').value.trim();
