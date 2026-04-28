@@ -674,25 +674,20 @@ window.exportCSV = function() {
 
 // ── Consent Records ───────────────────────────────────────────
 async function renderConsentLogs() {
-  // 철회된 계정 목록 먼저 로드
-  let revokedEmails = new Set();
-  try {
-    const { data } = await _supabase.from('consent_revoked').select('email');
-    if (data) data.forEach(r => revokedEmails.add(r.email));
-  } catch(e) {}
-
-  document.getElementById('consentCountInfo').textContent = `${allConsents.length}명 동의 완료 / ${revokedEmails.size}명 철회됨`;
+  const activeCount = allConsents.filter(c => !c.revoked_at).length;
+  const revokedCount = allConsents.filter(c => c.revoked_at).length;
+  document.getElementById('consentCountInfo').textContent = `${activeCount}건 활성 / ${revokedCount}건 철회됨 (전체 ${allConsents.length}건)`;
   if (!allConsents.length) {
     document.getElementById('consentTable').innerHTML = '<div class="empty-state">동의 기록 없음</div>';
     return;
   }
   document.getElementById('consentTable').innerHTML = allConsents.map(c => {
     const ts = c.consented_at ? new Date(c.consented_at).toLocaleString('ko-KR') : '—';
-    const isRevoked = revokedEmails.has(c.email);
+    const isRevoked = !!c.revoked_at;
     const rowStyle = isRevoked ? 'opacity:0.5;' : '';
     const revokeBtn = isRevoked
-      ? `<span style="font-size:11px;color:var(--text-danger);font-weight:600;">철회됨</span>`
-      : `<button onclick="revokeConsent('${c.email}')" style="padding:4px 10px;background:var(--bg-danger);border:none;border-radius:6px;font-size:11px;color:var(--text-danger);cursor:pointer;font-weight:600;">철회</button>`;
+      ? `<span style="font-size:11px;color:var(--text-danger);font-weight:600;padding:4px 10px;background:var(--bg-danger);border-radius:6px;display:inline-block;">철회됨</span>`
+      : `<button onclick="revokeConsent('${c.id}','${c.email}')" style="padding:4px 10px;background:var(--bg-danger);border:none;border-radius:6px;font-size:11px;color:var(--text-danger);cursor:pointer;font-weight:600;">철회</button>`;
     return `<div class="table-row" style="grid-template-columns:2fr 1.2fr 1fr 1.2fr 0.8fr 0.8fr;${rowStyle}">
       <div style="font-size:13px;font-weight:500;">${c.email||'—'}</div>
       <div style="font-size:13px;">${c.full_name||'—'}</div>
@@ -704,11 +699,15 @@ async function renderConsentLogs() {
   }).join('');
 }
 
-window.revokeConsent = async function(email) {
-  if (!confirm(`${email} 의 동의를 철회하시겠습니까?\n해당 계정은 다음 로그인 시 동의서를 다시 작성해야 합니다.`)) return;
+window.revokeConsent = async function(id, email) {
+  if (!confirm(`${email} 의 해당 동의를 철회하시겠습니까?\n다음 로그인 시 동의서를 다시 작성해야 합니다.`)) return;
   try {
-    // consent_logs는 유지, consent_revoked에만 기록
+    // 해당 row만 revoked_at 표시 + consent_revoked에 이메일 기록
+    await _supabase.from('consent_logs').update({ revoked_at: new Date().toISOString() }).eq('id', id);
     await _supabase.from('consent_revoked').upsert({ email, revoked_at: new Date().toISOString() });
+    // 로컬 데이터 업데이트
+    const target = allConsents.find(c => c.id === id);
+    if (target) target.revoked_at = new Date().toISOString();
     renderConsentLogs();
   } catch(e) {
     alert('오류가 발생했습니다: ' + e.message);
