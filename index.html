@@ -430,6 +430,117 @@
 </div>
 
 <!-- Supabase SDK -->
+
+<!-- ── Privacy Notice & Consent Popup ── -->
+<div id="consentOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:300;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:640px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.4);">
+    <div style="background:#1B2A4A;padding:22px 26px 18px;flex-shrink:0;">
+      <div style="font-size:11px;font-weight:600;color:#93C5FD;letter-spacing:0.5px;margin-bottom:8px;">🔒 INTERNAL USE ONLY</div>
+      <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:4px;">Privacy Notice &amp; Consent Declaration</div>
+      <div style="font-size:12px;color:#94A3B8;">Tire Claim Calculator Pro · Continental Korea (CTK TCS Team)</div>
+    </div>
+    <div style="overflow-y:auto;padding:20px 24px;flex:1;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;">
+      <div style="background:#EFF6FF;border-left:3px solid #1E5FA8;border-radius:0 8px 8px 0;padding:11px 14px;font-size:13px;color:#1E293B;line-height:1.6;margin-bottom:18px;">
+        This tool processes personal information in accordance with the <strong>Korea Personal Information Protection Act (PIPA)</strong>. Please read the notice below and consent before proceeding.<br>
+        <span style="font-size:11px;color:#64748B;">Logged in as: <span id="consentEmail" style="font-weight:600;"></span></span>
+      </div>
+      <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:14px;">
+        <div style="background:#F8FAFC;padding:10px 14px;border-bottom:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#1B2A4A;">📋 1. Personal Information Collected</div>
+        <div style="padding:12px 14px;font-size:12.5px;color:#475569;line-height:1.65;"><ul style="padding-left:16px;margin:0;">
+          <li style="margin-bottom:4px;"><strong style="color:#1E5FA8;">Work email address</strong> — identity verification via OTP authentication and access control</li>
+          <li style="margin-bottom:4px;"><strong style="color:#1E5FA8;">Session data</strong> — login time, session duration, and in-tool activity</li>
+          <li style="margin-bottom:4px;"><strong style="color:#1E5FA8;">Access &amp; action logs</strong> — pages visited and actions performed within the tool</li>
+          <li><strong style="color:#1E5FA8;">Approximate location data</strong> — city/region and country, derived from IP address at login (ipapi.co)</li>
+        </ul></div>
+      </div>
+      <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:14px;">
+        <div style="background:#F8FAFC;padding:10px 14px;border-bottom:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#1B2A4A;">🎯 2. Purpose of Processing</div>
+        <div style="padding:12px 14px;font-size:12.5px;color:#475569;line-height:1.65;"><ul style="padding-left:16px;margin:0;">
+          <li style="margin-bottom:4px;"><strong style="color:#0D9488;">Authentication &amp; access control</strong> — to verify that only authorised Continental employees can access the tool</li>
+          <li style="margin-bottom:4px;"><strong style="color:#0D9488;">Security monitoring &amp; anomaly detection</strong> — location data is used to detect abnormal access patterns (e.g. a Seoul-based account logging in from overseas will be flagged for review)</li>
+          <li style="margin-bottom:4px;"><strong style="color:#0D9488;">Usage analytics &amp; abuse prevention</strong> — session and access logs used to monitor for misuse and track performance metrics</li>
+          <li><strong style="color:#0D9488;">Admin oversight</strong> — authorised administrators can review session and access logs via the admin portal</li>
+        </ul></div>
+      </div>
+      <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:14px;">
+        <div style="background:#F8FAFC;padding:10px 14px;border-bottom:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#1B2A4A;">🗓️ 3. Data Retention Period</div>
+        <div style="padding:12px 14px;font-size:12.5px;color:#475569;line-height:1.65;">
+          <span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-right:4px;">Work email</span>
+          <span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-right:4px;">Session logs</span>
+          <span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-right:4px;">Access logs</span>
+          <span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;">Location data</span>
+          <br><br>Maximum retention period: <strong style="color:#D97706;">6 months</strong> from the date of collection, after which data is automatically and permanently deleted. Aggregate, non-identifiable usage statistics may be retained beyond this period for KPI tracking purposes.
+        </div>
+      </div>
+      <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:14px;">
+        <div style="background:#F8FAFC;padding:10px 14px;border-bottom:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#1B2A4A;">👁️ 4. Admin Portal &amp; Employee Monitoring</div>
+        <div style="padding:12px 14px;font-size:12.5px;color:#475569;line-height:1.65;">
+          Your tool usage is monitored and logged. In the event of a suspected policy violation or security incident, access may be suspended. <strong style="color:#1E293B;">Any such decision requires prior review and written approval from the following designated persons:</strong>
+          <ul style="padding-left:16px;margin:8px 0 0;">
+            <li style="margin-bottom:4px;">JinSeong Kim – Marketing Manager</li>
+            <li>Nikolaos Kyriazopoulos – Market Manager</li>
+          </ul>
+        </div>
+      </div>
+      <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:14px;">
+        <div style="background:#F8FAFC;padding:10px 14px;border-bottom:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#1B2A4A;">🌐 5. Cross-Border Data Transfer</div>
+        <div style="padding:12px 14px;font-size:12.5px;color:#475569;line-height:1.65;">
+          This tool operates using <strong>Supabase</strong> (cloud database) and <strong>ipapi.co</strong> (location data API). Personal information is processed through these services solely for the purposes stated above. Infrastructure may be located outside the Republic of Korea, which constitutes a cross-border transfer under PIPA.<br><br>
+          <span style="background:#DBEAFE;color:#1E5FA8;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-right:4px;">Transfer destination</span> Supabase · ipapi.co (global infrastructure)<br>
+          <span style="background:#DBEAFE;color:#1E5FA8;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-right:4px;">Safeguards</span> AES-256 encryption · RLS · Employee consent obtained via this declaration
+        </div>
+      </div>
+      <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:6px;">
+        <div style="background:#F8FAFC;padding:10px 14px;border-bottom:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#1B2A4A;">✅ 6. Your Rights &amp; Contact</div>
+        <div style="padding:12px 14px;font-size:12.5px;color:#475569;line-height:1.65;">
+          Under PIPA, you have the right to request access to, correction of, or deletion of your personal information. You also have the right to withdraw your consent at any time. Please note that withdrawal of consent may result in suspension of your access to this tool.<br><br>
+          <div style="background:#DCFCE7;border-radius:8px;padding:10px 14px;">
+            <strong style="color:#1B2A4A;">Jaehong Park</strong> · Korea TCS Manager<br>
+            <a href="mailto:Jaehong.Park@continental.com" style="color:#1E5FA8;font-size:12px;">Jaehong.Park@continental.com</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="background:#F8FAFC;border-top:1px solid #E2E8F0;padding:18px 24px;flex-shrink:0;">
+      <div style="background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+        <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;cursor:pointer;">
+          <input type="checkbox" id="chk1" onchange="updateConsentBtn()" style="width:16px;height:16px;margin-top:2px;accent-color:#1E5FA8;flex-shrink:0;">
+          <span style="font-size:12.5px;color:#475569;line-height:1.55;">I confirm that I have read and understood the Privacy Notice above, including the purposes for which my personal information is collected and processed.</span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;cursor:pointer;">
+          <input type="checkbox" id="chk2" onchange="updateConsentBtn()" style="width:16px;height:16px;margin-top:2px;accent-color:#1E5FA8;flex-shrink:0;">
+          <span style="font-size:12.5px;color:#475569;line-height:1.55;">I <strong style="color:#1E293B;">consent to the collection and processing</strong> of my personal information as described in this notice.</span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;cursor:pointer;">
+          <input type="checkbox" id="chk3" onchange="updateConsentBtn()" style="width:16px;height:16px;margin-top:2px;accent-color:#1E5FA8;flex-shrink:0;">
+          <span style="font-size:12.5px;color:#475569;line-height:1.55;">I <strong style="color:#1E293B;">consent to the cross-border transfer</strong> of my personal information to Supabase and ipapi.co (outside the Republic of Korea).</span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+          <input type="checkbox" id="chk4" onchange="updateConsentBtn()" style="width:16px;height:16px;margin-top:2px;accent-color:#1E5FA8;flex-shrink:0;">
+          <span style="font-size:12.5px;color:#475569;line-height:1.55;">I acknowledge that my <strong style="color:#1E293B;">tool usage is monitored and logged</strong> via the admin portal, and I understand the conditions under which my access may be reviewed or suspended.</span>
+        </label>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:14px;">
+        <div style="flex:1.2;">
+          <div style="font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:5px;">Full Name *</div>
+          <input type="text" id="consentName" placeholder="Jaehong Park" oninput="updateConsentBtn()" style="width:100%;padding:8px 11px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:13px;outline:none;color:#1E293B;">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:5px;">Employee ID *</div>
+          <input type="text" id="consentEmpId" placeholder="600042" oninput="updateConsentBtn()" style="width:100%;padding:8px 11px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:13px;outline:none;color:#1E293B;">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:5px;">Date</div>
+          <input type="text" id="consentDate" readonly style="width:100%;padding:8px 11px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:13px;background:#F8FAFC;color:#94A3B8;">
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;">
+        <button id="consentAgreeBtn" onclick="handleConsentAgree()" style="padding:10px 24px;background:#1E5FA8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:not-allowed;opacity:0.4;transition:opacity 0.15s;pointer-events:none;">I Agree &amp; Continue</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
