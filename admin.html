@@ -147,6 +147,7 @@
         <button class="search-tab active" id="tab-access" onclick="switchTab('access')" style="flex:none;padding:8px 20px;">접속 로그</button>
         <button class="search-tab" id="tab-action" onclick="switchTab('action')" style="flex:none;padding:8px 20px;">액션 로그</button>
         <button class="search-tab" id="tab-stats" onclick="switchTab('stats')" style="flex:none;padding:8px 20px;">📊 통계 · KPI</button>
+        <button class="search-tab" id="tab-consent" onclick="switchTab('consent')" style="flex:none;padding:8px 20px;">🔒 동의 현황</button>
         <button class="refresh-btn" onclick="loadAll()" style="margin-left:auto;">↻ 새로고침</button>
       </div>
 
@@ -182,6 +183,20 @@
       <div id="panel-stats" class="hidden">
         <div id="statsPanel"><div class="loading-state">로딩 중...</div></div>
       </div>
+
+      <!-- 동의 현황 -->
+      <div id="panel-consent" class="hidden">
+        <div style="display:flex;align-items:center;margin-bottom:8px;">
+          <div class="count-info" id="consentCountInfo" style="margin-bottom:0;flex:1;"></div>
+          <button onclick="exportConsentCSV()" style="padding:5px 12px;background:none;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);cursor:pointer;">📥 CSV</button>
+        </div>
+        <div class="table-wrap">
+          <div class="table-header" style="grid-template-columns:2fr 1.2fr 1fr 1.2fr 0.8fr;">
+            <div>이메일</div><div>성명</div><div>사번</div><div>동의 시각</div><div>PDF</div>
+          </div>
+          <div id="consentTable"><div class="loading-state">로딩 중...</div></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -196,7 +211,7 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }
 });
 
-let allLogs = [], allActions = [], allSessions = [], selectedUser = null, currentTab = 'access';
+let allLogs = [], allActions = [], allSessions = [], allConsents = [], selectedUser = null, currentTab = 'access';
 const bannedUsers = new Set();
 const excludedFromKPI = new Set();
 
@@ -322,12 +337,13 @@ window.resetAuth = resetAuth;
 // ── Tab ───────────────────────────────────────────────────────
 window.switchTab = function(tab) {
   currentTab = tab;
-  ['access','action','stats'].forEach(t => {
+  ['access','action','stats','consent'].forEach(t => {
     document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
     document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
   });
   if (tab === 'access') renderAccessLogs();
   else if (tab === 'action') renderActionLogs();
+  else if (tab === 'consent') renderConsentLogs();
   else renderStats();
 };
 
@@ -336,11 +352,13 @@ window.loadAll = async function() {
   document.getElementById('logTable').innerHTML = '<div class="loading-state">로딩 중...</div>';
   document.getElementById('actionTable').innerHTML = '<div class="loading-state">로딩 중...</div>';
   try {
-    const [accessRes, actionRes, sessionRes] = await Promise.all([
+    const [accessRes, actionRes, sessionRes, consentRes] = await Promise.all([
       _supabase.from('access_logs').select('*').order('created_at', { ascending: false }).limit(500),
       _supabase.from('action_logs').select('*').order('created_at', { ascending: false }).limit(500),
-      _supabase.from('sessions').select('*').order('session_start', { ascending: false }).limit(500)
+      _supabase.from('sessions').select('*').order('session_start', { ascending: false }).limit(500),
+      _supabase.from('consent_logs').select('*').order('consented_at', { ascending: false })
     ]);
+    allConsents = consentRes.error ? [] : consentRes.data;
     if (accessRes.error) throw accessRes.error;
     if (actionRes.error) throw actionRes.error;
     allLogs = accessRes.data;
@@ -652,6 +670,84 @@ window.exportCSV = function() {
 
   downloadCSV(rows, `TCS_KPI_${new Date().toISOString().slice(0,10)}.csv`);
 };
+
+
+// ── Consent Records ───────────────────────────────────────────
+function renderConsentLogs() {
+  document.getElementById('consentCountInfo').textContent = `${allConsents.length}명 동의 완료`;
+  if (!allConsents.length) {
+    document.getElementById('consentTable').innerHTML = '<div class="empty-state">동의 기록 없음</div>';
+    return;
+  }
+  document.getElementById('consentTable').innerHTML = allConsents.map(c => {
+    const ts = c.consented_at ? new Date(c.consented_at).toLocaleString('ko-KR') : '—';
+    return `<div class="table-row" style="grid-template-columns:2fr 1.2fr 1fr 1.2fr 0.8fr;">
+      <div style="font-size:13px;font-weight:500;">${c.email||'—'}</div>
+      <div style="font-size:13px;">${c.full_name||'—'}</div>
+      <div style="font-size:12px;color:var(--text-secondary);">${c.employee_id||'—'}</div>
+      <div style="font-size:12px;color:var(--text-secondary);">${ts}</div>
+      <div><button onclick="printConsentPDF(${JSON.stringify(c).replace(/"/g,'&quot;')})" style="padding:4px 10px;background:none;border:0.5px solid var(--border-strong);border-radius:6px;font-size:11px;color:var(--text-secondary);cursor:pointer;">🖨️ PDF</button></div>
+    </div>`;
+  }).join('');
+}
+
+window.printConsentPDF = function(c) {
+  const ts = c.consented_at ? new Date(c.consented_at).toLocaleString('ko-KR') : '—';
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <html><head><title>Consent – ${c.full_name}</title>
+    <style>
+      body{font-family:sans-serif;padding:32px;max-width:680px;margin:0 auto;}
+      h1{font-size:22px;color:#1B2A4A;margin-bottom:4px;}
+      .sub{font-size:12px;color:#94A3B8;margin-bottom:24px;}
+      .section{margin-bottom:16px;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;}
+      .sh{background:#F8FAFC;padding:8px 14px;font-size:12px;font-weight:600;color:#1B2A4A;border-bottom:1px solid #E2E8F0;}
+      .sb{padding:10px 14px;font-size:12px;color:#475569;line-height:1.6;}
+      .sig{margin-top:24px;border:1px solid #E2E8F0;border-radius:8px;padding:16px;}
+      .field{display:inline-block;margin-right:32px;margin-bottom:8px;}
+      .fl{font-size:10px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.4px;}
+      .fv{font-size:14px;font-weight:600;color:#1B2A4A;margin-top:2px;border-bottom:1px solid #CBD5E1;padding-bottom:2px;min-width:160px;}
+      .chk{margin-bottom:6px;font-size:12px;color:#475569;}
+      @media print{button{display:none}}
+    </style></head><body>
+    <div style="background:#1B2A4A;padding:16px 20px;border-radius:8px;margin-bottom:20px;">
+      <div style="font-size:10px;color:#93C5FD;font-weight:600;letter-spacing:0.5px;margin-bottom:6px;">🔒 INTERNAL USE ONLY</div>
+      <h1 style="color:#fff;margin:0 0 4px;">Privacy Notice &amp; Consent Declaration</h1>
+      <div style="font-size:11px;color:#94A3B8;">Tire Claim Calculator Pro · Continental Korea (CTK TCS Team)</div>
+    </div>
+    <div class="section"><div class="sh">1. 수집하는 개인정보</div><div class="sb">이메일 주소, 세션 데이터, 접근 및 액션 로그, 위치 데이터 (IP 기반 도시/지역/국가)</div></div>
+    <div class="section"><div class="sh">2. 수집 목적</div><div class="sb">인증 및 접근 제어 · 보안 모니터링 및 이상 감지 · 사용 분석 및 어뷰징 방지 · 관리자 감독</div></div>
+    <div class="section"><div class="sh">3. 보존 기간</div><div class="sb">최대 <strong>6개월</strong> 보존 후 자동 삭제. 비식별화된 집계 통계는 KPI 목적으로 별도 보관.</div></div>
+    <div class="section"><div class="sh">4. 어드민 포털 및 모니터링</div><div class="sb">툴 사용 현황은 어드민 포털을 통해 모니터링됩니다. 접근 제한 결정은 JinSeong Kim (Marketing Manager) → Nikolaos Kyriazopoulos (Market Manager) 순차 승인 필요.</div></div>
+    <div class="section"><div class="sh">5. 국외 데이터 이전</div><div class="sb">Supabase 및 ipapi.co (글로벌 인프라, 대한민국 외) 사용. AES-256 암호화 · RLS 적용.</div></div>
+    <div class="section"><div class="sh">6. 귀하의 권리</div><div class="sb">열람·정정·삭제 요청 및 동의 철회 가능. 동의 철회 시 툴 접근 제한될 수 있음.<br>연락처: <strong>Jaehong Park</strong> · Jaehong.Park@continental.com</div></div>
+    <div class="sig">
+      <div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:12px;">동의 선언</div>
+      <div class="chk">☑ 본 개인정보 처리방침을 읽고 이해하였으며, 개인정보 수집 및 처리 목적에 동의합니다.</div>
+      <div class="chk">☑ 개인정보 수집 및 처리에 동의합니다.</div>
+      <div class="chk">☑ 개인정보의 국외 이전 (Supabase 및 ipapi.co)에 동의합니다.</div>
+      <div class="chk">☑ 어드민 포털을 통한 모니터링 및 기록에 동의합니다.</div>
+      <br>
+      <div class="field"><div class="fl">성명</div><div class="fv">${c.full_name||''}</div></div>
+      <div class="field"><div class="fl">사번</div><div class="fv">${c.employee_id||''}</div></div>
+      <div class="field"><div class="fl">이메일</div><div class="fv">${c.email||''}</div></div>
+      <div class="field"><div class="fl">동의 시각</div><div class="fv">${ts}</div></div>
+    </div>
+    <div style="text-align:center;margin-top:24px;font-size:10px;color:#94A3B8;">Continental Korea · CTK TCS Team · Confidential</div>
+    <div style="text-align:center;margin-top:12px;"><button onclick="window.print()" style="padding:8px 20px;background:#1B2A4A;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨️ PDF로 저장</button></div>
+    </body></html>`);
+  win.document.close();
+};
+
+window.exportConsentCSV = function() {
+  const rows = [['이메일', '성명', '사번', '동의 시각']];
+  allConsents.forEach(c => {
+    const ts = c.consented_at ? new Date(c.consented_at).toLocaleString('ko-KR') : '—';
+    rows.push([c.email||'—', c.full_name||'—', c.employee_id||'—', ts]);
+  });
+  downloadCSV(rows, `TCS_Consent_Records_${new Date().toISOString().slice(0,10)}.csv`);
+};
+
 
 window.exportPDF = function() {
   const printWin = window.open('', '_blank');

@@ -530,12 +530,26 @@ function showAuthScreen() {
 function showApp(email) {
   _currentEmail = email;
   document.getElementById('authScreen').style.display = 'none';
+  const consentKey = 'tcs_consent_' + email;
+  if (!localStorage.getItem(consentKey)) {
+    showConsentPopup(email);
+  } else {
+    launchApp(email);
+  }
+}
+function launchApp(email) {
   document.getElementById('mainApp').classList.remove('hidden');
   document.getElementById('userBar').classList.remove('hidden');
   document.getElementById('userEmail').textContent = email;
   startSession(email);
   startHeartbeat();
   loadData();
+}
+function showConsentPopup(email) {
+  document.getElementById('consentEmail').textContent = email;
+  document.getElementById('consentOverlay').style.display = 'flex';
+  const today = new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('consentDate').value = today;
 }
 function showAuthError(msg) {
   const el = document.getElementById('authStatus');
@@ -1227,5 +1241,186 @@ document.addEventListener('click', e => {
   }
 });
 </script>
+
+<!-- ── Privacy Notice & Consent Popup ─────────────────────── -->
+<div id="consentOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:300;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:640px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.4);">
+    <!-- Header -->
+    <div style="background:#1B2A4A;padding:22px 26px 18px;flex-shrink:0;">
+      <div style="font-size:11px;font-weight:600;color:#93C5FD;letter-spacing:0.5px;margin-bottom:8px;">🔒 INTERNAL USE ONLY</div>
+      <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:4px;">Privacy Notice &amp; Consent Declaration</div>
+      <div style="font-size:12px;color:#94A3B8;">Tire Claim Calculator Pro · Continental Korea (CTK TCS Team)</div>
+    </div>
+    <!-- Scrollable body -->
+    <div style="overflow-y:auto;padding:20px 24px;flex:1;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;">
+      <!-- Intro -->
+      <div style="background:#EFF6FF;border-left:3px solid #1E5FA8;border-radius:0 8px 8px 0;padding:11px 14px;font-size:13px;color:#1E293B;line-height:1.6;margin-bottom:18px;">
+        이 툴은 <strong>개인정보 보호법(PIPA)</strong>에 따라 개인정보를 처리합니다. 아래 내용을 읽고 동의 후 사용하실 수 있습니다.<br>
+        <span style="font-size:11px;color:#64748B;">접속 계정: <span id="consentEmail" style="font-weight:600;"></span></span>
+      </div>
+      <!-- Section 1 -->
+      <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:14px;">
+        <div style="background:#F8FAFC;padding:10px 14px;border-bottom:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#1B2A4A;">📋 1. 수집하는 개인정보</div>
+        <div style="padding:12px 14px;font-size:12.5px;color:#475569;line-height:1.65;">
+          <ul style="padding-left:16px;margin:0;">
+            <li style="margin-bottom:4px;"><strong style="color:#1E5FA8;">이메일 주소</strong> — OTP 인증을 통한 본인 확인 및 접근 제어</li>
+            <li style="margin-bottom:4px;"><strong style="color:#1E5FA8;">세션 데이터</strong> — 로그인 시간, 세션 지속 시간, 툴 내 활동</li>
+            <li style="margin-bottom:4px;"><strong style="color:#1E5FA8;">접근 및 액션 로그</strong> — 방문 페이지 및 툴 내 수행 작업</li>
+            <li><strong style="color:#1E5FA8;">위치 데이터</strong> — 로그인 시 IP 주소 기반 도시/지역/국가 (ipapi.co)</li>
+          </ul>
+        </div>
+      </div>
+      <!-- Section 2 -->
+      <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:14px;">
+        <div style="background:#F8FAFC;padding:10px 14px;border-bottom:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#1B2A4A;">🎯 2. 수집 목적</div>
+        <div style="padding:12px 14px;font-size:12.5px;color:#475569;line-height:1.65;">
+          <ul style="padding-left:16px;margin:0;">
+            <li style="margin-bottom:4px;"><strong style="color:#0D9488;">인증 및 접근 제어</strong> — Continental 임직원만 툴에 접근할 수 있도록 인증</li>
+            <li style="margin-bottom:4px;"><strong style="color:#0D9488;">보안 모니터링 및 이상 감지</strong> — 위치 데이터를 통해 비정상 접속 패턴 탐지 (예: 서울 기반 계정이 해외에서 접속 시 플래그)</li>
+            <li style="margin-bottom:4px;"><strong style="color:#0D9488;">사용 분석 및 어뷰징 방지</strong> — 세션 및 접근 로그를 통한 악용 방지 및 성능 지표 추적</li>
+            <li><strong style="color:#0D9488;">관리자 감독</strong> — 어드민 포털을 통한 세션 및 접근 로그 검토</li>
+          </ul>
+        </div>
+      </div>
+      <!-- Section 3 -->
+      <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:14px;">
+        <div style="background:#F8FAFC;padding:10px 14px;border-bottom:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#1B2A4A;">🗓️ 3. 보존 기간</div>
+        <div style="padding:12px 14px;font-size:12.5px;color:#475569;line-height:1.65;">
+          <span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-right:4px;">이메일</span>
+          <span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-right:4px;">세션 로그</span>
+          <span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-right:4px;">접근 로그</span>
+          <span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;">위치 데이터</span>
+          <br><br>
+          최대 보존 기간: <strong style="color:#D97706;">6개월</strong>. 이후 자동 영구 삭제됩니다. 비식별화된 집계 통계는 KPI 추적 목적으로 별도 보관될 수 있습니다.
+        </div>
+      </div>
+      <!-- Section 4 -->
+      <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:14px;">
+        <div style="background:#F8FAFC;padding:10px 14px;border-bottom:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#1B2A4A;">👁️ 4. 어드민 포털 및 모니터링</div>
+        <div style="padding:12px 14px;font-size:12.5px;color:#475569;line-height:1.65;">
+          툴 사용 현황은 어드민 포털을 통해 모니터링됩니다. 정책 위반 또는 보안 사고 발생 시 접근이 제한될 수 있으며, <strong style="color:#1E293B;">모든 접근 제한 결정은 아래 지정된 담당자의 사전 검토 및 승인이 필요합니다:</strong>
+          <ul style="padding-left:16px;margin:8px 0 0;">
+            <li style="margin-bottom:4px;">JinSeong Kim – Marketing Manager</li>
+            <li>Nikolaos Kyriazopoulos – Market Manager</li>
+          </ul>
+        </div>
+      </div>
+      <!-- Section 5 -->
+      <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:14px;">
+        <div style="background:#F8FAFC;padding:10px 14px;border-bottom:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#1B2A4A;">🌐 5. 국외 데이터 이전</div>
+        <div style="padding:12px 14px;font-size:12.5px;color:#475569;line-height:1.65;">
+          본 툴은 <strong>Supabase</strong>(클라우드 데이터베이스)와 <strong>ipapi.co</strong>(위치 데이터 API)를 사용합니다. 개인정보는 위에 명시된 목적에 한하여 처리되며, 해당 인프라는 대한민국 외부에 위치할 수 있습니다(PIPA상 국외 이전 해당).
+          <br><br>
+          <span style="background:#DBEAFE;color:#1E5FA8;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-right:4px;">이전 대상</span> Supabase · ipapi.co (글로벌 인프라)<br>
+          <span style="background:#DBEAFE;color:#1E5FA8;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-right:4px;">보호 조치</span> AES-256 암호화 · RLS · 본 동의서를 통한 임직원 동의
+        </div>
+      </div>
+      <!-- Section 6 -->
+      <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:6px;">
+        <div style="background:#F8FAFC;padding:10px 14px;border-bottom:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#1B2A4A;">✅ 6. 귀하의 권리 및 연락처</div>
+        <div style="padding:12px 14px;font-size:12.5px;color:#475569;line-height:1.65;">
+          개인정보 보호법에 따라 귀하는 개인정보에 대한 열람, 정정, 삭제를 요청할 권리가 있습니다. 또한 언제든지 동의를 철회할 수 있으며, 동의 철회 시 툴 접근이 제한될 수 있습니다.
+          <br><br>
+          <div style="background:#DCFCE7;border-radius:8px;padding:10px 14px;">
+            <strong style="color:#1B2A4A;">Jaehong Park</strong> · Korea TCS Manager<br>
+            <a href="mailto:Jaehong.Park@continental.com" style="color:#1E5FA8;font-size:12px;">Jaehong.Park@continental.com</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Consent + Signature -->
+    <div style="background:#F8FAFC;border-top:1px solid #E2E8F0;padding:18px 24px;flex-shrink:0;">
+      <div style="background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+        <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;cursor:pointer;">
+          <input type="checkbox" id="chk1" onchange="updateConsentBtn()" style="width:16px;height:16px;margin-top:2px;accent-color:#1E5FA8;flex-shrink:0;">
+          <span style="font-size:12.5px;color:#475569;line-height:1.55;">본 개인정보 처리방침을 읽고 이해하였으며, 개인정보 수집 및 처리 목적에 동의합니다.</span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;cursor:pointer;">
+          <input type="checkbox" id="chk2" onchange="updateConsentBtn()" style="width:16px;height:16px;margin-top:2px;accent-color:#1E5FA8;flex-shrink:0;">
+          <span style="font-size:12.5px;color:#475569;line-height:1.55;">개인정보 <strong style="color:#1E293B;">수집 및 처리</strong>에 동의합니다.</span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;cursor:pointer;">
+          <input type="checkbox" id="chk3" onchange="updateConsentBtn()" style="width:16px;height:16px;margin-top:2px;accent-color:#1E5FA8;flex-shrink:0;">
+          <span style="font-size:12.5px;color:#475569;line-height:1.55;">개인정보의 <strong style="color:#1E293B;">국외 이전</strong>(Supabase 및 ipapi.co, 대한민국 외)에 동의합니다.</span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+          <input type="checkbox" id="chk4" onchange="updateConsentBtn()" style="width:16px;height:16px;margin-top:2px;accent-color:#1E5FA8;flex-shrink:0;">
+          <span style="font-size:12.5px;color:#475569;line-height:1.55;">어드민 포털을 통해 툴 사용 현황이 <strong style="color:#1E293B;">모니터링 및 기록</strong>됨을 인지하며, 접근 검토 및 제한 조건을 이해합니다.</span>
+        </label>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:14px;">
+        <div style="flex:1.2;">
+          <div style="font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:5px;">성명 *</div>
+          <input type="text" id="consentName" placeholder="Jaehong Park" oninput="updateConsentBtn()" style="width:100%;padding:8px 11px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:13px;outline:none;">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:5px;">사번 *</div>
+          <input type="text" id="consentEmpId" placeholder="600042" oninput="updateConsentBtn()" style="width:100%;padding:8px 11px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:13px;outline:none;">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:5px;">날짜</div>
+          <input type="text" id="consentDate" readonly style="width:100%;padding:8px 11px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:13px;background:#F8FAFC;color:#94A3B8;">
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;">
+        <button id="consentAgreeBtn" disabled onclick="handleConsentAgree()" style="padding:10px 24px;background:#1E5FA8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;opacity:0.4;transition:opacity 0.15s;">동의하고 시작하기 →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CONSENT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwtZJM9ZjeIwx8r_pDCniyVfbL6Vq12wEiVL-DZTmB9zJMGe0_27GnRcV8xWdQqfD5Uxg/exec';
+
+function updateConsentBtn() {
+  const allChecked = ['chk1','chk2','chk3','chk4'].every(id => document.getElementById(id).checked);
+  const hasName = document.getElementById('consentName').value.trim().length > 0;
+  const hasEmpId = document.getElementById('consentEmpId').value.trim().length > 0;
+  const btn = document.getElementById('consentAgreeBtn');
+  const ok = allChecked && hasName && hasEmpId;
+  btn.disabled = !ok;
+  btn.style.opacity = ok ? '1' : '0.4';
+  btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+}
+
+async function handleConsentAgree() {
+  const btn = document.getElementById('consentAgreeBtn');
+  btn.disabled = true;
+  btn.textContent = '처리 중...';
+
+  const email = _currentEmail;
+  const full_name = document.getElementById('consentName').value.trim();
+  const employee_id = document.getElementById('consentEmpId').value.trim();
+  const consented_at = new Date().toISOString();
+
+  try {
+    // 1. Supabase consent_logs 저장
+    await _supabase.from('consent_logs').insert({ email, full_name, employee_id, consented_at });
+
+    // 2. Apps Script로 알림 이메일 발송
+    fetch(CONSENT_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ secret: 'TCS_CONSENT_2026', email, full_name, employee_id, consented_at }),
+      mode: 'no-cors'
+    }).catch(() => {});
+
+    // 3. 로컬에 동의 완료 기록
+    localStorage.setItem('tcs_consent_' + email, consented_at);
+
+    // 4. 팝업 닫고 앱 시작
+    document.getElementById('consentOverlay').style.display = 'none';
+    launchApp(email);
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '동의하고 시작하기 →';
+    btn.style.opacity = '1';
+    alert('오류가 발생했습니다. 다시 시도해주세요.
+' + e.message);
+  }
+}
+</script>
+
 </body>
 </html>
