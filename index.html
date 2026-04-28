@@ -638,13 +638,28 @@ function showAuthScreen() {
   document.getElementById('mainApp').classList.add('hidden');
   document.getElementById('userBar').classList.add('hidden');
 }
-function showApp(email) {
+async function showApp(email) {
   _currentEmail = email;
   document.getElementById('authScreen').style.display = 'none';
+
+  // 1. Supabase에서 동의 철회 여부 확인
+  let isRevoked = false;
+  try {
+    const { data } = await _supabase.from('consent_revoked').select('email').eq('email', email).maybeSingle();
+    if (data) isRevoked = true;
+  } catch(e) {}
+
+  // 2. 동의 철회됐으면 localStorage도 초기화
+  if (isRevoked) {
+    localStorage.removeItem('tcs_consent_' + email);
+  }
+
+  // 3. 동의 여부 판단
   const consentKey = 'tcs_consent_' + email;
   if (!localStorage.getItem(consentKey)) {
     showConsentPopup(email);
   } else {
+    logAccess(email, 'OTP인증');
     launchApp(email);
   }
 }
@@ -1387,8 +1402,9 @@ async function handleConsentAgree() {
   const consented_at = new Date().toISOString();
 
   try {
-    // 1. Supabase consent_logs 저장
+    // 1. Supabase consent_logs 저장 + 철회 기록 삭제
     await _supabase.from('consent_logs').insert({ email, full_name, employee_id, consented_at });
+    await _supabase.from('consent_revoked').delete().eq('email', email);
 
     // 2. Apps Script로 알림 이메일 발송
     fetch(CONSENT_SCRIPT_URL, {

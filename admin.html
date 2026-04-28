@@ -191,8 +191,8 @@
           <button onclick="exportConsentCSV()" style="padding:5px 12px;background:none;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);cursor:pointer;">📥 CSV</button>
         </div>
         <div class="table-wrap">
-          <div class="table-header" style="grid-template-columns:2fr 1.2fr 1fr 1.2fr 0.8fr;">
-            <div>이메일</div><div>성명</div><div>사번</div><div>동의 시각</div><div>PDF</div>
+          <div class="table-header" style="grid-template-columns:2fr 1.2fr 1fr 1.2fr 0.8fr 0.8fr;">
+            <div>이메일</div><div>성명</div><div>사번</div><div>동의 시각</div><div>PDF</div><div>동의 철회</div>
           </div>
           <div id="consentTable"><div class="loading-state">로딩 중...</div></div>
         </div>
@@ -673,23 +673,51 @@ window.exportCSV = function() {
 
 
 // ── Consent Records ───────────────────────────────────────────
-function renderConsentLogs() {
-  document.getElementById('consentCountInfo').textContent = `${allConsents.length}명 동의 완료`;
+async function renderConsentLogs() {
+  // 철회된 계정 목록 먼저 로드
+  let revokedEmails = new Set();
+  try {
+    const { data } = await _supabase.from('consent_revoked').select('email');
+    if (data) data.forEach(r => revokedEmails.add(r.email));
+  } catch(e) {}
+
+  document.getElementById('consentCountInfo').textContent = `${allConsents.length}명 동의 완료 / ${revokedEmails.size}명 철회됨`;
   if (!allConsents.length) {
     document.getElementById('consentTable').innerHTML = '<div class="empty-state">동의 기록 없음</div>';
     return;
   }
   document.getElementById('consentTable').innerHTML = allConsents.map(c => {
     const ts = c.consented_at ? new Date(c.consented_at).toLocaleString('ko-KR') : '—';
-    return `<div class="table-row" style="grid-template-columns:2fr 1.2fr 1fr 1.2fr 0.8fr;">
+    const isRevoked = revokedEmails.has(c.email);
+    const rowStyle = isRevoked ? 'opacity:0.5;' : '';
+    const revokeBtn = isRevoked
+      ? `<span style="font-size:11px;color:var(--text-danger);font-weight:600;">철회됨</span>`
+      : `<button onclick="revokeConsent('${c.email}')" style="padding:4px 10px;background:var(--bg-danger);border:none;border-radius:6px;font-size:11px;color:var(--text-danger);cursor:pointer;font-weight:600;">철회</button>`;
+    return `<div class="table-row" style="grid-template-columns:2fr 1.2fr 1fr 1.2fr 0.8fr 0.8fr;${rowStyle}">
       <div style="font-size:13px;font-weight:500;">${c.email||'—'}</div>
       <div style="font-size:13px;">${c.full_name||'—'}</div>
       <div style="font-size:12px;color:var(--text-secondary);">${c.employee_id||'—'}</div>
       <div style="font-size:12px;color:var(--text-secondary);">${ts}</div>
       <div><button onclick="printConsentPDF(${JSON.stringify(c).replace(/"/g,'&quot;')})" style="padding:4px 10px;background:none;border:0.5px solid var(--border-strong);border-radius:6px;font-size:11px;color:var(--text-secondary);cursor:pointer;">🖨️ PDF</button></div>
+      <div>${revokeBtn}</div>
     </div>`;
   }).join('');
 }
+
+window.revokeConsent = async function(email) {
+  if (!confirm(`${email} 의 동의를 철회하시겠습니까?\n해당 계정은 다음 로그인 시 동의서를 다시 작성해야 합니다.`)) return;
+  try {
+    // consent_logs 삭제
+    await _supabase.from('consent_logs').delete().eq('email', email);
+    // consent_revoked 에 기록
+    await _supabase.from('consent_revoked').upsert({ email, revoked_at: new Date().toISOString() });
+    // 로컬 데이터 업데이트
+    allConsents = allConsents.filter(c => c.email !== email);
+    renderConsentLogs();
+  } catch(e) {
+    alert('오류가 발생했습니다: ' + e.message);
+  }
+};
 
 window.printConsentPDF = function(c) {
   const ts = c.consented_at ? new Date(c.consented_at).toLocaleString('ko-KR') : '—';
