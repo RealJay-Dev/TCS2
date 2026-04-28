@@ -707,12 +707,8 @@ async function renderConsentLogs() {
 window.revokeConsent = async function(email) {
   if (!confirm(`${email} 의 동의를 철회하시겠습니까?\n해당 계정은 다음 로그인 시 동의서를 다시 작성해야 합니다.`)) return;
   try {
-    // consent_logs 삭제
-    await _supabase.from('consent_logs').delete().eq('email', email);
-    // consent_revoked 에 기록
+    // consent_logs는 유지, consent_revoked에만 기록
     await _supabase.from('consent_revoked').upsert({ email, revoked_at: new Date().toISOString() });
-    // 로컬 데이터 업데이트
-    allConsents = allConsents.filter(c => c.email !== email);
     renderConsentLogs();
   } catch(e) {
     alert('오류가 발생했습니다: ' + e.message);
