@@ -655,6 +655,7 @@ function launchApp(email) {
   startSession(email);
   startHeartbeat();
   loadData();
+  logAccess(email, 'OTP인증');
 }
 function showConsentPopup(email) {
   document.getElementById('consentEmail').textContent = email;
