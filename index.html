@@ -1084,6 +1084,11 @@ function onGradeSelect() {
     document.getElementById('selDisc').textContent = (disc * 100).toFixed(1) + '%';
     document.getElementById('selInvoice').textContent = fmt(invoicePrice);
     document.getElementById('invoiceBox').classList.remove('hidden');
+  } else if (!isNaN(lp) && isNaN(disc)) {
+    // List Price는 있지만 할인율 없는 경우
+    document.getElementById('selDisc').textContent = '별도 확인 필요';
+    document.getElementById('selInvoice').textContent = '별도 확인 필요';
+    document.getElementById('invoiceBox').classList.remove('hidden');
   }
   // 가격조회 로그
   logAction({
@@ -1163,6 +1168,12 @@ function calculate() {
     document.getElementById('priceDisc').textContent = (disc * 100).toFixed(1) + '%';
     document.getElementById('priceInvoice').textContent = fmt(Math.round(invoicePrice));
     document.getElementById('priceCredit').textContent = fmt(Math.round(creditAmt));
+  } else if (!isNaN(listPrice) && isNaN(disc)) {
+    // List Price는 있지만 할인율 없는 경우
+    document.getElementById('priceList').textContent = fmt(listPrice);
+    document.getElementById('priceDisc').textContent = '별도 확인 필요';
+    document.getElementById('priceInvoice').textContent = '별도 확인 필요';
+    document.getElementById('priceCredit').textContent = '별도 확인 필요';
   } else {
     document.getElementById('priceList').textContent = '정보 없음';
     document.getElementById('priceDisc').textContent = '—';
