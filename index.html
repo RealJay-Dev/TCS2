@@ -817,9 +817,9 @@ async function loadData() {
 function parseSupabase(rows) {
   db = {};
   for (const row of rows) {
-    if (!row.article || row.ntd == null) continue;
+    if (!row.article) continue;
     db[row.article] = {
-      ntd: parseFloat(row.ntd),
+      ntd: row.ntd != null ? parseFloat(row.ntd) : NaN,
       size: row.size || '',
       pattern: row.pattern || '',
       desc: row.description || '',
@@ -963,7 +963,7 @@ function onSearchInput() {
   dd.innerHTML = matches.map(k => {
     const d = db[k];
     return `<div class="dropdown-item" onclick="selectArticle('${k}')">
-      ${highlight(k, q)}<span>${[d.pattern, d.size].filter(Boolean).join(' · ')} — NTD ${d.ntd}mm</span>
+      ${highlight(k, q)}<span>${[d.pattern, d.size].filter(Boolean).join(' · ')} — NTD ${isNaN(d.ntd) ? '정보없음' : d.ntd+'mm'}</span>
     </div>`;
   }).join('');
   dd.classList.remove('hidden');
@@ -1053,7 +1053,7 @@ function selectArticle(art) {
   document.getElementById('selSize').textContent = db[art].size || '—';
   document.getElementById('selPattern').textContent = db[art].pattern || '—';
   document.getElementById('selLoadSpeed').textContent = db[art].loadSpeed || '—';
-  document.getElementById('selNTD').textContent = db[art].ntd.toFixed(1) + ' mm';
+  document.getElementById('selNTD').textContent = isNaN(db[art].ntd) ? '정보 없음' : db[art].ntd.toFixed(1) + ' mm';
   const lp = db[art].listPrice;
   document.getElementById('selListPrice').textContent = isNaN(lp) ? '정보 없음' : fmt(lp);
   document.getElementById('confirmCheck').checked = false;
@@ -1132,6 +1132,7 @@ function calculate() {
   const ntd = db[selected].ntd;
   const warn = document.getElementById('rtdWarn');
 
+  if (isNaN(ntd)) { warn.textContent = 'NTD 정보가 없습니다. 별도 확인 후 계산하세요.'; warn.classList.remove('hidden'); document.getElementById('sec5').classList.add('hidden'); return; }
   if (isNaN(rtd)) { document.getElementById('sec5').classList.add('hidden'); warn.classList.add('hidden'); return; }
   if (rtd > ntd) { warn.textContent = 'RTD가 NTD보다 클 수 없습니다'; warn.classList.remove('hidden'); document.getElementById('sec5').classList.add('hidden'); return; }
   if (rtd < mtd) { warn.textContent = `RTD가 법적 최소깊이(${mtd}mm)보다 낮습니다`; warn.classList.remove('hidden'); document.getElementById('sec5').classList.add('hidden'); return; }
