@@ -795,15 +795,26 @@ async function loadData() {
     // 인증된 사용자만 가격 포함 전체 조회
     const session = await _supabase.auth.getSession();
     const token = session.data.session?.access_token || SUPABASE_KEY;
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/articles?select=*&limit=2000`, {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const rows = await res.json();
-    parseSupabase(rows);
+    // 전체 데이터 페이지네이션으로 가져오기
+    let allRows = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/articles?select=*&limit=${pageSize}&offset=${from}`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${token}`,
+          'Range-Unit': 'items',
+          'Range': `${from}-${from + pageSize - 1}`
+        }
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const rows = await res.json();
+      allRows = allRows.concat(rows);
+      if (rows.length < pageSize) break;
+      from += pageSize;
+    }
+    parseSupabase(allRows);
   } catch(e) {
     s.className = 'db-status err';
     s.innerHTML = '<div class="dot"></div> 데이터를 불러올 수 없습니다';
