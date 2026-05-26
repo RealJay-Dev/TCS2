@@ -1133,7 +1133,7 @@ function onConfirm() {
 }
 
 // ── Calculate ─────────────────────────────────────────────────
-function roundNearest5(val) { return Math.round(val / 5) * 5; }
+function roundNearest5(val) { return Math.ceil(val / 5) * 5; }
 
 function calculate() {
   if (!selected) return;
