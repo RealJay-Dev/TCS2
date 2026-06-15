@@ -361,9 +361,9 @@ window.loadAll = async function() {
     allConsents = consentRes.error ? [] : consentRes.data;
     if (accessRes.error) throw accessRes.error;
     if (actionRes.error) throw actionRes.error;
-    allLogs = accessRes.data;
+    allLogs = accessRes.data.filter(l => l.email !== 'system@ping.internal');
     allActions = actionRes.data;
-    allSessions = sessionRes.error ? [] : sessionRes.data;
+    allSessions = (sessionRes.error ? [] : sessionRes.data).filter(s => s.email !== 'system@ping.internal');
 
     // banned users 로드
     const bannedRes = await _supabase.from('banned_users').select('email');
