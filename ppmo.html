@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PPMo">
+<title>TCS Korea Workplace · PPMo</title>
+<style>
+  :root {
+    --bg: #ffffff; --bg-secondary: #f5f5f4; --bg-success: #eaf3de;
+    --bg-warning: #faeeda; --bg-danger: #fcebeb; --bg-info: #e6f1fb;
+    --text: #1a1a18; --text-secondary: #5f5e5a; --text-tertiary: #888780;
+    --text-success: #3b6d11; --text-warning: #854f0b; --text-danger: #a32d2d;
+    --text-info: #185fa5; --border: rgba(0,0,0,0.12); --border-strong: rgba(0,0,0,0.25);
+    --radius: 12px; --radius-sm: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg-secondary: #2a2a28; --bg-success: #173404;
+      --bg-warning: #412402; --bg-danger: #501313; --bg-info: #042c53;
+      --text: #f0ede8; --text-secondary: #b4b2a9; --text-tertiary: #888780;
+      --text-success: #c0dd97; --text-warning: #fac775; --text-danger: #f7c1c1;
+      --text-info: #b5d4f4; --border: rgba(255,255,255,0.1); --border-strong: rgba(255,255,255,0.22);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: var(--bg-secondary); color: var(--text); min-height: 100vh; }
+  .hidden { display: none !important; }
+
+  /* Auth */
+  #authScreen { position: fixed; inset: 0; background: var(--bg-secondary); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .auth-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 32px 24px; width: 100%; max-width: 360px; }
+  .auth-logo { font-size: 13px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 24px; }
+  .auth-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .auth-sub { font-size: 14px; color: var(--text-secondary); margin-bottom: 28px; line-height: 1.5; }
+  .auth-btn { width: 100%; padding: 14px; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; }
+  .auth-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .auth-status { margin-top: 16px; padding: 12px 14px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.5; }
+  .auth-status.err { background: var(--bg-danger); color: var(--text-danger); }
+  input[type=text], input[type=number], select, textarea {
+    width: 100%; padding: 12px 14px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm);
+    font-size: 16px; background: var(--bg); color: var(--text); outline: none; -webkit-appearance: none; font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--text); }
+
+  /* Bars */
+  .user-bar { background: var(--bg-info); border-bottom: 0.5px solid var(--border); padding: 8px 20px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--text-info); }
+  .logout-btn { background: none; border: 0.5px solid var(--text-info); border-radius: 20px; color: var(--text-info); font-size: 11px; padding: 3px 10px; cursor: pointer; }
+  .header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 14px 20px; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; gap: 12px; }
+  .header-title { font-size: 17px; font-weight: 700; }
+  .header-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+
+  /* Nav drawer */
+  .hamburger-btn { width: 34px; height: 34px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-strong); background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; flex-shrink: 0; }
+  .hamburger-btn span { width: 16px; height: 1.5px; background: var(--text); border-radius: 1px; }
+  .nav-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 250; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .nav-overlay.open { opacity: 1; pointer-events: auto; }
+  .nav-drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 260px; max-width: 82vw; background: var(--bg); z-index: 260; transform: translateX(-100%); transition: transform 0.22s ease; display: flex; flex-direction: column; box-shadow: 4px 0 24px rgba(0,0,0,0.15); }
+  .nav-drawer.open { transform: translateX(0); }
+  .nav-brand { padding: 24px 20px 16px; border-bottom: 0.5px solid var(--border); }
+  .nav-brand-name { font-size: 15px; font-weight: 700; }
+  .nav-brand-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; letter-spacing: 0.03em; text-transform: uppercase; }
+  .nav-items { padding: 12px; flex: 1; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 13px 12px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; color: var(--text-secondary); text-decoration: none; cursor: pointer; margin-bottom: 2px; }
+  .nav-item .nav-icon { width: 20px; text-align: center; font-size: 15px; flex-shrink: 0; }
+  .nav-item:active { background: var(--bg-secondary); }
+  .nav-item.active { background: var(--bg-info); color: var(--text-info); font-weight: 600; }
+  .nav-footer { padding: 14px 20px; border-top: 0.5px solid var(--border); font-size: 11px; color: var(--text-tertiary); }
+
+  /* Content */
+  .wrap { max-width: 640px; margin: 0 auto; padding: 16px; padding-bottom: 120px; }
+  .btn { padding: 12px 16px; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn.outline { background: none; border: 0.5px solid var(--border-strong); color: var(--text); }
+  .btn.danger { background: var(--bg-danger); color: var(--text-danger); }
+  .btn.full { width: 100%; }
+  .btn.sm { padding: 8px 12px; font-size: 13px; }
+  .label { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+  .sub-label { font-size: 12px; color: var(--text-tertiary); margin-top: 5px; }
+  .field { margin-bottom: 12px; }
+  .row { display: flex; gap: 10px; }
+  .row > div { flex: 1; }
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+
+  /* Vehicle list */
+  .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .list-title { font-size: 15px; font-weight: 700; }
+  .list-count { font-size: 12px; color: var(--text-tertiary); margin-left: 6px; font-weight: 500; }
+  .vehicle-item { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .vehicle-item:active { background: var(--bg-secondary); }
+  .vehicle-item-main { flex: 1; min-width: 0; }
+  .vehicle-item-title { font-size: 15px; font-weight: 700; color: var(--text); }
+  .vehicle-item-meta { font-size: 12px; color: var(--text-tertiary); margin-top: 3px; }
+  .vehicle-item-arrow { font-size: 18px; color: var(--text-tertiary); margin-left: 12px; }
+  .vehicle-progress { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: var(--bg-info); color: var(--text-info); margin-left: 6px; }
+  .empty-state { text-align: center; color: var(--text-tertiary); padding: 40px 16px; font-size: 14px; }
+
+  /* Back link */
+  .back-link { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-info); text-decoration: none; margin-bottom: 8px; cursor: pointer; }
+
+  /* Vehicle detail summary */
+  .vehicle-summary { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+  .vehicle-summary-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+  .vehicle-summary-meta { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+  /* Round accordion */
+  .round-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
+  .round-head { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: var(--bg); }
+  .round-head:active { background: var(--bg-secondary); }
+  .round-head-left { display: flex; align-items: center; gap: 10px; }
+  .round-badge { width: 26px; height: 26px; border-radius: 50%; background: var(--bg-secondary); border: 0.5px solid var(--border-strong); color: var(--text-secondary); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .round-badge.done { background: var(--bg-success); color: var(--text-success); border-color: transparent; }
+  .round-badge.done::after { content: '✓'; font-size: 13px; }
+  .round-badge.done .round-num { display: none; }
+  .round-title { font-size: 14px; font-weight: 700; }
+  .round-meta { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+  .round-arrow { font-size: 14px; color: var(--text-tertiary); transition: transform 0.2s; }
+  .round-card.open .round-arrow { transform: rotate(90deg); }
+  .round-body { padding: 0 16px 16px; border-top: 0.5px solid var(--border); display: none; }
+  .round-card.open .round-body { display: block; }
+
+  /* RTD grid inside round */
+  .rtd-block { border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 10px; background: var(--bg-secondary); }
+  .rtd-pos-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .rtd-points { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .rtd-points label { font-size: 11px; color: var(--text-tertiary); display: block; margin-bottom: 4px; text-align: center; }
+  .rtd-points input { text-align: center; padding: 10px 6px; font-size: 15px; background: var(--bg); }
+  .rtd-min-badge { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; text-align: right; }
+
+  /* Photos */
+  .photo-types { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .photo-type-btn { padding: 7px 12px; border-radius: 20px; border: 0.5px solid var(--border-strong); background: none; color: var(--text-secondary); font-size: 12px; cursor: pointer; }
+  .photo-type-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .photo-thumb { position: relative; aspect-ratio: 1; border-radius: var(--radius-sm); overflow: hidden; background: var(--bg-secondary); border: 0.5px solid var(--border); }
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-thumb .tag { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: #fff; font-size: 9px; padding: 3px 5px; text-align: center; }
+  .photo-thumb .del { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; background: rgba(0,0,0,0.65); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .upload-tile { aspect-ratio: 1; border-radius: var(--radius-sm); border: 1.5px dashed var(--border-strong); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 24px; color: var(--text-tertiary); cursor: pointer; gap: 4px; }
+  .upload-tile-sub { font-size: 10px; color: var(--text-tertiary); }
+
+  /* Section header inside round */
+  .section-head { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 16px 0 10px; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 20px; font-size: 13px; z-index: 300; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+  .toast.err { background: var(--text-danger); color: #fff; }
+
+  /* Uploading indicator */
+  .uploading { display: inline-block; padding: 4px 10px; font-size: 11px; background: var(--bg-warning); color: var(--text-warning); border-radius: 10px; margin-left: 8px; }
+</style>
+</head>
+<body>
+
+<!-- Auth -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">TCS Korea Workplace</div>
+    <div class="auth-title">현장 기록 로그인</div>
+    <div class="auth-sub">Continental 계정 이메일로 인증 코드를 받아 로그인하세요.</div>
+    <div id="emailStep">
+      <input type="text" id="emailInput" placeholder="이메일 주소 입력" oninput="onEmailInput()" onkeydown="if(event.key==='Enter') sendOTP()" style="margin-bottom:12px;">
+      <button class="auth-btn" id="authBtn" onclick="sendOTP()" disabled>인증 코드 받기</button>
+    </div>
+    <div id="otpStep" class="hidden">
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;" id="otpSentTo"></div>
+      <input type="text" id="otpInput" placeholder="6자리 코드" maxlength="6" inputmode="numeric" style="font-size:22px;text-align:center;letter-spacing:0.3em;margin-bottom:12px;" oninput="onOTPInput()" onkeydown="if(event.key==='Enter') verifyOTP()">
+      <button class="auth-btn" id="otpBtn" onclick="verifyOTP()" disabled>확인</button>
+      <div style="text-align:center;margin-top:12px;">
+        <button onclick="resetAuth()" style="background:none;border:none;color:var(--text-tertiary);font-size:13px;cursor:pointer;text-decoration:underline;">이메일 다시 입력</button>
+      </div>
+    </div>
+    <div id="authStatus" class="hidden auth-status err"></div>
+  </div>
+</div>
+
+<!-- Nav drawer -->
+<div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+<div class="nav-drawer" id="navDrawer">
+  <div class="nav-brand">
+    <div class="nav-brand-name">TCS Korea Workplace</div>
+    <div class="nav-brand-sub">Continental · CTK TCS Team</div>
+  </div>
+  <div class="nav-items">
+    <a class="nav-item" href="index.html"><span class="nav-icon">🏠</span> 홈</a>
+    <a class="nav-item" href="calculator.html"><span class="nav-icon">🧮</span> 보상 계산기</a>
+    <a class="nav-item active" href="ppmo.html"><span class="nav-icon">📋</span> PPMo 현장 기록</a>
+    <a class="nav-item" href="info.html"><span class="nav-icon">📚</span> 각종 정보 확인</a>
+  </div>
+  <div class="nav-footer">v2 · CTK TCS Team</div>
+</div>
+
+<!-- Main -->
+<div id="mainApp" class="hidden">
+  <div class="user-bar" id="userBar">
+    <span id="userEmail"></span>
+    <button class="logout-btn" onclick="logout()">로그아웃</button>
+  </div>
+  <div class="header">
+    <button class="hamburger-btn" onclick="openNav()" aria-label="메뉴"><span></span><span></span><span></span></button>
+    <div>
+      <div class="header-title" id="pageTitle">PPMo 현장 기록</div>
+      <div class="header-sub" id="pageSub">VanContact AP2 · 마일리지 체크업</div>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <!-- VIEW 1: Vehicle List -->
+    <div id="view-list">
+      <button class="btn full" onclick="showNewVehicleForm()" style="margin-bottom:16px;">+ 새 차량 생성하기</button>
+      <div class="list-header">
+        <div>
+          <span class="list-title">등록된 차량</span>
+          <span class="list-count" id="listCount"></span>
+        </div>
+      </div>
+      <div id="vehicleList"><div class="empty-state">불러오는 중...</div></div>
+    </div>
+
+    <!-- VIEW 2: New Vehicle Form -->
+    <div id="view-new" class="hidden">
+      <a class="back-link" onclick="showList()">← 목록으로</a>
+      <div class="card">
+        <div style="font-size:16px;font-weight:700;margin-bottom:14px;">새 차량 생성하기</div>
+        <div class="field">
+          <div class="label">차량 번호 *</div>
+          <input type="text" id="fNewNo" placeholder="예: 12가3456" oninput="validateNewVehicle()">
+        </div>
+        <div class="field">
+          <div class="label">차량 모델명 *</div>
+          <input type="text" id="fNewModel" placeholder="예: 포터 II" oninput="validateNewVehicle()">
+        </div>
+        <div class="row field">
+          <div>
+            <div class="label">연식 *</div>
+            <input type="number" id="fNewYear" placeholder="예: 2024" min="1980" max="2099" oninput="validateNewVehicle()">
+          </div>
+          <div>
+            <div class="label">타이어 장착 시 주행거리 (km) *</div>
+            <input type="number" id="fNewInitMileage" placeholder="예: 45000" min="0" oninput="validateNewVehicle()">
+          </div>
+        </div>
+        <div class="field">
+          <div class="label">딜러/점포명</div>
+          <input type="text" id="fNewDealer" placeholder="딜러명">
+        </div>
+        <div class="field">
+          <div class="label">제품 (아티클)</div>
+          <input type="text" id="fNewProduct" value="VanContact AP2">
+        </div>
+        <button class="btn full" id="btnCreateVehicle" onclick="createVehicle()" disabled>생성하기</button>
+      </div>
+    </div>
+
+    <!-- VIEW 3: Vehicle Detail -->
+    <div id="view-detail" class="hidden">
+      <a class="back-link" onclick="showList()">← 목록으로</a>
+      <div class="vehicle-summary">
+        <div class="vehicle-summary-title" id="detNo"></div>
+        <div class="vehicle-summary-meta" id="detMeta"></div>
+      </div>
+      <div id="roundsWrap"></div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ── Config ──
+const SUPABASE_URL = 'https://thosddtgtffapakvmrhn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_HmrBU9WFhkCTM_TquLM31g_IPovXtXm';
+const ALLOWED_DOMAIN = 'continental.com';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+
+const POSITIONS = ['1축-좌','1축-우','2축-좌외','2축-좌내','2축-우외','2축-우내'];
+const POINTS = [['outer','외'], ['center','중'], ['inner','내']];
+const PHOTO_TYPES_ROUND0 = ['DOT','라벨','바코드','장착사진','전체샷','기타'];
+const PHOTO_TYPES_ROUNDN = ['RTD측정','마모부위','손상부위','전체샷','기타'];
+const TOTAL_ROUNDS = 6; // 0(초기) + 1~5
+
+let _currentEmail = null;
+let _currentVehicle = null;      // detail view의 대상 차량
+let _roundsState = {};           // { round_no: { round: {}, measurements: [], photos: [], pendingPhotos: [] } }
+
+// ── Auth ──
+document.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (session && session.user.email.endsWith('@' + ALLOWED_DOMAIN)) {
+    launchApp(session.user.email);
+  } else {
+    document.getElementById('authScreen').style.display = 'flex';
+  }
+});
+window.onEmailInput = function() {
+  document.getElementById('authBtn').disabled = !document.getElementById('emailInput').value.trim().endsWith('@' + ALLOWED_DOMAIN);
+};
+window.onOTPInput = function() {
+  document.getElementById('otpBtn').disabled = document.getElementById('otpInput').value.trim().length !== 6;
+};
+window.sendOTP = async function() {
+  const email = document.getElementById('emailInput').value.trim();
+  if (!email.endsWith('@' + ALLOWED_DOMAIN)) return showAuthError('@' + ALLOWED_DOMAIN + ' 이메일만 사용 가능합니다.');
+  const btn = document.getElementById('authBtn'); btn.disabled = true; btn.textContent = '전송 중...';
+  try {
+    const { error } = await _supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: null } });
+    if (error) throw error;
+    document.getElementById('emailStep').classList.add('hidden');
+    document.getElementById('otpStep').classList.remove('hidden');
+    document.getElementById('otpSentTo').textContent = `${email} 으로 6자리 코드를 보냈습니다`;
+    document.getElementById('authStatus').classList.add('hidden');
+  } catch(e) {
+    showAuthError('전송 실패: ' + e.message); btn.disabled = false; btn.textContent = '인증 코드 받기';
+  }
+};
+window.verifyOTP = async function() {
+  const email = document.getElementById('emailInput').value.trim();
+  const token = document.getElementById('otpInput').value.trim();
+  const btn = document.getElementById('otpBtn'); btn.disabled = true; btn.textContent = '확인 중...';
+  try {
+    const { data, error } = await _supabase.auth.verifyOtp({ email, token, type: 'email' });
+    if (error) throw error;
+    const { data: banData } = await _supabase.from('banned_users').select('email').eq('email', data.user.email).maybeSingle();
+    if (banData) { showAuthError('접근이 제한된 계정입니다.'); btn.disabled = false; btn.textContent = '확인'; return; }
+    launchApp(data.user.email);
+  } catch(e) {
+    showAuthError('코드가 올바르지 않거나 만료되었습니다.'); btn.disabled = false; btn.textContent = '확인';
+  }
+};
+window.logout = async function() { await _supabase.auth.signOut(); location.reload(); };
+window.resetAuth = function() {
+  document.getElementById('otpStep').classList.add('hidden');
+  document.getElementById('emailStep').classList.remove('hidden');
+  document.getElementById('authStatus').classList.add('hidden');
+};
+function showAuthError(msg) {
+  const el = document.getElementById('authStatus');
+  el.textContent = msg; el.classList.remove('hidden');
+}
+async function launchApp(email) {
+  _currentEmail = email;
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('mainApp').classList.remove('hidden');
+  document.getElementById('userEmail').textContent = email;
+  await loadVehicles();
+}
+window.openNav = () => { document.getElementById('navDrawer').classList.add('open'); document.getElementById('navOverlay').classList.add('open'); };
+window.closeNav = () => { document.getElementById('navDrawer').classList.remove('open'); document.getElementById('navOverlay').classList.remove('open'); };
+
+// ── View switching ──
+function showList() {
+  document.getElementById('view-list').classList.remove('hidden');
+  document.getElementById('view-new').classList.add('hidden');
+  document.getElementById('view-detail').classList.add('hidden');
+  setPageHeader('PPMo 현장 기록', 'VanContact AP2 · 마일리지 체크업');
+  loadVehicles();
+}
+window.showNewVehicleForm = function() {
+  document.getElementById('view-list').classList.add('hidden');
+  document.getElementById('view-new').classList.remove('hidden');
+  document.getElementById('view-detail').classList.add('hidden');
+  setPageHeader('새 차량 생성', '차량 정보 입력');
+  // reset form
+  ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewDealer'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fNewProduct').value = 'VanContact AP2';
+  document.getElementById('btnCreateVehicle').disabled = true;
+};
+function showDetail(vehicle) {
+  _currentVehicle = vehicle;
+  _roundsState = {};
+  document.getElementById('view-list').classList.add('hidden');
+  document.getElementById('view-new').classList.add('hidden');
+  document.getElementById('view-detail').classList.remove('hidden');
+  setPageHeader(vehicle.vehicle_no, `${vehicle.vehicle_type || ''} ${vehicle.model_year ? `'${String(vehicle.model_year).slice(-2)}` : ''} · ${vehicle.product}`);
+  document.getElementById('detNo').textContent = vehicle.vehicle_no;
+  const meta = [];
+  if (vehicle.vehicle_type) meta.push(vehicle.vehicle_type);
+  if (vehicle.model_year) meta.push(`${vehicle.model_year}년식`);
+  meta.push(vehicle.product);
+  if (vehicle.dealer_name) meta.push(vehicle.dealer_name);
+  const init = vehicle.initial_mileage_km != null ? `장착 시점 ${fmtKm(vehicle.initial_mileage_km)}` : '';
+  document.getElementById('detMeta').innerHTML = meta.join(' · ') + (init ? '<br>' + init : '');
+  renderRounds();
+}
+function setPageHeader(title, sub) {
+  document.getElementById('pageTitle').textContent = title;
+  if (sub) { document.getElementById('pageSub').textContent = sub; document.getElementById('pageSub').style.display = ''; }
+  else document.getElementById('pageSub').style.display = 'none';
+}
+
+// ── Vehicle list ──
+async function loadVehicles() {
+  const wrap = document.getElementById('vehicleList');
+  wrap.innerHTML = '<div class="empty-state">불러오는 중...</div>';
+  try {
+    const { data: vehicles, error } = await _supabase.from('ppmo_vehicles').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    document.getElementById('listCount').textContent = `${vehicles.length}대`;
+    if (!vehicles.length) {
+      wrap.innerHTML = '<div class="empty-state">아직 등록된 차량이 없습니다.<br>위 버튼으로 첫 차량을 생성해보세요.</div>';
+      return;
+    }
+    // 각 차량의 진행 회차 수 병렬 조회
+    const ids = vehicles.map(v => v.id);
+    const { data: rounds } = await _supabase.from('ppmo_rounds').select('vehicle_id, round_no').in('vehicle_id', ids);
+    const progressMap = {};
+    (rounds || []).forEach(r => {
+      if (!progressMap[r.vehicle_id]) progressMap[r.vehicle_id] = new Set();
+      progressMap[r.vehicle_id].add(r.round_no);
+    });
+    wrap.innerHTML = vehicles.map(v => {
+      const done = progressMap[v.id] ? progressMap[v.id].size : 0;
+      const modelStr = [v.vehicle_type, v.model_year && `'${String(v.model_year).slice(-2)}`].filter(Boolean).join(' ');
+      const initStr = v.initial_mileage_km != null ? `장착 ${fmtKm(v.initial_mileage_km)}` : '';
+      return `<div class="vehicle-item" onclick='openVehicle(${JSON.stringify(v).replace(/'/g, "&apos;")})'>
+        <div class="vehicle-item-main">
+          <div class="vehicle-item-title">${escapeHtml(v.vehicle_no)}<span class="vehicle-progress">${done}/${TOTAL_ROUNDS}</span></div>
+          <div class="vehicle-item-meta">${escapeHtml(modelStr || '모델 정보 없음')} · ${escapeHtml(v.product)}${initStr ? ' · ' + initStr : ''}</div>
+        </div>
+        <div class="vehicle-item-arrow">›</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty-state" style="color:var(--text-danger);">불러오기 실패: ${e.message}</div>`;
+  }
+}
+window.openVehicle = function(v) { showDetail(v); };
+
+// ── New vehicle ──
+window.validateNewVehicle = function() {
+  const ok = ['fNewNo','fNewModel','fNewYear','fNewInitMileage'].every(id => document.getElementById(id).value.trim());
+  document.getElementById('btnCreateVehicle').disabled = !ok;
+};
+window.createVehicle = async function() {
+  const btn = document.getElementById('btnCreateVehicle');
+  btn.disabled = true; btn.textContent = '생성 중...';
+  const payload = {
+    vehicle_no: document.getElementById('fNewNo').value.trim(),
+    vehicle_type: document.getElementById('fNewModel').value.trim(),
+    model_year: parseInt(document.getElementById('fNewYear').value),
+    initial_mileage_km: parseFloat(document.getElementById('fNewInitMileage').value),
+    dealer_name: document.getElementById('fNewDealer').value.trim() || null,
+    product: document.getElementById('fNewProduct').value.trim() || 'VanContact AP2',
+    created_by: _currentEmail
+  };
+  try {
+    const { data, error } = await _supabase.from('ppmo_vehicles').insert(payload).select().single();
+    if (error) throw error;
+    toast('차량이 생성되었습니다');
+    showDetail(data);
+  } catch(e) {
+    toast('생성 실패: ' + e.message, true);
+    btn.disabled = false; btn.textContent = '생성하기';
+  }
+};
+
+// ── Rounds ──
+async function renderRounds() {
+  const wrap = document.getElementById('roundsWrap');
+  wrap.innerHTML = '<div class="empty-state">회차 데이터를 불러오는 중...</div>';
+  try {
+    const { data: rounds } = await _supabase.from('ppmo_rounds').select('*').eq('vehicle_id', _currentVehicle.id);
+    const roundIds = (rounds || []).map(r => r.id);
+    let allMeasurements = [], allPhotos = [];
+    if (roundIds.length) {
+      const [m, p] = await Promise.all([
+        _supabase.from('ppmo_measurements').select('*').in('round_id', roundIds),
+        _supabase.from('ppmo_photos').select('*').in('round_id', roundIds)
+      ]);
+      allMeasurements = m.data || [];
+      allPhotos = p.data || [];
+    }
+    // state 초기화
+    _roundsState = {};
+    for (let n = 0; n < TOTAL_ROUNDS; n++) {
+      const r = (rounds || []).find(x => x.round_no === n);
+      _roundsState[n] = {
+        round: r || null,
+        measurements: r ? allMeasurements.filter(m => m.round_id === r.id) : [],
+        photos: r ? allPhotos.filter(p => p.round_id === r.id) : [],
+        pendingPhotos: [],
+        activePhotoType: (n === 0 ? PHOTO_TYPES_ROUND0 : PHOTO_TYPES_ROUNDN)[0]
+      };
+    }
+    wrap.innerHTML = '';
+    for (let n = 0; n < TOTAL_ROUNDS; n++) wrap.appendChild(buildRoundCard(n));
+    // 자동 확장: 첫 미완료 회차
+    const firstOpen = Object.keys(_roundsState).find(n => !_roundsState[n].round);
+    if (firstOpen != null) document.querySelector(`.round-card[data-n="${firstOpen}"]`).classList.add('open');
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty-state" style="color:var(--text-danger);">불러오기 실패: ${e.message}</div>`;
+  }
+}
+function buildRoundCard(n) {
+  const s = _roundsState[n];
+  const isRound0 = n === 0;
+  const isDone = !!s.round;
+  const title = isRound0 ? '초기 설치 시점' : `${n}회차 측정`;
+  const mileage = isRound0 ? (_currentVehicle.initial_mileage_km || 0) : (s.round ? s.round.mileage_km : '');
+
+  const card = document.createElement('div');
+  card.className = 'round-card' + (isDone ? '' : '');
+  card.dataset.n = n;
+  card.innerHTML = `
+    <div class="round-head" onclick="toggleRound(${n})">
+      <div class="round-head-left">
+        <div class="round-badge ${isDone ? 'done' : ''}"><span class="round-num">${n}</span></div>
+        <div>
+          <div class="round-title">${title}${isDone ? '' : ' <span style="font-weight:500;color:var(--text-tertiary);font-size:12px;">(미입력)</span>'}</div>
+          ${isDone ? `<div class="round-meta">${fmtKm(s.round.mileage_km)} · ${new Date(s.round.inspected_at).toLocaleDateString('ko-KR')}</div>` : ''}
+        </div>
+      </div>
+      <div class="round-arrow">›</div>
+    </div>
+    <div class="round-body">
+      ${isDone ? renderDoneBody(n) : renderEditBody(n, isRound0, mileage)}
+    </div>`;
+  return card;
+}
+function renderDoneBody(n) {
+  const s = _roundsState[n];
+  const minRtdByPos = {};
+  s.measurements.forEach(m => {
+    if (minRtdByPos[m.position] == null || m.rtd_mm < minRtdByPos[m.position]) minRtdByPos[m.position] = m.rtd_mm;
+  });
+  const rtdSummary = POSITIONS.map(p => `<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:0.5px solid var(--border);"><span>${p}</span><span style="font-weight:600;">${minRtdByPos[p] != null ? minRtdByPos[p].toFixed(1) + ' mm' : '—'}</span></div>`).join('');
+  const photosHtml = s.photos.length
+    ? `<div class="photo-grid">${s.photos.map(p => `<div class="photo-thumb"><img src="${p.url}"><div class="tag">${escapeHtml(p.photo_type)}</div></div>`).join('')}</div>`
+    : '<div class="sub-label" style="text-align:center;padding:12px 0;">업로드된 사진 없음</div>';
+  return `
+    <div class="section-head">측정값 (포지션별 최소 RTD)</div>
+    <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;">${rtdSummary}</div>
+    <div class="section-head">사진 (${s.photos.length}장)</div>
+    ${photosHtml}
+    ${s.round.notes ? `<div class="section-head">비고</div><div style="font-size:13px;color:var(--text-secondary);background:var(--bg-secondary);padding:10px 12px;border-radius:var(--radius-sm);">${escapeHtml(s.round.notes)}</div>` : ''}`;
+}
+function renderEditBody(n, isRound0, mileage) {
+  const s = _roundsState[n];
+  const photoTypes = isRound0 ? PHOTO_TYPES_ROUND0 : PHOTO_TYPES_ROUNDN;
+  return `
+    ${isRound0
+      ? `<div class="sub-label" style="margin:12px 0;padding:10px 12px;background:var(--bg-info);color:var(--text-info);border-radius:var(--radius-sm);">타이어 장착 시점의 초기 상태를 기록합니다. 주행거리는 차량 생성 시 입력한 <b>${fmtKm(mileage)}</b>이 자동 적용됩니다.</div>`
+      : `<div class="field" style="margin-top:12px;"><div class="label">주행거리 (km) *</div><input type="number" id="mile-${n}" placeholder="누적 주행거리" value="${mileage || ''}" oninput="validateRoundSave(${n})"></div>`}
+
+    <div class="section-head">사진 업로드</div>
+    <div class="photo-types" id="ptypes-${n}"></div>
+    <input type="file" id="fileInp-${n}" accept="image/*" capture="environment" class="hidden" onchange="onFileChosen(${n}, event)">
+    <div class="photo-grid" id="pgrid-${n}"><div class="upload-tile" onclick="document.getElementById('fileInp-${n}').click()">＋<span class="upload-tile-sub">사진 추가</span></div></div>
+
+    <div class="section-head">RTD 측정 (mm) · 6본 × 외/중/내</div>
+    <div id="rtdWrap-${n}"></div>
+
+    <div class="field" style="margin-top:14px;"><div class="label">비고</div><textarea id="notes-${n}" rows="2" placeholder="특이사항 (선택)"></textarea></div>
+
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;padding:8px 0;">
+      <input type="checkbox" id="rot-${n}" style="width:16px;height:16px;">
+      이번 방문 전/후 타이어 로테이션 실시
+    </label>
+
+    <button class="btn full" id="save-${n}" onclick="saveRound(${n})" disabled style="margin-top:12px;">${isRound0 ? '초기 데이터 저장' : n + '회차 저장'}</button>`;
+}
+window.toggleRound = function(n) {
+  const card = document.querySelector(`.round-card[data-n="${n}"]`);
+  const wasOpen = card.classList.contains('open');
+  card.classList.toggle('open');
+  if (!wasOpen && !_roundsState[n].round) {
+    // 편집 UI 초기화
+    buildPhotoTypeTabs(n);
+    buildRtdGrid(n);
+    validateRoundSave(n);
+  }
+};
+function buildPhotoTypeTabs(n) {
+  const s = _roundsState[n];
+  const types = n === 0 ? PHOTO_TYPES_ROUND0 : PHOTO_TYPES_ROUNDN;
+  const wrap = document.getElementById(`ptypes-${n}`);
+  wrap.innerHTML = types.map(t => `<button type="button" class="photo-type-btn ${t === s.activePhotoType ? 'active' : ''}" onclick="setPhotoType(${n}, '${t}')">${t}</button>`).join('');
+}
+window.setPhotoType = function(n, t) {
+  _roundsState[n].activePhotoType = t;
+  buildPhotoTypeTabs(n);
+};
+function buildRtdGrid(n) {
+  const wrap = document.getElementById(`rtdWrap-${n}`);
+  wrap.innerHTML = POSITIONS.map(pos => `
+    <div class="rtd-block">
+      <div class="rtd-pos-title">${pos}</div>
+      <div class="rtd-points">
+        ${POINTS.map(([key, label]) => `<div><label>${label}</label><input type="number" step="0.1" min="0" max="20" class="rtdInput-${n}" data-pos="${pos}" data-point="${key}" placeholder="mm" oninput="onRtdInput(${n},'${pos}')"></div>`).join('')}
+      </div>
+      <div class="rtd-min-badge" id="rtdMin-${n}-${pos}"></div>
+    </div>`).join('');
+}
+window.onRtdInput = function(n, pos) {
+  const inputs = document.querySelectorAll(`.rtdInput-${n}[data-pos="${CSS.escape(pos)}"]`);
+  const vals = [...inputs].map(i => parseFloat(i.value)).filter(v => !isNaN(v));
+  const badge = document.getElementById(`rtdMin-${n}-${pos}`);
+  if (vals.length) badge.textContent = `최소 RTD: ${Math.min(...vals).toFixed(1)}mm`;
+  validateRoundSave(n);
+};
+window.validateRoundSave = function(n) {
+  const btn = document.getElementById(`save-${n}`);
+  if (!btn) return;
+  const rtdOk = [...document.querySelectorAll(`.rtdInput-${n}`)].every(i => i.value !== '' && !isNaN(parseFloat(i.value)));
+  const mileageOk = n === 0 || (document.getElementById(`mile-${n}`).value !== '');
+  btn.disabled = !(rtdOk && mileageOk);
+};
+
+// ── Photo handling with client-side compression ──
+async function compressImage(file, maxDim = 1600, quality = 0.78) {
+  // Skip compression for already-small files
+  if (file.size < 500 * 1024 && file.type === 'image/jpeg') return file;
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        if (width >= height) { height = Math.round(height * maxDim / width); width = maxDim; }
+        else { width = Math.round(width * maxDim / height); height = maxDim; }
+      }
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      canvas.toBlob(blob => {
+        blob ? resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' })) : reject(new Error('압축 실패'));
+      }, 'image/jpeg', quality);
+    };
+    img.onerror = () => reject(new Error('이미지 로드 실패'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+window.onFileChosen = async function(n, e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+  const s = _roundsState[n];
+  const origKb = Math.round(file.size / 1024);
+  try {
+    const compressed = await compressImage(file);
+    const newKb = Math.round(compressed.size / 1024);
+    const previewUrl = URL.createObjectURL(compressed);
+    s.pendingPhotos.push({ type: s.activePhotoType, file: compressed, previewUrl, sizeKb: newKb, origKb });
+    renderPhotoGrid(n);
+    if (origKb > newKb) toast(`사진 압축: ${origKb}KB → ${newKb}KB`);
+  } catch(err) {
+    toast('사진 처리 실패: ' + err.message, true);
+  }
+};
+function renderPhotoGrid(n) {
+  const grid = document.getElementById(`pgrid-${n}`);
+  const uploadTile = `<div class="upload-tile" onclick="document.getElementById('fileInp-${n}').click()">＋<span class="upload-tile-sub">사진 추가</span></div>`;
+  const thumbs = _roundsState[n].pendingPhotos.map((p, i) => `
+    <div class="photo-thumb"><img src="${p.previewUrl}"><div class="tag">${escapeHtml(p.type)} · ${p.sizeKb}KB</div><div class="del" onclick="removePendingPhoto(${n},${i})">✕</div></div>`).join('');
+  grid.innerHTML = uploadTile + thumbs;
+}
+window.removePendingPhoto = function(n, i) {
+  _roundsState[n].pendingPhotos.splice(i, 1);
+  renderPhotoGrid(n);
+};
+
+// ── Save round ──
+window.saveRound = async function(n) {
+  const btn = document.getElementById(`save-${n}`);
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const isRound0 = n === 0;
+  const mileage = isRound0 ? _currentVehicle.initial_mileage_km : parseFloat(document.getElementById(`mile-${n}`).value);
+  const rotated = document.getElementById(`rot-${n}`).checked;
+  const notes = document.getElementById(`notes-${n}`).value.trim() || null;
+  try {
+    // 1. 회차 insert
+    const { data: round, error: rErr } = await _supabase.from('ppmo_rounds').insert({
+      vehicle_id: _currentVehicle.id, round_no: n, mileage_km: mileage, rotated, notes,
+      inspected_by: _currentEmail
+    }).select().single();
+    if (rErr) throw rErr;
+
+    // 2. RTD 측정값
+    const measurements = [...document.querySelectorAll(`.rtdInput-${n}`)].map(i => ({
+      round_id: round.id, position: i.dataset.pos, point: i.dataset.point, rtd_mm: parseFloat(i.value)
+    }));
+    if (measurements.length) {
+      const { error: mErr } = await _supabase.from('ppmo_measurements').insert(measurements);
+      if (mErr) throw mErr;
+    }
+
+    // 3. 사진 업로드
+    const pendingPhotos = _roundsState[n].pendingPhotos;
+    for (let i = 0; i < pendingPhotos.length; i++) {
+      const p = pendingPhotos[i];
+      btn.textContent = `사진 업로드 ${i+1}/${pendingPhotos.length}`;
+      const path = `${_currentVehicle.id}/${round.id}/${Date.now()}_${i}.jpg`;
+      const { error: upErr } = await _supabase.storage.from('ppmo-photos').upload(path, p.file);
+      if (upErr) throw upErr;
+      const { data: pub } = _supabase.storage.from('ppmo-photos').getPublicUrl(path);
+      await _supabase.from('ppmo_photos').insert({ round_id: round.id, photo_type: p.type, url: pub.publicUrl });
+    }
+
+    toast(isRound0 ? '초기 데이터가 저장되었습니다' : `${n}회차 데이터가 저장되었습니다`);
+    await renderRounds();
+  } catch(e) {
+    toast('저장 실패: ' + e.message, true);
+    btn.disabled = false; btn.textContent = isRound0 ? '초기 데이터 저장' : `${n}회차 저장`;
+  }
+};
+
+// ── Utils ──
+function fmtKm(km) { return (km == null || isNaN(km)) ? '—' : Number(km).toLocaleString('ko-KR') + ' km'; }
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(msg, isErr) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isErr ? ' err' : '');
+  setTimeout(() => t.classList.add('hidden'), 3500);
+  t.classList.remove('hidden');
+}
+</script>
+</body>
+</html>

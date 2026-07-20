@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TCS Info">
+<title>TCS Korea Workplace · 참고자료</title>
+<style>
+  :root {
+    --bg: #ffffff; --bg-secondary: #f5f5f4; --bg-success: #eaf3de;
+    --bg-warning: #faeeda; --bg-danger: #fcebeb; --bg-info: #e6f1fb;
+    --text: #1a1a18; --text-secondary: #5f5e5a; --text-tertiary: #888780;
+    --text-success: #3b6d11; --text-warning: #854f0b; --text-danger: #a32d2d;
+    --text-info: #185fa5; --border: rgba(0,0,0,0.12); --border-strong: rgba(0,0,0,0.25);
+    --radius: 12px; --radius-sm: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg-secondary: #2a2a28; --bg-success: #173404;
+      --bg-warning: #412402; --bg-danger: #501313; --bg-info: #042c53;
+      --text: #f0ede8; --text-secondary: #b4b2a9; --text-tertiary: #888780;
+      --text-success: #c0dd97; --text-warning: #fac775; --text-danger: #f7c1c1;
+      --text-info: #b5d4f4; --border: rgba(255,255,255,0.1); --border-strong: rgba(255,255,255,0.22);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: var(--bg-secondary); color: var(--text); min-height: 100vh; }
+  .hidden { display: none !important; }
+
+  #authScreen { position: fixed; inset: 0; background: var(--bg-secondary); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .auth-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 32px 24px; width: 100%; max-width: 360px; }
+  .auth-logo { font-size: 13px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 24px; }
+  .auth-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .auth-sub { font-size: 14px; color: var(--text-secondary); margin-bottom: 28px; line-height: 1.5; }
+  .auth-btn { width: 100%; padding: 14px; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; }
+  .auth-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .auth-status { margin-top: 16px; padding: 12px 14px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.5; }
+  .auth-status.err { background: var(--bg-danger); color: var(--text-danger); }
+  input[type=text] { width: 100%; padding: 12px 14px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 16px; background: var(--bg); color: var(--text); outline: none; -webkit-appearance: none; font-family: inherit; }
+  input:focus { border-color: var(--text); }
+
+  .user-bar { background: var(--bg-info); border-bottom: 0.5px solid var(--border); padding: 8px 20px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--text-info); }
+  .logout-btn { background: none; border: 0.5px solid var(--text-info); border-radius: 20px; color: var(--text-info); font-size: 11px; padding: 3px 10px; cursor: pointer; }
+  .header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 16px 20px 14px; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; gap: 12px; }
+  .header-title { font-size: 17px; font-weight: 700; }
+  .header-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+
+  /* Nav drawer (공통 컴포넌트) */
+  .hamburger-btn { width: 34px; height: 34px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-strong); background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; flex-shrink: 0; }
+  .hamburger-btn span { width: 16px; height: 1.5px; background: var(--text); border-radius: 1px; }
+  .nav-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 250; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .nav-overlay.open { opacity: 1; pointer-events: auto; }
+  .nav-drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 260px; max-width: 82vw; background: var(--bg); z-index: 260; transform: translateX(-100%); transition: transform 0.22s ease; display: flex; flex-direction: column; box-shadow: 4px 0 24px rgba(0,0,0,0.15); }
+  .nav-drawer.open { transform: translateX(0); }
+  .nav-brand { padding: 24px 20px 16px; border-bottom: 0.5px solid var(--border); }
+  .nav-brand-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .nav-brand-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; letter-spacing: 0.03em; text-transform: uppercase; }
+  .nav-items { padding: 12px; flex: 1; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 13px 12px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; color: var(--text-secondary); text-decoration: none; cursor: pointer; margin-bottom: 2px; }
+  .nav-item .nav-icon { width: 20px; text-align: center; font-size: 15px; flex-shrink: 0; }
+  .nav-item:active { background: var(--bg-secondary); }
+  .nav-item.active { background: var(--bg-info); color: var(--text-info); font-weight: 600; }
+  .nav-footer { padding: 14px 20px; border-top: 0.5px solid var(--border); font-size: 11px; color: var(--text-tertiary); }
+
+  /* Doc cards */
+  .doc-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 8px; }
+  @media (min-width: 640px) { .doc-grid { grid-template-columns: 1fr 1fr; } }
+  .doc-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 20px 18px; cursor: pointer; text-align: left; }
+  .doc-card:active { border-color: var(--border-strong); }
+  .doc-card-icon { font-size: 26px; margin-bottom: 8px; }
+  .doc-card-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .doc-card-sub { font-size: 12px; color: var(--text-tertiary); line-height: 1.4; }
+  .doc-card-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-top: 8px; }
+  .doc-card-badge.ready { background: var(--bg-success); color: var(--text-success); }
+  .doc-card-badge.pending { background: var(--bg-warning); color: var(--text-warning); }
+
+  .back-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-info); background: none; border: none; cursor: pointer; margin-bottom: 14px; padding: 0; }
+
+  .section { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .cc-search-wrap { margin-bottom: 12px; }
+  .cc-cat-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; }
+  .cc-cat-tab { flex-shrink: 0; padding: 7px 13px; font-size: 12.5px; font-weight: 500; border: 0.5px solid var(--border-strong); border-radius: 20px; background: none; color: var(--text-secondary); cursor: pointer; }
+  .cc-cat-tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .cc-row { display: flex; gap: 10px; padding: 11px 4px; border-bottom: 0.5px solid var(--border); }
+  .cc-row:last-child { border-bottom: none; }
+  .cc-code { font-size: 13px; font-weight: 700; color: var(--text-info); flex-shrink: 0; width: 46px; }
+  .cc-desc-ko { font-size: 13.5px; color: var(--text); }
+  .cc-desc-en { font-size: 11.5px; color: var(--text-tertiary); margin-top: 2px; }
+  .cc-count { font-size: 12px; color: var(--text-tertiary); margin-bottom: 8px; }
+  .empty-note { text-align: center; padding: 32px 16px; color: var(--text-tertiary); font-size: 13px; }
+
+  .pending-box { background: var(--bg-warning); border-radius: var(--radius-sm); padding: 20px 18px; text-align: center; }
+  .pending-box-title { font-size: 15px; font-weight: 700; color: var(--text-warning); margin-bottom: 6px; }
+  .pending-box-sub { font-size: 13px; color: var(--text-warning); line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<!-- ── Auth ── -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">TCS Korea Workplace</div>
+    <div class="auth-title">로그인</div>
+    <div class="auth-sub" id="authSubText">Continental 계정 이메일로 인증 코드를 받아 로그인하세요.</div>
+    <div id="emailStep">
+      <input type="text" id="emailInput" placeholder="이메일 주소 입력" oninput="onEmailInput()" onkeydown="if(event.key==='Enter') sendOTP()" style="margin-bottom:12px;">
+      <button class="auth-btn" id="authBtn" onclick="sendOTP()" disabled>인증 코드 받기</button>
+    </div>
+    <div id="otpStep" class="hidden">
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;" id="otpSentTo"></div>
+      <input type="text" id="otpInput" placeholder="6자리 코드 입력" maxlength="6" inputmode="numeric" style="font-size:22px;text-align:center;letter-spacing:0.3em;margin-bottom:12px;" oninput="onOTPInput()" onkeydown="if(event.key==='Enter') verifyOTP()">
+      <button class="auth-btn" id="otpBtn" onclick="verifyOTP()" disabled>확인</button>
+      <div style="text-align:center;margin-top:12px;">
+        <button onclick="resetAuth()" style="background:none;border:none;color:var(--text-tertiary);font-size:13px;cursor:pointer;text-decoration:underline;">이메일 다시 입력</button>
+      </div>
+    </div>
+    <div id="authStatus" class="hidden auth-status err"></div>
+  </div>
+</div>
+
+<!-- ── Nav drawer ── -->
+<div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+<div class="nav-drawer" id="navDrawer">
+  <div class="nav-brand">
+    <div class="nav-brand-name">TCS Korea Workplace</div>
+    <div class="nav-brand-sub">Continental · CTK TCS Team</div>
+  </div>
+  <div class="nav-items">
+    <a class="nav-item" href="index.html">
+      <span class="nav-icon">🏠</span> 홈
+    </a>
+    <a class="nav-item" href="calculator.html">
+      <span class="nav-icon">🧮</span> Compensation Calculator
+    </a>
+    <a class="nav-item" href="ppmo.html">
+      <span class="nav-icon">📋</span> PPMo 현장 기록
+    </a>
+    <a class="nav-item active" href="info.html">
+      <span class="nav-icon">📚</span> 참고자료
+    </a>
+  </div>
+  <div class="nav-footer">v1 · CTK TCS Team</div>
+</div>
+
+<!-- ── Main ── -->
+<div id="mainApp" class="hidden">
+  <div class="user-bar" id="userBar">
+    <span id="userEmail"></span>
+    <button class="logout-btn" onclick="logout()">로그아웃</button>
+  </div>
+  <div class="header">
+    <button class="hamburger-btn" onclick="openNav()" aria-label="메뉴"><span></span><span></span><span></span></button>
+    <div>
+      <div class="header-title">참고자료</div>
+      <div class="header-sub">Condition Code · Adjustment Policy</div>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <!-- 문서 목록 -->
+    <div id="docListView">
+      <div class="doc-grid">
+        <div class="doc-card" onclick="openDoc('cc')">
+          <div class="doc-card-icon">🔎</div>
+          <div class="doc-card-title">Condition Code (EoTC)</div>
+          <div class="doc-card-sub">타이어 손상 분류 코드 155종 · 한글 번역 포함</div>
+          <div class="doc-card-badge ready">바로 확인 가능</div>
+        </div>
+        <div class="doc-card" onclick="openDoc('policy')">
+          <div class="doc-card-icon">📄</div>
+          <div class="doc-card-title">Adjustment Policy</div>
+          <div class="doc-card-sub">보상 규정 · 정책 문서</div>
+          <div class="doc-card-badge pending">준비중</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Condition Code 상세 -->
+    <div id="ccDetailView" class="hidden">
+      <button class="back-btn" onclick="closeDoc()">← 참고자료 목록</button>
+      <div class="section">
+        <div class="cc-search-wrap">
+          <input type="text" id="ccSearchInput" placeholder="코드 또는 증상으로 검색 (예: 사이드월, 0122)" oninput="renderCcList()">
+        </div>
+        <div class="cc-cat-tabs" id="ccCatTabs"></div>
+        <div class="cc-count" id="ccCount"></div>
+        <div id="ccList"></div>
+      </div>
+    </div>
+
+    <!-- Adjustment Policy 상세 -->
+    <div id="policyDetailView" class="hidden">
+      <button class="back-btn" onclick="closeDoc()">← 참고자료 목록</button>
+      <div class="section">
+        <div class="pending-box">
+          <div class="pending-box-title">🚧 준비중</div>
+          <div class="pending-box-sub">Adjustment Policy 문서는 아직 등록되지 않았습니다.<br>문의: Jaehong.Park@continental.com</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://thosddtgtffapakvmrhn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_HmrBU9WFhkCTM_TquLM31g_IPovXtXm';
+const ALLOWED_DOMAIN = 'continental.com';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+
+let _currentEmail = null;
+let ccCodes = [];
+let activeCat = '전체';
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (session && session.user.email.endsWith('@' + ALLOWED_DOMAIN)) {
+    launchApp(session.user.email);
+  } else {
+    document.getElementById('authScreen').style.display = 'flex';
+  }
+});
+window.onEmailInput = function() {
+  const email = document.getElementById('emailInput').value.trim();
+  document.getElementById('authBtn').disabled = !email.endsWith('@' + ALLOWED_DOMAIN);
+};
+window.onOTPInput = function() {
+  document.getElementById('otpBtn').disabled = document.getElementById('otpInput').value.trim().length !== 6;
+};
+window.sendOTP = async function() {
+  const email = document.getElementById('emailInput').value.trim();
+  if (!email.endsWith('@' + ALLOWED_DOMAIN)) return showAuthError('@' + ALLOWED_DOMAIN + ' 이메일만 사용 가능합니다.');
+  const btn = document.getElementById('authBtn'); btn.disabled = true; btn.textContent = '전송 중...';
+  try {
+    const { error } = await _supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: null } });
+    if (error) throw error;
+    document.getElementById('emailStep').classList.add('hidden');
+    document.getElementById('otpStep').classList.remove('hidden');
+    document.getElementById('otpSentTo').textContent = `${email} 으로 6자리 코드를 보냈습니다`;
+    document.getElementById('authStatus').classList.add('hidden');
+  } catch(e) {
+    showAuthError('전송 실패: ' + e.message); btn.disabled = false; btn.textContent = '인증 코드 받기';
+  }
+};
+window.verifyOTP = async function() {
+  const email = document.getElementById('emailInput').value.trim();
+  const token = document.getElementById('otpInput').value.trim();
+  const btn = document.getElementById('otpBtn'); btn.disabled = true; btn.textContent = '확인 중...';
+  try {
+    const { data, error } = await _supabase.auth.verifyOtp({ email, token, type: 'email' });
+    if (error) throw error;
+    const { data: banData } = await _supabase.from('banned_users').select('email').eq('email', data.user.email).maybeSingle();
+    if (banData) { showAuthError('접근이 제한된 계정입니다.'); btn.disabled = false; btn.textContent = '확인'; return; }
+    launchApp(data.user.email);
+  } catch(e) {
+    showAuthError('코드가 올바르지 않거나 만료되었습니다.'); btn.disabled = false; btn.textContent = '확인';
+  }
+};
+window.logout = async function() { await _supabase.auth.signOut(); location.reload(); };
+window.resetAuth = function() {
+  document.getElementById('otpStep').classList.add('hidden');
+  document.getElementById('emailStep').classList.remove('hidden');
+  document.getElementById('authStatus').classList.add('hidden');
+};
+function showAuthError(msg) {
+  const el = document.getElementById('authStatus');
+  el.textContent = msg; el.classList.remove('hidden');
+}
+async function launchApp(email) {
+  _currentEmail = email;
+  // 동의 여부 확인 (미동의 시 홈 대시보드에서 동의서부터 진행)
+  let isRevoked = false;
+  try {
+    const { data } = await _supabase.from('consent_revoked').select('email').eq('email', email).maybeSingle();
+    if (data) isRevoked = true;
+  } catch(e) {}
+  if (isRevoked) localStorage.removeItem('tcs_consent_' + email);
+  if (!localStorage.getItem('tcs_consent_' + email)) {
+    location.href = 'index.html';
+    return;
+  }
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('mainApp').classList.remove('hidden');
+  document.getElementById('userEmail').textContent = email;
+}
+window.openNav = function() {
+  document.getElementById('navDrawer').classList.add('open');
+  document.getElementById('navOverlay').classList.add('open');
+};
+window.closeNav = function() {
+  document.getElementById('navDrawer').classList.remove('open');
+  document.getElementById('navOverlay').classList.remove('open');
+};
+
+// ── 문서 열기/닫기 ──
+window.openDoc = async function(doc) {
+  document.getElementById('docListView').classList.add('hidden');
+  if (doc === 'cc') {
+    document.getElementById('ccDetailView').classList.remove('hidden');
+    if (!ccCodes.length) await loadCcCodes();
+  } else if (doc === 'policy') {
+    document.getElementById('policyDetailView').classList.remove('hidden');
+  }
+};
+window.closeDoc = function() {
+  document.getElementById('ccDetailView').classList.add('hidden');
+  document.getElementById('policyDetailView').classList.add('hidden');
+  document.getElementById('docListView').classList.remove('hidden');
+};
+
+// ── Condition Code 로드/검색 ──
+async function loadCcCodes() {
+  document.getElementById('ccList').innerHTML = '<div class="empty-note">불러오는 중...</div>';
+  const { data, error } = await _supabase.from('cc_codes').select('code, description_en, description_ko, category').order('code');
+  if (error) {
+    document.getElementById('ccList').innerHTML = '<div class="empty-note">불러오기 실패: ' + error.message + '</div>';
+    return;
+  }
+  ccCodes = data || [];
+  buildCatTabs();
+  renderCcList();
+}
+function buildCatTabs() {
+  const cats = ['전체', ...new Set(ccCodes.map(c => c.category))];
+  document.getElementById('ccCatTabs').innerHTML = cats.map(c =>
+    `<button type="button" class="cc-cat-tab ${c === activeCat ? 'active' : ''}" onclick="setCat('${c}')">${c}</button>`
+  ).join('');
+}
+window.setCat = function(cat) {
+  activeCat = cat;
+  buildCatTabs();
+  renderCcList();
+};
+window.renderCcList = function() {
+  const q = document.getElementById('ccSearchInput').value.trim().toLowerCase();
+  let list = ccCodes;
+  if (activeCat !== '전체') list = list.filter(c => c.category === activeCat);
+  if (q) list = list.filter(c => c.code.includes(q) || c.description_ko.toLowerCase().includes(q) || c.description_en.toLowerCase().includes(q));
+
+  document.getElementById('ccCount').textContent = `${list.length}건`;
+  const container = document.getElementById('ccList');
+  if (!list.length) {
+    container.innerHTML = '<div class="empty-note">검색 결과가 없습니다.</div>';
+    return;
+  }
+  container.innerHTML = list.map(c => `
+    <div class="cc-row">
+      <div class="cc-code">${c.code}</div>
+      <div>
+        <div class="cc-desc-ko">${c.description_ko}</div>
+        <div class="cc-desc-en">${c.description_en}</div>
+      </div>
+    </div>`).join('');
+};
+</script>
+</body>
+</html>
