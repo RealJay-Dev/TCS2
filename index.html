@@ -624,6 +624,53 @@ window.closeNav = function() {
   document.getElementById('navDrawer').classList.remove('open');
   document.getElementById('navOverlay').classList.remove('open');
 };
+
+// ── Secret password mode (관리자 이메일 입력 후 로고 5회 클릭 시 활성화) ──
+let _secretClicks = 0, _secretTimer = null, _pwMode = false;
+const _PW_ALLOWED = ['jaehong.park@continental.com', 'sangyong.2.jung@continental.com'];
+window.secretClick = function() {
+  const email = document.getElementById('emailInput').value.trim().toLowerCase();
+  if (!_PW_ALLOWED.includes(email)) return;
+  _secretClicks++;
+  if (_secretTimer) clearTimeout(_secretTimer);
+  _secretTimer = setTimeout(() => { _secretClicks = 0; }, 2000);
+  if (_secretClicks >= 5) {
+    _secretClicks = 0;
+    _pwMode = !_pwMode;
+    document.getElementById('emailStep').classList.toggle('hidden', _pwMode);
+    document.getElementById('pwStep').classList.toggle('hidden', !_pwMode);
+    document.getElementById('otpStep').classList.add('hidden');
+    document.getElementById('authStatus').classList.add('hidden');
+    document.getElementById('authSubText').textContent = _pwMode
+      ? '비밀번호로 로그인합니다.'
+      : 'Continental 이메일로 인증 코드를 받아 로그인하세요.';
+    if (_pwMode) {
+      document.getElementById('pwEmailInput').value = email;
+      document.getElementById('pwInput').focus();
+    }
+  }
+};
+window.onPwEmailInput = window.onPwInput = function() {
+  const e = document.getElementById('pwEmailInput').value.trim();
+  const p = document.getElementById('pwInput').value.trim();
+  document.getElementById('pwBtn').disabled = !e.includes('@') || p.length < 1;
+};
+window.loginWithPassword = async function() {
+  const email = document.getElementById('pwEmailInput').value.trim();
+  const password = document.getElementById('pwInput').value.trim();
+  const btn = document.getElementById('pwBtn');
+  btn.disabled = true; btn.textContent = '로그인 중...';
+  try {
+    const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    const { data: banData } = await _supabase.from('banned_users').select('email').eq('email', data.user.email).maybeSingle();
+    if (banData) { showAuthError('접근이 제한된 계정입니다.'); btn.disabled = false; btn.textContent = '로그인'; return; }
+    showApp(data.user.email);
+  } catch(e) {
+    showAuthError('이메일 또는 비밀번호가 올바르지 않습니다.');
+    btn.disabled = false; btn.textContent = '로그인';
+  }
+};
 </script>
 <script>
 // ── Consent ──
