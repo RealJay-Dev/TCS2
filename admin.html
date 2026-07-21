@@ -1040,8 +1040,17 @@ window.deletePpmoVehicle = async function(vehicleId, vehicleNo) {
       }
     }
     // 2. Vehicle 삭제 (CASCADE로 rounds → measurements/photos/feedback 자동 삭제)
-    const { error } = await _supabase.from('ppmo_vehicles').delete().eq('id', vehicleId);
+    //    RLS 정책이 없으면 Postgres는 에러 없이 0행을 삭제하므로,
+    //    .select()로 반환된 행 수를 반드시 확인
+    const { data: deleted, error } = await _supabase
+      .from('ppmo_vehicles')
+      .delete()
+      .eq('id', vehicleId)
+      .select();
     if (error) throw error;
+    if (!deleted || deleted.length === 0) {
+      throw new Error('삭제된 행이 없습니다.\n\n원인: v5/v6 마이그레이션(관리자 삭제 정책)이 아직 실행되지 않았거나, 현재 계정이 관리자 이메일 목록에 없습니다.\n\nSupabase SQL Editor에서 ppmo_migration_v5.sql 및 v6를 실행하세요.');
+    }
     alert(`차량 ${vehicleNo} 삭제 완료`);
     await loadPpmoData();
   } catch(e) {
