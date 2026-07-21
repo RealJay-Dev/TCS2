@@ -152,9 +152,10 @@
       </div>
 
       <!-- 탭 -->
-      <div style="display:flex; gap:8px; margin-bottom:14px;">
+      <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
         <button class="search-tab active" id="tab-access" onclick="switchTab('access')" style="flex:none;padding:8px 20px;">접속 로그</button>
         <button class="search-tab" id="tab-action" onclick="switchTab('action')" style="flex:none;padding:8px 20px;">액션 로그</button>
+        <button class="search-tab" id="tab-ppmo" onclick="switchTab('ppmo')" style="flex:none;padding:8px 20px;">🚚 PPMo</button>
         <button class="search-tab" id="tab-stats" onclick="switchTab('stats')" style="flex:none;padding:8px 20px;">📊 통계 · KPI</button>
         <button class="search-tab" id="tab-consent" onclick="switchTab('consent')" style="flex:none;padding:8px 20px;">🔒 동의 현황</button>
         <button class="refresh-btn" onclick="loadAll()" style="margin-left:auto;">↻ 새로고침</button>
@@ -193,6 +194,29 @@
         <div id="statsPanel"><div class="loading-state">로딩 중...</div></div>
       </div>
 
+      <!-- PPMo -->
+      <div id="panel-ppmo" class="hidden">
+        <div id="ppmoStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;"></div>
+        <div style="display:flex;gap:10px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
+          <select id="ppmoFilterSales" onchange="renderPpmoTable()" style="padding:7px 10px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:13px;background:var(--bg);color:var(--text);min-width:180px;">
+            <option value="">전체 담당자</option>
+          </select>
+          <select id="ppmoFilterStatus" onchange="renderPpmoTable()" style="padding:7px 10px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:13px;background:var(--bg);color:var(--text);">
+            <option value="">전체 상태</option>
+            <option value="in_progress">진행중 (미완료)</option>
+            <option value="complete">완료 (6/6)</option>
+          </select>
+          <div class="count-info" id="ppmoCountInfo" style="margin:0;"></div>
+          <button onclick="exportPpmoCSV()" style="margin-left:auto;padding:5px 12px;background:none;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);cursor:pointer;">📥 CSV</button>
+        </div>
+        <div class="table-wrap">
+          <div class="table-header" style="grid-template-columns:1.2fr 1.6fr 1.4fr 0.8fr 1fr 1fr 0.6fr;">
+            <div>차량번호</div><div>담당자</div><div>모델 · 연식</div><div>진행</div><div>최근 검사일</div><div>등록일</div><div>액션</div>
+          </div>
+          <div id="ppmoTable"><div class="loading-state">로딩 중...</div></div>
+        </div>
+      </div>
+
       <!-- 동의 현황 -->
       <div id="panel-consent" class="hidden">
         <div style="display:flex;align-items:center;margin-bottom:8px;">
@@ -221,6 +245,7 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 
 let allLogs = [], allActions = [], allSessions = [], allConsents = [], selectedUser = null, currentTab = 'access';
+let ppmoVehicles = [], ppmoRounds = [], ppmoLoaded = false;
 const bannedUsers = new Set();
 const excludedFromKPI = new Set();
 
@@ -348,12 +373,13 @@ window.resetAuth = resetAuth;
 // ── Tab ───────────────────────────────────────────────────────
 window.switchTab = function(tab) {
   currentTab = tab;
-  ['access','action','stats','consent'].forEach(t => {
+  ['access','action','ppmo','stats','consent'].forEach(t => {
     document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
     document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
   });
   if (tab === 'access') renderAccessLogs();
   else if (tab === 'action') renderActionLogs();
+  else if (tab === 'ppmo') { if (!ppmoLoaded) loadPpmoData(); else renderPpmoTable(); }
   else if (tab === 'consent') renderConsentLogs();
   else renderStats();
 };
@@ -821,7 +847,247 @@ window.exportPDF = function() {
   printWin.document.close();
   printWin.print();
 };
+
+// ═══════════════════════════════════════════════════════════════
+// PPMo 관리 (담당자별 현황, 차량 삭제, 상세 조회)
+// ═══════════════════════════════════════════════════════════════
+const TOTAL_PPMO_ROUNDS = 6; // 0(초기) + 1~5
+
+async function loadPpmoData() {
+  document.getElementById('ppmoTable').innerHTML = '<div class="loading-state">로딩 중...</div>';
+  try {
+    const [vRes, rRes] = await Promise.all([
+      _supabase.from('ppmo_vehicles').select('*').order('created_at', { ascending: false }),
+      _supabase.from('ppmo_rounds').select('id, vehicle_id, round_no, inspected_at, mileage_km')
+    ]);
+    if (vRes.error) throw vRes.error;
+    ppmoVehicles = vRes.data || [];
+    ppmoRounds = rRes.error ? [] : (rRes.data || []);
+    ppmoLoaded = true;
+    // 담당자 필터 옵션 채우기
+    const sales = [...new Set(ppmoVehicles.map(v => v.created_by).filter(Boolean))].sort();
+    const sel = document.getElementById('ppmoFilterSales');
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">전체 담당자 (' + sales.length + '명)</option>' +
+      sales.map(s => `<option value="${escapeAttr(s)}">${escapeHtmlAdm(s)}</option>`).join('');
+    if (sales.includes(currentVal)) sel.value = currentVal;
+    renderPpmoStats();
+    renderPpmoTable();
+  } catch(e) {
+    document.getElementById('ppmoTable').innerHTML = `<div class="empty-state">로드 실패: ${e.message}</div>`;
+  }
+}
+
+function renderPpmoStats() {
+  const totalVehicles = ppmoVehicles.length;
+  const uniqueSales = new Set(ppmoVehicles.map(v => v.created_by).filter(Boolean)).size;
+  const totalRounds = ppmoRounds.length;
+  // 평균 진행률
+  const progressPerVehicle = {};
+  ppmoRounds.forEach(r => { progressPerVehicle[r.vehicle_id] = (progressPerVehicle[r.vehicle_id] || 0) + 1; });
+  const avgProgress = totalVehicles ? (Object.values(progressPerVehicle).reduce((a,b) => a+b, 0) / totalVehicles) : 0;
+  const completeCount = Object.values(progressPerVehicle).filter(n => n >= TOTAL_PPMO_ROUNDS).length;
+
+  document.getElementById('ppmoStats').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${totalVehicles}</div><div class="stat-sub">총 차량 수</div></div>
+    <div class="stat-card"><div class="stat-num">${uniqueSales}</div><div class="stat-sub">담당자 수</div></div>
+    <div class="stat-card"><div class="stat-num">${totalRounds}</div><div class="stat-sub">총 회차 기록</div></div>
+    <div class="stat-card"><div class="stat-num">${avgProgress.toFixed(1)}/${TOTAL_PPMO_ROUNDS}</div><div class="stat-sub">평균 진행률</div></div>
+    <div class="stat-card"><div class="stat-num">${completeCount}</div><div class="stat-sub">완료 차량 (6/6)</div></div>`;
+}
+
+function renderPpmoTable() {
+  const salesFilter = document.getElementById('ppmoFilterSales').value;
+  const statusFilter = document.getElementById('ppmoFilterStatus').value;
+  const progressMap = {};
+  const lastDateMap = {};
+  ppmoRounds.forEach(r => {
+    progressMap[r.vehicle_id] = (progressMap[r.vehicle_id] || 0) + 1;
+    const t = r.inspected_at ? new Date(r.inspected_at).getTime() : 0;
+    if (!lastDateMap[r.vehicle_id] || t > lastDateMap[r.vehicle_id]) lastDateMap[r.vehicle_id] = t;
+  });
+  let filtered = ppmoVehicles.filter(v => !salesFilter || v.created_by === salesFilter);
+  if (statusFilter === 'in_progress') filtered = filtered.filter(v => (progressMap[v.id] || 0) < TOTAL_PPMO_ROUNDS);
+  else if (statusFilter === 'complete') filtered = filtered.filter(v => (progressMap[v.id] || 0) >= TOTAL_PPMO_ROUNDS);
+
+  document.getElementById('ppmoCountInfo').textContent = `${filtered.length}대 표시`;
+
+  if (!filtered.length) {
+    document.getElementById('ppmoTable').innerHTML = '<div class="empty-state">해당 조건의 차량이 없습니다.</div>';
+    return;
+  }
+
+  document.getElementById('ppmoTable').innerHTML = filtered.map(v => {
+    const done = progressMap[v.id] || 0;
+    const pct = Math.round((done / TOTAL_PPMO_ROUNDS) * 100);
+    const progressBar = `<div style="display:flex;align-items:center;gap:6px;font-size:12px;"><div style="flex:1;height:6px;background:var(--bg-secondary);border-radius:3px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${done >= TOTAL_PPMO_ROUNDS ? 'var(--text-success)' : 'var(--text-info)'};"></div></div><span style="font-weight:600;min-width:28px;">${done}/${TOTAL_PPMO_ROUNDS}</span></div>`;
+    const lastDate = lastDateMap[v.id] ? new Date(lastDateMap[v.id]).toLocaleDateString('ko-KR') : '—';
+    const createDate = v.created_at ? new Date(v.created_at).toLocaleDateString('ko-KR') : '—';
+    const model = [v.vehicle_type, v.model_year && `'${String(v.model_year).slice(-2)}`].filter(Boolean).join(' ') || '—';
+    return `<div class="table-row" style="grid-template-columns:1.2fr 1.6fr 1.4fr 0.8fr 1fr 1fr 0.6fr;">
+      <div style="font-weight:700;cursor:pointer;color:var(--text-info);" onclick="showPpmoDetail('${v.id}')">${escapeHtmlAdm(v.vehicle_no)}</div>
+      <div style="font-size:12px;color:var(--text-secondary);">${escapeHtmlAdm(v.created_by || '—')}</div>
+      <div style="font-size:12px;">${escapeHtmlAdm(model)}</div>
+      <div>${progressBar}</div>
+      <div style="font-size:12px;color:var(--text-secondary);">${lastDate}</div>
+      <div style="font-size:12px;color:var(--text-secondary);">${createDate}</div>
+      <div><button onclick="deletePpmoVehicle('${v.id}', '${escapeAttr(v.vehicle_no)}')" style="padding:4px 8px;background:none;border:0.5px solid var(--text-danger);border-radius:4px;color:var(--text-danger);font-size:11px;cursor:pointer;">삭제</button></div>
+    </div>`;
+  }).join('');
+}
+
+window.showPpmoDetail = async function(vehicleId) {
+  const v = ppmoVehicles.find(x => x.id === vehicleId);
+  if (!v) return;
+  const modal = document.getElementById('ppmoDetailModal');
+  modal.style.display = 'flex';
+  modal.classList.remove('hidden');
+  document.getElementById('ppmoDetailTitle').textContent = `${v.vehicle_no} · ${v.vehicle_type || ''}`;
+  document.getElementById('ppmoDetailContent').innerHTML = '<div class="loading-state">회차 데이터 로딩 중...</div>';
+  try {
+    const roundIds = ppmoRounds.filter(r => r.vehicle_id === vehicleId).map(r => r.id);
+    let measurements = [], photos = [], feedback = [], fullRounds = [];
+    const [rRes] = await Promise.all([
+      _supabase.from('ppmo_rounds').select('*').eq('vehicle_id', vehicleId).order('round_no')
+    ]);
+    fullRounds = rRes.data || [];
+    if (roundIds.length) {
+      const [m, p, f] = await Promise.all([
+        _supabase.from('ppmo_measurements').select('*').in('round_id', roundIds),
+        _supabase.from('ppmo_photos').select('*').in('round_id', roundIds),
+        _supabase.from('ppmo_feedback').select('*').in('round_id', roundIds)
+      ]);
+      measurements = m.data || [];
+      photos = p.data || [];
+      feedback = f.data || [];
+    }
+    // 차량 정보 요약
+    const info = [
+      ['차량번호', v.vehicle_no],
+      ['담당자', v.created_by],
+      ['모델·연식', [v.vehicle_type, v.model_year && `${v.model_year}년식`].filter(Boolean).join(' · ') || '—'],
+      ['제품', v.product || '—'],
+      ['타이어 사이즈', v.tire_size ? `${v.tire_size} ${v.load_index || ''}${v.speed_index || ''}` : '—'],
+      ['딜러', v.dealer_name || '—'],
+      ['장착 시점 주행거리', v.initial_mileage_km != null ? Number(v.initial_mileage_km).toLocaleString('ko-KR') + ' km' : '—'],
+      ['등록일', v.created_at ? new Date(v.created_at).toLocaleString('ko-KR') : '—']
+    ];
+    const infoHtml = `<div style="background:var(--bg-secondary);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;">${
+      info.map(([k, val]) => `<div style="display:flex;padding:3px 0;"><span style="color:var(--text-tertiary);min-width:120px;">${k}</span><span>${escapeHtmlAdm(val)}</span></div>`).join('')
+    }</div>`;
+
+    // 회차별 요약
+    let roundsHtml = '<div style="font-size:12px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">회차별 기록</div>';
+    for (let n = 0; n < TOTAL_PPMO_ROUNDS; n++) {
+      const r = fullRounds.find(x => x.round_no === n);
+      const title = n === 0 ? '초기 설치' : `${n}회차`;
+      if (!r) {
+        roundsHtml += `<div style="padding:10px 12px;margin-bottom:6px;border:0.5px dashed var(--border-strong);border-radius:8px;font-size:13px;color:var(--text-tertiary);">${title} · 미입력</div>`;
+        continue;
+      }
+      const rMeas = measurements.filter(m => m.round_id === r.id);
+      const rPhotos = photos.filter(p => p.round_id === r.id);
+      const rFeed = feedback.filter(f => f.round_id === r.id);
+      // 포지션별 min RTD
+      const minByPos = {};
+      rMeas.forEach(m => { if (minByPos[m.position] == null || m.rtd_mm < minByPos[m.position]) minByPos[m.position] = m.rtd_mm; });
+      const rtdSummary = Object.entries(minByPos).map(([pos, mm]) => `${pos}: ${mm.toFixed(1)}`).join(' · ') || '—';
+      const feedbackTags = rFeed.map(f => `<span style="display:inline-block;background:var(--bg-info);color:var(--text-info);padding:1px 7px;border-radius:8px;font-size:11px;margin-right:3px;">${escapeHtmlAdm(f.note || f.category)}</span>`).join('');
+      roundsHtml += `<div style="padding:10px 12px;margin-bottom:6px;background:var(--bg);border:0.5px solid var(--border);border-radius:8px;font-size:12.5px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div style="font-weight:700;">${title} · ${new Date(r.inspected_at).toLocaleDateString('ko-KR')}</div>
+          <div style="font-size:11px;color:var(--text-tertiary);">${Number(r.mileage_km).toLocaleString('ko-KR')} km</div>
+        </div>
+        <div style="color:var(--text-secondary);margin-bottom:4px;">RTD ${rtdSummary}</div>
+        <div style="color:var(--text-secondary);">사진 ${rPhotos.length}장${feedbackTags ? ' · ' + feedbackTags : ''}</div>
+        ${r.notes ? `<div style="margin-top:4px;color:var(--text-tertiary);font-style:italic;">${escapeHtmlAdm(r.notes)}</div>` : ''}
+      </div>`;
+    }
+
+    document.getElementById('ppmoDetailContent').innerHTML = infoHtml + roundsHtml;
+  } catch(e) {
+    document.getElementById('ppmoDetailContent').innerHTML = `<div class="empty-state">불러오기 실패: ${e.message}</div>`;
+  }
+};
+window.closePpmoDetail = function() {
+  const modal = document.getElementById('ppmoDetailModal');
+  modal.style.display = 'none';
+  modal.classList.add('hidden');
+};
+
+window.deletePpmoVehicle = async function(vehicleId, vehicleNo) {
+  const roundIds = ppmoRounds.filter(r => r.vehicle_id === vehicleId).map(r => r.id);
+  let photoCount = 0;
+  if (roundIds.length) {
+    const { data: cnt } = await _supabase.from('ppmo_photos').select('id', { count: 'exact', head: true }).in('round_id', roundIds);
+    photoCount = cnt || 0;
+  }
+  const msg = `정말 삭제할까요?\n\n차량: ${vehicleNo}\n회차: ${roundIds.length}건\n사진 등: 함께 삭제됨\n\n※ 이 작업은 되돌릴 수 없습니다.`;
+  if (!confirm(msg)) return;
+  try {
+    // 1. Storage 사진 파일 삭제
+    if (roundIds.length) {
+      const { data: photos } = await _supabase.from('ppmo_photos').select('url').in('round_id', roundIds);
+      if (photos && photos.length) {
+        const paths = photos.map(p => {
+          const m = p.url && p.url.match(/\/ppmo-photos\/(.+)$/);
+          return m ? m[1] : null;
+        }).filter(Boolean);
+        if (paths.length) {
+          const { error: rmErr } = await _supabase.storage.from('ppmo-photos').remove(paths);
+          if (rmErr) console.warn('사진 파일 일부 삭제 실패 (계속 진행):', rmErr.message);
+        }
+      }
+    }
+    // 2. Vehicle 삭제 (CASCADE로 rounds → measurements/photos/feedback 자동 삭제)
+    const { error } = await _supabase.from('ppmo_vehicles').delete().eq('id', vehicleId);
+    if (error) throw error;
+    alert(`차량 ${vehicleNo} 삭제 완료`);
+    await loadPpmoData();
+  } catch(e) {
+    alert('삭제 실패: ' + e.message + '\n\n※ RLS 정책 확인 필요 시 관리자에게 문의');
+  }
+};
+
+window.exportPpmoCSV = function() {
+  const progressMap = {};
+  const lastDateMap = {};
+  ppmoRounds.forEach(r => {
+    progressMap[r.vehicle_id] = (progressMap[r.vehicle_id] || 0) + 1;
+    const t = r.inspected_at ? new Date(r.inspected_at).getTime() : 0;
+    if (!lastDateMap[r.vehicle_id] || t > lastDateMap[r.vehicle_id]) lastDateMap[r.vehicle_id] = t;
+  });
+  const headers = ['차량번호','담당자','모델','연식','제품','사이즈','하중지수','속도지수','장착주행거리','진행회차','최근검사일','등록일'];
+  const rows = ppmoVehicles.map(v => [
+    v.vehicle_no, v.created_by || '', v.vehicle_type || '', v.model_year || '',
+    v.product || '', v.tire_size || '', v.load_index || '', v.speed_index || '',
+    v.initial_mileage_km || '', (progressMap[v.id] || 0) + '/' + TOTAL_PPMO_ROUNDS,
+    lastDateMap[v.id] ? new Date(lastDateMap[v.id]).toLocaleDateString('ko-KR') : '',
+    v.created_at ? new Date(v.created_at).toLocaleDateString('ko-KR') : ''
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `ppmo_vehicles_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+function escapeHtmlAdm(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s) { return String(s ?? '').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
 </script>
+
+<!-- PPMo 차량 상세 모달 -->
+<div id="ppmoDetailModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:400;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;">
+  <div style="background:var(--bg);border-radius:var(--radius);max-width:680px;width:100%;margin:auto;padding:20px 22px;border:0.5px solid var(--border);">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+      <div id="ppmoDetailTitle" style="font-size:18px;font-weight:800;"></div>
+      <button onclick="closePpmoDetail()" style="background:none;border:none;font-size:22px;color:var(--text-tertiary);cursor:pointer;padding:0 4px;">×</button>
+    </div>
+    <div id="ppmoDetailContent"></div>
+  </div>
+</div>
 
 </body>
 </html>
