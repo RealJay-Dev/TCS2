@@ -205,7 +205,7 @@
 <script>
 const SUPABASE_URL = 'https://thosddtgtffapakvmrhn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_HmrBU9WFhkCTM_TquLM31g_IPovXtXm';
-const ADMIN_EMAIL = 'jaehong.park@continental.com';
+const ADMIN_EMAILS = ['jaehong.park@continental.com', 'sangyong.2.jung@continental.com'];
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }
@@ -219,7 +219,7 @@ const excludedFromKPI = new Set();
 let _secretClicks = 0, _secretTimer = null, _pwMode = false;
 window.secretClick = function() {
   const email = document.getElementById('emailInput').value.trim().toLowerCase();
-  if (email !== ADMIN_EMAIL) return;
+  if (!ADMIN_EMAILS.includes(email)) return;
   _secretClicks++;
   if (_secretTimer) clearTimeout(_secretTimer);
   _secretTimer = setTimeout(() => { _secretClicks = 0; }, 2000);
@@ -241,10 +241,12 @@ window.onPwInput = function() {
 };
 window.loginWithPassword = async function() {
   const btn = document.getElementById('pwBtn');
+  const email = document.getElementById('emailInput').value.trim().toLowerCase();
+  if (!ADMIN_EMAILS.includes(email)) { showAuthError('관리자 계정만 접근 가능합니다.'); return; }
   btn.disabled = true; btn.textContent = '로그인 중...';
   try {
     const { data, error } = await _supabase.auth.signInWithPassword({
-      email: ADMIN_EMAIL,
+      email,
       password: document.getElementById('pwInput').value.trim()
     });
     if (error) throw error;
@@ -258,7 +260,7 @@ window.loginWithPassword = async function() {
 // 페이지 로드 시 세션 확인
 (async () => {
   const { data: { session } } = await _supabase.auth.getSession();
-  if (session && session.user.email.toLowerCase() === ADMIN_EMAIL) {
+  if (session && ADMIN_EMAILS.includes(session.user.email.toLowerCase())) {
     showAdmin(session.user.email);
   } else {
     document.getElementById('authScreen').style.display = 'flex';
@@ -296,7 +298,7 @@ window.onOTPInput = function() {
 };
 window.sendOTP = async function() {
   const email = document.getElementById('emailInput').value.trim();
-  if (email.toLowerCase() !== ADMIN_EMAIL) { showAuthError('관리자 계정만 접근 가능합니다.'); return; }
+  if (!ADMIN_EMAILS.includes(email.toLowerCase())) { showAuthError('관리자 계정만 접근 가능합니다.'); return; }
   const btn = document.getElementById('authBtn');
   btn.disabled = true; btn.textContent = '전송 중...';
   try {
@@ -320,7 +322,7 @@ window.verifyOTP = async function() {
   try {
     const { data, error } = await _supabase.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
-    if (data.user.email.toLowerCase() !== ADMIN_EMAIL) {
+    if (!ADMIN_EMAILS.includes(data.user.email.toLowerCase())) {
       await _supabase.auth.signOut();
       showAuthError('관리자 계정만 접근 가능합니다.');
       btn.disabled = false; btn.textContent = '확인'; return;
