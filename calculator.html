@@ -211,16 +211,16 @@
     <div class="nav-brand-sub">Continental · CTK TCS Team</div>
   </div>
   <div class="nav-items">
-    <a class="nav-item" href="index.html">
+    <a class="nav-item" href="index.html" onclick="logNav('홈 이동')">
       <span class="nav-icon">🏠</span> 홈
     </a>
-    <a class="nav-item active" href="calculator.html">
+    <a class="nav-item active" href="calculator.html" onclick="logNav('계산기 이동')">
       <span class="nav-icon">🧮</span> Compensation Calculator
     </a>
-    <a class="nav-item" href="ppmo.html">
+    <a class="nav-item" href="ppmo.html" onclick="logNav('PPMo 이동')">
       <span class="nav-icon">📋</span> PPMo 현장 기록
     </a>
-    <a class="nav-item" href="info.html">
+    <a class="nav-item" href="info.html" onclick="logNav('정보 이동')">
       <span class="nav-icon">📚</span> 참고자료
     </a>
   </div>
@@ -608,7 +608,7 @@ const SUPABASE_URL = 'https://thosddtgtffapakvmrhn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_HmrBU9WFhkCTM_TquLM31g_IPovXtXm';
 const ALLOWED_DOMAIN = 'continental.com';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: false }
+  auth: { persistSession: true, autoRefreshToken: true }
 });
 
 // IP 기반 지역 정보 가져오기
@@ -634,6 +634,11 @@ async function logAccess(email, type) {
     });
   } catch(e) { console.warn('로그 저장 실패:', e); }
 }
+
+// 페이지 이동 로그 (사이드바 클릭 시)
+window.logNav = function(type) {
+  if (_currentEmail) logAccess(_currentEmail, type);
+};
 
 // 액션 로그 저장
 let _currentEmail = null;
@@ -686,7 +691,7 @@ document.addEventListener('visibilitychange', () => {
   const { data: { session } } = await _supabase.auth.getSession();
   if (session && session.user.email.endsWith('@' + ALLOWED_DOMAIN)) {
     showApp(session.user.email);
-    logAccess(session.user.email, '세션유지');
+    logAccess(session.user.email, '계산기 진입');
   } else {
     showAuthScreen();
   }

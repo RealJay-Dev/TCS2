@@ -135,16 +135,16 @@
     <div class="nav-brand-sub">Continental · CTK TCS Team</div>
   </div>
   <div class="nav-items">
-    <a class="nav-item" href="index.html">
+    <a class="nav-item" href="index.html" onclick="logNav('홈 이동')">
       <span class="nav-icon">🏠</span> 홈
     </a>
-    <a class="nav-item" href="calculator.html">
+    <a class="nav-item" href="calculator.html" onclick="logNav('계산기 이동')">
       <span class="nav-icon">🧮</span> Compensation Calculator
     </a>
-    <a class="nav-item" href="ppmo.html">
+    <a class="nav-item" href="ppmo.html" onclick="logNav('PPMo 이동')">
       <span class="nav-icon">📋</span> PPMo 현장 기록
     </a>
-    <a class="nav-item active" href="info.html">
+    <a class="nav-item active" href="info.html" onclick="logNav('정보 이동')">
       <span class="nav-icon">📚</span> 참고자료
     </a>
   </div>
@@ -293,7 +293,20 @@ async function launchApp(email) {
   document.getElementById('authScreen').style.display = 'none';
   document.getElementById('mainApp').classList.remove('hidden');
   document.getElementById('userEmail').textContent = email;
+  logAccess(email, '정보 진입');
 }
+async function logAccess(email, type) {
+  try {
+    await _supabase.from('access_logs').insert({
+      email, type,
+      user_agent: navigator.userAgent,
+      platform: navigator.platform,
+    });
+  } catch(e) { console.warn('로그 저장 실패:', e); }
+}
+window.logNav = function(type) {
+  if (_currentEmail) logAccess(_currentEmail, type);
+};
 window.openNav = function() {
   document.getElementById('navDrawer').classList.add('open');
   document.getElementById('navOverlay').classList.add('open');

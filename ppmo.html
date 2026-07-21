@@ -190,10 +190,10 @@
     <div class="nav-brand-sub">Continental · CTK TCS Team</div>
   </div>
   <div class="nav-items">
-    <a class="nav-item" href="index.html"><span class="nav-icon">🏠</span> 홈</a>
-    <a class="nav-item" href="calculator.html"><span class="nav-icon">🧮</span> 보상 계산기</a>
-    <a class="nav-item active" href="ppmo.html"><span class="nav-icon">📋</span> PPMo 현장 기록</a>
-    <a class="nav-item" href="info.html"><span class="nav-icon">📚</span> 각종 정보 확인</a>
+    <a class="nav-item" href="index.html" onclick="logNav('홈 이동')"><span class="nav-icon">🏠</span> 홈</a>
+    <a class="nav-item" href="calculator.html" onclick="logNav('계산기 이동')"><span class="nav-icon">🧮</span> 보상 계산기</a>
+    <a class="nav-item active" href="ppmo.html" onclick="logNav('PPMo 이동')"><span class="nav-icon">📋</span> PPMo 현장 기록</a>
+    <a class="nav-item" href="info.html" onclick="logNav('정보 이동')"><span class="nav-icon">📚</span> 각종 정보 확인</a>
   </div>
   <div class="nav-footer">v2 · CTK TCS Team</div>
 </div>
@@ -256,6 +256,20 @@
         <div class="field">
           <div class="label">제품 (아티클)</div>
           <input type="text" id="fNewProduct" value="VanContact AP2">
+        </div>
+        <div class="row field">
+          <div>
+            <div class="label">사이즈 *</div>
+            <input type="text" id="fNewTireSize" placeholder="예: 195/70R15" oninput="validateNewVehicle()">
+          </div>
+          <div>
+            <div class="label">하중지수 *</div>
+            <input type="text" id="fNewLoadIndex" placeholder="예: 106/104" oninput="validateNewVehicle()">
+          </div>
+          <div>
+            <div class="label">속도지수 *</div>
+            <input type="text" id="fNewSpeedIndex" placeholder="예: R" oninput="validateNewVehicle()">
+          </div>
         </div>
         <button class="btn full" id="btnCreateVehicle" onclick="createVehicle()" disabled>생성하기</button>
       </div>
@@ -353,10 +367,25 @@ async function launchApp(email) {
   document.getElementById('authScreen').style.display = 'none';
   document.getElementById('mainApp').classList.remove('hidden');
   document.getElementById('userEmail').textContent = email;
+  logAccess(email, 'PPMo 진입');
   await loadVehicles();
 }
 window.openNav = () => { document.getElementById('navDrawer').classList.add('open'); document.getElementById('navOverlay').classList.add('open'); };
 window.closeNav = () => { document.getElementById('navDrawer').classList.remove('open'); document.getElementById('navOverlay').classList.remove('open'); };
+
+// ── Access logging ──
+async function logAccess(email, type) {
+  try {
+    await _supabase.from('access_logs').insert({
+      email, type,
+      user_agent: navigator.userAgent,
+      platform: navigator.platform,
+    });
+  } catch(e) { console.warn('로그 저장 실패:', e); }
+}
+window.logNav = function(type) {
+  if (_currentEmail) logAccess(_currentEmail, type);
+};
 
 // ── View switching ──
 function showList() {
@@ -372,7 +401,7 @@ window.showNewVehicleForm = function() {
   document.getElementById('view-detail').classList.add('hidden');
   setPageHeader('새 차량 생성', '차량 정보 입력');
   // reset form
-  ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewDealer'].forEach(id => document.getElementById(id).value = '');
+  ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewDealer','fNewTireSize','fNewLoadIndex','fNewSpeedIndex'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fNewProduct').value = 'VanContact AP2';
   document.getElementById('btnCreateVehicle').disabled = true;
 };
@@ -389,8 +418,16 @@ function showDetail(vehicle) {
   if (vehicle.model_year) meta.push(`${vehicle.model_year}년식`);
   meta.push(vehicle.product);
   if (vehicle.dealer_name) meta.push(vehicle.dealer_name);
+  // 타이어 스펙 조립: "195/70R15 106/104R"
+  const tireSpec = [
+    vehicle.tire_size,
+    [vehicle.load_index, vehicle.speed_index].filter(Boolean).join('')
+  ].filter(Boolean).join(' ');
   const init = vehicle.initial_mileage_km != null ? `장착 시점 ${fmtKm(vehicle.initial_mileage_km)}` : '';
-  document.getElementById('detMeta').innerHTML = meta.join(' · ') + (init ? '<br>' + init : '');
+  const lines = [meta.join(' · ')];
+  if (tireSpec) lines.push(`타이어: ${tireSpec}`);
+  if (init) lines.push(init);
+  document.getElementById('detMeta').innerHTML = lines.join('<br>');
   renderRounds();
 }
 function setPageHeader(title, sub) {
@@ -439,7 +476,7 @@ window.openVehicle = function(v) { showDetail(v); };
 
 // ── New vehicle ──
 window.validateNewVehicle = function() {
-  const ok = ['fNewNo','fNewModel','fNewYear','fNewInitMileage'].every(id => document.getElementById(id).value.trim());
+  const ok = ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewTireSize','fNewLoadIndex','fNewSpeedIndex'].every(id => document.getElementById(id).value.trim());
   document.getElementById('btnCreateVehicle').disabled = !ok;
 };
 window.createVehicle = async function() {
@@ -452,6 +489,9 @@ window.createVehicle = async function() {
     initial_mileage_km: parseFloat(document.getElementById('fNewInitMileage').value),
     dealer_name: document.getElementById('fNewDealer').value.trim() || null,
     product: document.getElementById('fNewProduct').value.trim() || 'VanContact AP2',
+    tire_size: document.getElementById('fNewTireSize').value.trim(),
+    load_index: document.getElementById('fNewLoadIndex').value.trim(),
+    speed_index: document.getElementById('fNewSpeedIndex').value.trim(),
     created_by: _currentEmail
   };
   try {

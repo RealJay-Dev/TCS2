@@ -224,13 +224,13 @@
     <a class="nav-item active" href="index.html">
       <span class="nav-icon">🏠</span> 홈
     </a>
-    <a class="nav-item" href="calculator.html">
+    <a class="nav-item" href="calculator.html" onclick="logNav('계산기 이동')">
       <span class="nav-icon">🧮</span> Compensation Calculator
     </a>
-    <a class="nav-item" href="ppmo.html">
+    <a class="nav-item" href="ppmo.html" onclick="logNav('PPMo 이동')">
       <span class="nav-icon">📋</span> PPMo 현장 기록
     </a>
-    <a class="nav-item" href="info.html">
+    <a class="nav-item" href="info.html" onclick="logNav('정보 이동')">
       <span class="nav-icon">📚</span> 각종 정보 확인
     </a>
   </div>
@@ -250,17 +250,17 @@
   <div class="wrap">
     <div class="home-prompt">환영합니다. 무엇을 실행할까요?</div>
     <div class="tile-grid">
-      <a class="tile" href="calculator.html">
+      <a class="tile" href="calculator.html" onclick="logNav('계산기 이동')">
         <div class="tile-icon">🧮</div>
         <div class="tile-title">보상 계산기</div>
         <div class="tile-sub">Compensation Calculator · 가격 조회</div>
       </a>
-      <a class="tile" href="ppmo.html">
+      <a class="tile" href="ppmo.html" onclick="logNav('PPMo 이동')">
         <div class="tile-icon">📋</div>
         <div class="tile-title">PPMo 현장 기록</div>
         <div class="tile-sub">마일리지 체크업 · 사진/RTD 입력</div>
       </a>
-      <a class="tile" href="info.html">
+      <a class="tile" href="info.html" onclick="logNav('정보 이동')">
         <div class="tile-icon">📚</div>
         <div class="tile-title">각종 정보 확인</div>
         <div class="tile-sub">Condition Code (EoTC) · Adjustment Policy</div>
@@ -404,7 +404,7 @@ const SUPABASE_URL = 'https://thosddtgtffapakvmrhn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_HmrBU9WFhkCTM_TquLM31g_IPovXtXm';
 const ALLOWED_DOMAIN = 'continental.com';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: false }
+  auth: { persistSession: true, autoRefreshToken: true }
 });
 
 // IP 기반 지역 정보 가져오기
@@ -430,6 +430,11 @@ async function logAccess(email, type) {
     });
   } catch(e) { console.warn('로그 저장 실패:', e); }
 }
+
+// 페이지 이동 로그 (타일/사이드바 클릭 시 fire-and-forget)
+window.logNav = function(type) {
+  if (_currentEmail) logAccess(_currentEmail, type);
+};
 
 // 액션 로그 저장
 let _currentEmail = null;
