@@ -1,6 +1,6 @@
 {
   "name": "TCS Korea Workplace",
-  "short_name": "TCS",
+  "short_name": "TCS Workplace",
   "description": "Continental Korea TCS 업무 통합 툴 · 보상 계산기, PPMo 현장 기록, 참고자료",
   "start_url": "/index.html",
   "scope": "/",

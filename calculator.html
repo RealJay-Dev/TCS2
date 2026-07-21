@@ -713,19 +713,31 @@ async function showApp(email) {
     if (data) isRevoked = true;
   } catch(e) {}
 
-  // 2. 동의 철회됐으면 localStorage도 초기화
   if (isRevoked) {
     localStorage.removeItem('tcs_consent_' + email);
+    showConsentPopup(email);
+    return;
   }
 
-  // 3. 동의 여부 판단
+  // 2. 동의 여부 판단 — 로컬 우선, 없으면 서버 조회 (기기간 동기화)
   const consentKey = 'tcs_consent_' + email;
-  if (!localStorage.getItem(consentKey)) {
-    showConsentPopup(email);
-  } else {
+  if (localStorage.getItem(consentKey)) {
     logAccess(email, 'OTP인증');
     launchApp(email);
+    return;
   }
+  try {
+    const { data: logRow } = await _supabase.from('consent_logs')
+      .select('consented_at').eq('email', email)
+      .order('consented_at', { ascending: false }).limit(1).maybeSingle();
+    if (logRow && logRow.consented_at) {
+      localStorage.setItem(consentKey, logRow.consented_at);
+      logAccess(email, 'OTP인증');
+      launchApp(email);
+      return;
+    }
+  } catch(e) {}
+  showConsentPopup(email);
 }
 function launchApp(email) {
   document.getElementById('mainApp').classList.remove('hidden');
