@@ -261,11 +261,16 @@
           </div>
         </div>
         <div class="field">
+          <div class="label">아티클 번호 <span style="color:var(--text-tertiary);font-weight:400;">(입력 시 계산기 DB에서 자동 조회)</span></div>
+          <input type="text" id="fNewArticle" placeholder="예: 04510660000" oninput="onArticleInput()" style="letter-spacing:0.05em;">
+          <div id="articleLookupStatus" style="font-size:11px;margin-top:4px;min-height:14px;"></div>
+        </div>
+        <div class="field">
           <div class="label">딜러/점포명</div>
           <input type="text" id="fNewDealer" placeholder="딜러명">
         </div>
         <div class="field">
-          <div class="label">제품 (아티클)</div>
+          <div class="label">제품명</div>
           <input type="text" id="fNewProduct" value="VanContact AP2">
         </div>
         <div class="row field">
@@ -281,6 +286,10 @@
             <div class="label">속도지수 *</div>
             <input type="text" id="fNewSpeedIndex" placeholder="예: R" oninput="validateNewVehicle()">
           </div>
+        </div>
+        <div class="field">
+          <div class="label">NTD - 신품 트레드 깊이 (mm) * <span style="color:var(--text-tertiary);font-weight:400;">(예상 마일리지 계산에 사용)</span></div>
+          <input type="number" step="0.1" min="0" max="30" id="fNewNtd" placeholder="예: 9.5" oninput="validateNewVehicle()">
         </div>
         <button class="btn full" id="btnCreateVehicle" onclick="createVehicle()" disabled>생성하기</button>
       </div>
@@ -341,8 +350,9 @@ const PHOTO_SLOTS = [
 ];
 const SLOT_BY_ID = Object.fromEntries(PHOTO_SLOTS.map(s => [s.id, s]));
 
-// 피드백 퀵픽 칩 (다중 선택 가능)
+// 피드백 퀵픽 칩 (다중 선택 가능, "특이사항 없음"은 배타적)
 const FEEDBACK_CHIPS = [
+  { category: '없음', label: '특이사항 없음', exclusive: true },
   { category: '소음', label: '조용함' },
   { category: '소음', label: '소음 발생' },
   { category: '승차감', label: '승차감 좋음' },
@@ -452,8 +462,9 @@ window.showNewVehicleForm = function() {
   document.getElementById('view-detail').classList.add('hidden');
   setPageHeader('새 차량 생성', '차량 정보 입력');
   // reset form
-  ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewDealer','fNewTireSize','fNewLoadIndex','fNewSpeedIndex'].forEach(id => document.getElementById(id).value = '');
+  ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewDealer','fNewTireSize','fNewLoadIndex','fNewSpeedIndex','fNewArticle','fNewNtd'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fNewProduct').value = 'VanContact AP2';
+  document.getElementById('articleLookupStatus').textContent = '';
   document.getElementById('btnCreateVehicle').disabled = true;
 };
 function showDetail(vehicle) {
@@ -477,6 +488,8 @@ function showDetail(vehicle) {
   const init = vehicle.initial_mileage_km != null ? `장착 시점 ${fmtKm(vehicle.initial_mileage_km)}` : '';
   const lines = [meta.join(' · ')];
   if (tireSpec) lines.push(`타이어: ${tireSpec}`);
+  if (vehicle.article) lines.push(`아티클: <code style="font-family:monospace;">${escapeHtml(vehicle.article)}</code>` + (vehicle.ntd_mm != null ? ` · NTD ${vehicle.ntd_mm}mm` : ''));
+  else if (vehicle.ntd_mm != null) lines.push(`NTD ${vehicle.ntd_mm}mm`);
   if (init) lines.push(init);
   document.getElementById('detMeta').innerHTML = lines.join('<br>');
   renderRounds();
@@ -527,8 +540,56 @@ window.openVehicle = function(v) { showDetail(v); };
 
 // ── New vehicle ──
 window.validateNewVehicle = function() {
-  const ok = ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewTireSize','fNewLoadIndex','fNewSpeedIndex'].every(id => document.getElementById(id).value.trim());
+  const ok = ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewTireSize','fNewLoadIndex','fNewSpeedIndex','fNewNtd'].every(id => document.getElementById(id).value.trim());
   document.getElementById('btnCreateVehicle').disabled = !ok;
+};
+
+// 아티클 번호로 계산기 DB(articles 테이블) 조회 → NTD/사이즈/패턴 자동 채움
+let _articleLookupTimer = null;
+window.onArticleInput = function() {
+  clearTimeout(_articleLookupTimer);
+  const raw = document.getElementById('fNewArticle').value.trim();
+  const statusEl = document.getElementById('articleLookupStatus');
+  if (!raw) { statusEl.textContent = ''; return; }
+  statusEl.style.color = 'var(--text-tertiary)';
+  statusEl.textContent = '⋯ 조회 중';
+  _articleLookupTimer = setTimeout(async () => {
+    try {
+      const { data, error } = await _supabase
+        .from('articles')
+        .select('article, ntd, size, pattern, description, li_ss')
+        .eq('article', raw)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        statusEl.style.color = 'var(--text-warning)';
+        statusEl.textContent = '⚠ 아티클을 찾을 수 없음 (수동 입력 필요)';
+        return;
+      }
+      // 자동 채움 (빈 필드만; 사용자 입력값은 덮어쓰지 않음)
+      const set = (id, v) => {
+        const el = document.getElementById(id);
+        if (v != null && v !== '' && !el.value) el.value = v;
+      };
+      set('fNewNtd', data.ntd);
+      set('fNewTireSize', data.size);
+      set('fNewProduct', data.pattern || data.description);
+      // li_ss 예: "106/104R" → 하중지수 + 속도지수 분리
+      if (data.li_ss) {
+        const m = data.li_ss.match(/^(\d+(?:\/\d+)?)([A-Z]+)$/);
+        if (m) {
+          set('fNewLoadIndex', m[1]);
+          set('fNewSpeedIndex', m[2]);
+        }
+      }
+      statusEl.style.color = 'var(--text-success)';
+      statusEl.textContent = `✓ ${data.pattern || ''} · ${data.size || ''} · NTD ${data.ntd || '?'}mm 자동 채움`;
+      validateNewVehicle();
+    } catch(e) {
+      statusEl.style.color = 'var(--text-danger)';
+      statusEl.textContent = '조회 실패: ' + e.message;
+    }
+  }, 400);
 };
 window.createVehicle = async function() {
   const btn = document.getElementById('btnCreateVehicle');
@@ -540,9 +601,11 @@ window.createVehicle = async function() {
     initial_mileage_km: parseFloat(document.getElementById('fNewInitMileage').value),
     dealer_name: document.getElementById('fNewDealer').value.trim() || null,
     product: document.getElementById('fNewProduct').value.trim() || 'VanContact AP2',
+    article: document.getElementById('fNewArticle').value.trim() || null,
     tire_size: document.getElementById('fNewTireSize').value.trim(),
     load_index: document.getElementById('fNewLoadIndex').value.trim(),
     speed_index: document.getElementById('fNewSpeedIndex').value.trim(),
+    ntd_mm: parseFloat(document.getElementById('fNewNtd').value),
     created_by: _currentEmail
   };
   try {
@@ -596,9 +659,17 @@ async function renderRounds() {
     }
     wrap.innerHTML = '';
     for (let n = 0; n < TOTAL_ROUNDS; n++) wrap.appendChild(buildRoundCard(n));
-    // 자동 확장: 첫 미완료 회차
+    // 자동 확장: 첫 미완료 회차 (편집 UI도 함께 렌더)
     const firstOpen = Object.keys(_roundsState).find(n => !_roundsState[n].round);
-    if (firstOpen != null) document.querySelector(`.round-card[data-n="${firstOpen}"]`).classList.add('open');
+    if (firstOpen != null) {
+      const n = parseInt(firstOpen);
+      document.querySelector(`.round-card[data-n="${n}"]`).classList.add('open');
+      // toggleRound과 동일한 초기화 절차
+      renderPhotoSlots(n);
+      buildRtdGrid(n);
+      renderFeedbackChips(n);
+      validateRoundSave(n);
+    }
   } catch(e) {
     wrap.innerHTML = `<div class="empty-state" style="color:var(--text-danger);">불러오기 실패: ${e.message}</div>`;
   }
@@ -771,6 +842,7 @@ window.onSlotFileChosen = async function(n, e) {
       origKb
     };
     renderPhotoSlots(n);
+    validateRoundSave(n);
     if (origKb > newKb + 30) toast(`사진 압축: ${origKb}KB → ${newKb}KB`);
   } catch(err) {
     toast('사진 처리 실패: ' + err.message, true);
@@ -782,6 +854,7 @@ window.removeSlotPhoto = function(n, slotId) {
     URL.revokeObjectURL(s.pendingBySlot[slotId].previewUrl);
     delete s.pendingBySlot[slotId];
     renderPhotoSlots(n);
+    validateRoundSave(n);
   }
 };
 
@@ -797,9 +870,21 @@ function renderFeedbackChips(n) {
 }
 window.toggleChip = function(n, i) {
   const s = _roundsState[n];
-  if (s.pendingChips.has(i)) s.pendingChips.delete(i);
-  else s.pendingChips.add(i);
+  const chip = FEEDBACK_CHIPS[i];
+  if (s.pendingChips.has(i)) {
+    s.pendingChips.delete(i);
+  } else {
+    // "특이사항 없음"은 다른 모든 것 해제 후 단독 선택
+    if (chip.exclusive) {
+      s.pendingChips.clear();
+    } else {
+      // 다른 칩을 누르면 "특이사항 없음"은 자동 해제
+      FEEDBACK_CHIPS.forEach((c, idx) => { if (c.exclusive) s.pendingChips.delete(idx); });
+    }
+    s.pendingChips.add(i);
+  }
   renderFeedbackChips(n);
+  validateRoundSave(n);
 };
 
 function buildRtdGrid(n) {
@@ -824,9 +909,35 @@ window.onRtdInput = function(n, pos) {
 window.validateRoundSave = function(n) {
   const btn = document.getElementById(`save-${n}`);
   if (!btn) return;
-  const rtdOk = [...document.querySelectorAll(`.rtdInput-${n}`)].every(i => i.value !== '' && !isNaN(parseFloat(i.value)));
-  const mileageOk = n === 0 || (document.getElementById(`mile-${n}`).value !== '');
-  btn.disabled = !(rtdOk && mileageOk);
+  const s = _roundsState[n];
+  // 1. 날짜
+  const dateEl = document.getElementById(`date-${n}`);
+  const dateOk = dateEl && !!dateEl.value;
+  // 2. 주행거리 (0회차는 자동 적용이라 무조건 OK)
+  const mileageOk = n === 0 || (document.getElementById(`mile-${n}`)?.value !== '');
+  // 3. 사진 16개 슬롯 전부
+  const photoOk = Object.keys(s.pendingBySlot).length === PHOTO_SLOTS.length;
+  // 4. RTD 18개 (6포지션 × 3점) 전부
+  const rtdInputs = document.querySelectorAll(`.rtdInput-${n}`);
+  const rtdOk = rtdInputs.length > 0 && [...rtdInputs].every(i => i.value !== '' && !isNaN(parseFloat(i.value)));
+  // 5. 피드백 최소 1개 (없음 포함)
+  const feedbackOk = s.pendingChips.size > 0;
+  btn.disabled = !(dateOk && mileageOk && photoOk && rtdOk && feedbackOk);
+  // 진행 상태 표시 (툴팁 대신 텍스트)
+  if (btn.disabled) {
+    const missing = [];
+    if (!dateOk) missing.push('날짜');
+    if (!mileageOk) missing.push('주행거리');
+    if (!photoOk) missing.push(`사진 ${Object.keys(s.pendingBySlot).length}/${PHOTO_SLOTS.length}`);
+    if (!rtdOk) {
+      const filled = [...rtdInputs].filter(i => i.value !== '' && !isNaN(parseFloat(i.value))).length;
+      missing.push(`RTD ${filled}/${rtdInputs.length || 18}`);
+    }
+    if (!feedbackOk) missing.push('피드백');
+    btn.textContent = `미완료: ${missing.join(', ')}`;
+  } else {
+    btn.textContent = n === 0 ? '초기 데이터 저장' : `${n}회차 저장`;
+  }
 };
 
 // ── Photo handling with client-side compression ──

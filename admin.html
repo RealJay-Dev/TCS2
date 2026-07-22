@@ -305,7 +305,10 @@
             <option value="complete">완료 (6/6)</option>
           </select>
           <div class="count-info" id="ppmoCountInfo" style="margin:0;"></div>
-          <button onclick="exportPpmoCSV()" style="margin-left:auto;padding:5px 12px;background:none;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);cursor:pointer;">📥 CSV</button>
+          <div style="margin-left:auto;display:flex;gap:6px;">
+            <button onclick="exportPpmoCSV()" style="padding:5px 12px;background:none;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);cursor:pointer;">📥 CSV</button>
+            <button onclick="exportPpmoExcel()" style="padding:5px 12px;background:none;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);cursor:pointer;">📊 Excel</button>
+          </div>
         </div>
         <div class="table-wrap">
           <div class="table-header" style="grid-template-columns:1.2fr 1.6fr 1.4fr 0.8fr 1fr 1fr 0.6fr;">
@@ -333,6 +336,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
 const SUPABASE_URL = 'https://thosddtgtffapakvmrhn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_HmrBU9WFhkCTM_TquLM31g_IPovXtXm';
@@ -1050,6 +1055,57 @@ function renderPpmoTable() {
   }).join('');
 }
 
+// PPMo 사진 슬롯 (ppmo.html과 동기화 - 순서 그대로)
+const PPMO_PHOTO_SLOTS = [
+  { id: 'front', label: '차량전면(번호판)' },
+  { id: 'odometer', label: '주행거리계' },
+  { id: 'tire_fl', label: '전륜좌측' },
+  { id: 'tire_fr', label: '전륜우측' },
+  { id: 'tire_rl_outer', label: '후륜좌측1' },
+  { id: 'tire_rl_inner', label: '후륜좌측2' },
+  { id: 'tire_rr_outer', label: '후륜우측1' },
+  { id: 'tire_rr_inner', label: '후륜우측2' },
+  { id: 'rtd_1', label: 'RTD 측정1' },
+  { id: 'rtd_2', label: 'RTD 측정2' },
+  { id: 'rtd_3', label: 'RTD 측정3' },
+  { id: 'rtd_4', label: 'RTD 측정4' },
+  { id: 'rtd_5', label: 'RTD 측정5' },
+  { id: 'rtd_6', label: 'RTD 측정6' },
+  { id: 'rtd_7', label: 'RTD 측정7' },
+  { id: 'rtd_8', label: 'RTD 측정8' },
+];
+const SLOT_LABEL_BY_ID = Object.fromEntries(PPMO_PHOTO_SLOTS.map(s => [s.id, s.label]));
+const MTD_MM = 1.6;  // 법정 최저 트레드 깊이
+
+// 예상 마일리지 계산: 회차별 (mileage_km, min RTD across 6 positions)로 선형 회귀
+// 반환: { slope, intercept, kmUntilMtd, currentMinRtd, sample }
+function calcMileagePrediction(vehicle, rounds, measurements) {
+  if (!vehicle.ntd_mm) return null;
+  const points = [];
+  rounds.forEach(r => {
+    const rMeas = measurements.filter(m => m.round_id === r.id);
+    if (!rMeas.length) return;
+    const minRtd = Math.min(...rMeas.map(m => m.rtd_mm));
+    points.push({ km: r.mileage_km, rtd: minRtd });
+  });
+  if (points.length < 2) return { points, insufficient: true };
+  // 선형 회귀 (y=slope*x+intercept where y=rtd, x=km)
+  const n = points.length;
+  const sumX = points.reduce((a,p) => a+p.km, 0);
+  const sumY = points.reduce((a,p) => a+p.rtd, 0);
+  const sumXY = points.reduce((a,p) => a+p.km*p.rtd, 0);
+  const sumX2 = points.reduce((a,p) => a+p.km*p.km, 0);
+  const slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);
+  const intercept = (sumY - slope*sumX) / n;
+  // RTD=MTD_MM이 되는 km
+  if (slope >= 0) return { points, slope, intercept, invalid: true }; // 마모율이 증가/평평
+  const kmAtMtd = (MTD_MM - intercept) / slope;
+  const latest = points[points.length-1];
+  const totalLifeKm = kmAtMtd - (vehicle.initial_mileage_km || 0);
+  const remainingKm = kmAtMtd - latest.km;
+  return { points, slope, intercept, kmAtMtd, remainingKm, totalLifeKm, currentMinRtd: latest.rtd };
+}
+
 window.showPpmoDetail = async function(vehicleId) {
   const v = ppmoVehicles.find(x => x.id === vehicleId);
   if (!v) return;
@@ -1065,32 +1121,64 @@ window.showPpmoDetail = async function(vehicleId) {
       _supabase.from('ppmo_rounds').select('*').eq('vehicle_id', vehicleId).order('round_no')
     ]);
     fullRounds = rRes.data || [];
-    if (roundIds.length) {
+    if (fullRounds.length) {
+      const roundIdsFromFull = fullRounds.map(r => r.id);
       const [m, p, f] = await Promise.all([
-        _supabase.from('ppmo_measurements').select('*').in('round_id', roundIds),
-        _supabase.from('ppmo_photos').select('*').in('round_id', roundIds),
-        _supabase.from('ppmo_feedback').select('*').in('round_id', roundIds)
+        _supabase.from('ppmo_measurements').select('*').in('round_id', roundIdsFromFull),
+        _supabase.from('ppmo_photos').select('*').in('round_id', roundIdsFromFull),
+        _supabase.from('ppmo_feedback').select('*').in('round_id', roundIdsFromFull)
       ]);
       measurements = m.data || [];
       photos = p.data || [];
       feedback = f.data || [];
     }
-    // 차량 정보 요약
+    // 차량 정보 요약 + 액션 버튼
     const info = [
       ['차량번호', v.vehicle_no],
       ['담당자', v.created_by],
       ['모델·연식', [v.vehicle_type, v.model_year && `${v.model_year}년식`].filter(Boolean).join(' · ') || '—'],
       ['제품', v.product || '—'],
+      ['아티클', v.article || '—'],
       ['타이어 사이즈', v.tire_size ? `${v.tire_size} ${v.load_index || ''}${v.speed_index || ''}` : '—'],
+      ['NTD (신품)', v.ntd_mm != null ? `${v.ntd_mm} mm` : '—'],
       ['딜러', v.dealer_name || '—'],
       ['장착 시점 주행거리', v.initial_mileage_km != null ? Number(v.initial_mileage_km).toLocaleString('ko-KR') + ' km' : '—'],
       ['등록일', v.created_at ? new Date(v.created_at).toLocaleString('ko-KR') : '—']
     ];
-    const infoHtml = `<div style="background:var(--bg-secondary);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;">${
-      info.map(([k, val]) => `<div style="display:flex;padding:3px 0;"><span style="color:var(--text-tertiary);min-width:120px;">${k}</span><span>${escapeHtmlAdm(val)}</span></div>`).join('')
-    }</div>`;
+    const infoHtml = `
+      <div style="background:var(--bg-secondary);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;">${
+        info.map(([k, val]) => `<div style="display:flex;padding:3px 0;"><span style="color:var(--text-tertiary);min-width:130px;">${k}</span><span>${escapeHtmlAdm(val)}</span></div>`).join('')
+      }</div>
+      <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+        <button onclick="downloadVehicleExcel('${v.id}')" style="padding:7px 14px;background:var(--text);color:var(--bg);border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">📊 이 차량 Excel</button>
+        <button onclick="downloadVehiclePhotosZip('${v.id}')" ${!photos.length ? 'disabled style="opacity:0.4;"' : ''} style="padding:7px 14px;background:none;color:var(--text);border:0.5px solid var(--border-strong);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">🗂 사진 전체 ZIP (${photos.length}장)</button>
+      </div>`;
 
-    // 회차별 요약
+    // 예상 마일리지 분석 카드
+    const prediction = calcMileagePrediction(v, fullRounds, measurements);
+    let predHtml = '';
+    if (prediction) {
+      if (prediction.insufficient) {
+        predHtml = `<div style="padding:12px 14px;background:var(--bg-warning);color:var(--text-warning);border-radius:8px;font-size:12.5px;margin-bottom:12px;">회귀 분석은 <b>2회차 이상</b>의 데이터가 필요합니다. 현재 ${prediction.points.length}개 데이터 포인트.</div>`;
+      } else if (prediction.invalid) {
+        predHtml = `<div style="padding:12px 14px;background:var(--bg-warning);color:var(--text-warning);border-radius:8px;font-size:12.5px;margin-bottom:12px;">마모율이 감소하지 않는 패턴입니다 (측정 오차 또는 로테이션 영향 가능). 데이터 축적 후 재분석 권장.</div>`;
+      } else {
+        const wearRate = Math.abs(prediction.slope) * 1000; // mm per 1000km
+        predHtml = `
+          <div style="padding:14px 16px;background:linear-gradient(135deg,var(--bg-info),var(--bg-secondary));border-radius:10px;margin-bottom:16px;">
+            <div style="font-size:12px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">📈 예상 마일리지 분석 (1.6mm까지)</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+              <div><div style="font-size:11px;color:var(--text-tertiary);">현재 최소 RTD</div><div style="font-size:18px;font-weight:800;">${prediction.currentMinRtd.toFixed(1)} mm</div></div>
+              <div><div style="font-size:11px;color:var(--text-tertiary);">마모율</div><div style="font-size:18px;font-weight:800;">${wearRate.toFixed(2)} mm/1000km</div></div>
+              <div><div style="font-size:11px;color:var(--text-tertiary);">잔여 예상</div><div style="font-size:18px;font-weight:800;color:var(--text-info);">${Math.max(0, Math.round(prediction.remainingKm)).toLocaleString('ko-KR')} km</div></div>
+              <div><div style="font-size:11px;color:var(--text-tertiary);">총 수명 (장착부터)</div><div style="font-size:18px;font-weight:800;">${Math.round(prediction.totalLifeKm).toLocaleString('ko-KR')} km</div></div>
+            </div>
+            <div style="margin-top:10px;font-size:11px;color:var(--text-tertiary);">회귀식: RTD = ${prediction.intercept.toFixed(2)} + ${prediction.slope.toExponential(2)} × km · 샘플 ${prediction.points.length}점</div>
+          </div>`;
+      }
+    }
+
+    // 회차별 요약 + 사진 그리드
     let roundsHtml = '<div style="font-size:12px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">회차별 기록</div>';
     for (let n = 0; n < TOTAL_PPMO_ROUNDS; n++) {
       const r = fullRounds.find(x => x.round_no === n);
@@ -1102,23 +1190,45 @@ window.showPpmoDetail = async function(vehicleId) {
       const rMeas = measurements.filter(m => m.round_id === r.id);
       const rPhotos = photos.filter(p => p.round_id === r.id);
       const rFeed = feedback.filter(f => f.round_id === r.id);
+      const photosBySlot = {};
+      rPhotos.forEach(p => { photosBySlot[p.photo_type] = p; });
       // 포지션별 min RTD
       const minByPos = {};
       rMeas.forEach(m => { if (minByPos[m.position] == null || m.rtd_mm < minByPos[m.position]) minByPos[m.position] = m.rtd_mm; });
-      const rtdSummary = Object.entries(minByPos).map(([pos, mm]) => `${pos}: ${mm.toFixed(1)}`).join(' · ') || '—';
-      const feedbackTags = rFeed.map(f => `<span style="display:inline-block;background:var(--bg-info);color:var(--text-info);padding:1px 7px;border-radius:8px;font-size:11px;margin-right:3px;">${escapeHtmlAdm(f.note || f.category)}</span>`).join('');
-      roundsHtml += `<div style="padding:10px 12px;margin-bottom:6px;background:var(--bg);border:0.5px solid var(--border);border-radius:8px;font-size:12.5px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-          <div style="font-weight:700;">${title} · ${new Date(r.inspected_at).toLocaleDateString('ko-KR')}</div>
-          <div style="font-size:11px;color:var(--text-tertiary);">${Number(r.mileage_km).toLocaleString('ko-KR')} km</div>
+      const rtdSummary = Object.entries(minByPos).map(([pos, mm]) => `${pos}: <b>${mm.toFixed(1)}</b>`).join(' · ') || '—';
+      const feedbackTags = rFeed.map(f => `<span style="display:inline-block;background:var(--bg-info);color:var(--text-info);padding:2px 8px;border-radius:8px;font-size:11px;margin:2px 3px 0 0;">${escapeHtmlAdm(f.note || f.category)}</span>`).join('');
+
+      // 사진 그리드 (16 슬롯, 클릭 시 다운로드/새창)
+      const photoGridHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin-top:8px;">${
+        PPMO_PHOTO_SLOTS.map(slot => {
+          const p = photosBySlot[slot.id];
+          if (p) {
+            return `<div style="text-align:center;">
+              <a href="${p.url}" target="_blank" rel="noopener" title="${escapeHtmlAdm(slot.label)} - 클릭 시 원본 열기"><img src="${p.url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:5px;border:0.5px solid var(--border);"></a>
+              <div style="font-size:9px;color:var(--text-tertiary);margin-top:2px;line-height:1.2;">${escapeHtmlAdm(slot.label)}</div>
+              <a href="${p.url}" download="${v.vehicle_no}_R${n}_${slot.id}.jpg" style="font-size:9px;color:var(--text-info);text-decoration:none;">⬇ 다운</a>
+            </div>`;
+          }
+          return `<div style="text-align:center;">
+            <div style="width:100%;aspect-ratio:1;border:0.5px dashed var(--border-strong);border-radius:5px;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);font-size:10px;">—</div>
+            <div style="font-size:9px;color:var(--text-tertiary);margin-top:2px;line-height:1.2;">${escapeHtmlAdm(slot.label)}</div>
+          </div>`;
+        }).join('')
+      }</div>`;
+
+      roundsHtml += `<div style="padding:12px 14px;margin-bottom:8px;background:var(--bg);border:0.5px solid var(--border);border-radius:8px;font-size:12.5px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-weight:700;font-size:14px;">${title} · ${new Date(r.inspected_at).toLocaleDateString('ko-KR')}</div>
+          <div style="font-size:11px;color:var(--text-tertiary);">${Number(r.mileage_km).toLocaleString('ko-KR')} km${r.rotated ? ' · 로테이션' : ''}</div>
         </div>
-        <div style="color:var(--text-secondary);margin-bottom:4px;">RTD ${rtdSummary}</div>
-        <div style="color:var(--text-secondary);">사진 ${rPhotos.length}장${feedbackTags ? ' · ' + feedbackTags : ''}</div>
-        ${r.notes ? `<div style="margin-top:4px;color:var(--text-tertiary);font-style:italic;">${escapeHtmlAdm(r.notes)}</div>` : ''}
+        <div style="color:var(--text-secondary);margin-bottom:2px;">RTD (포지션별 min) — ${rtdSummary}</div>
+        <div style="margin-top:6px;">사진: ${rPhotos.length}/${PPMO_PHOTO_SLOTS.length}${feedbackTags ? ' · ' + feedbackTags : ''}</div>
+        ${photoGridHtml}
+        ${r.notes ? `<div style="margin-top:8px;padding:6px 10px;background:var(--bg-secondary);border-radius:6px;color:var(--text-secondary);font-style:italic;">📝 ${escapeHtmlAdm(r.notes)}</div>` : ''}
       </div>`;
     }
 
-    document.getElementById('ppmoDetailContent').innerHTML = infoHtml + roundsHtml;
+    document.getElementById('ppmoDetailContent').innerHTML = infoHtml + predHtml + roundsHtml;
   } catch(e) {
     document.getElementById('ppmoDetailContent').innerHTML = `<div class="empty-state">불러오기 실패: ${e.message}</div>`;
   }
@@ -1169,6 +1279,210 @@ window.deletePpmoVehicle = async function(vehicleId, vehicleNo) {
     await loadPpmoData();
   } catch(e) {
     alert('삭제 실패: ' + e.message + '\n\n※ RLS 정책 확인 필요 시 관리자에게 문의');
+  }
+};
+
+// ═══ Excel: 전체 차량 (관리자용 리포트) ═══
+window.exportPpmoExcel = async function() {
+  if (!window.XLSX) return alert('Excel 라이브러리 로드 실패');
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = '⋯ 생성 중';
+  btn.disabled = true;
+  try {
+    // 차량 시트
+    const wb = XLSX.utils.book_new();
+    const progressMap = {};
+    ppmoRounds.forEach(r => { progressMap[r.vehicle_id] = (progressMap[r.vehicle_id] || 0) + 1; });
+    const vehicleRows = ppmoVehicles.map(v => ({
+      '차량번호': v.vehicle_no,
+      '담당자': v.created_by || '',
+      '모델': v.vehicle_type || '',
+      '연식': v.model_year || '',
+      '제품': v.product || '',
+      '아티클': v.article || '',
+      '사이즈': v.tire_size || '',
+      '하중지수': v.load_index || '',
+      '속도지수': v.speed_index || '',
+      'NTD (mm)': v.ntd_mm ?? '',
+      '장착 주행거리 (km)': v.initial_mileage_km ?? '',
+      '딜러': v.dealer_name || '',
+      '진행 회차': (progressMap[v.id] || 0) + '/' + TOTAL_PPMO_ROUNDS,
+      '등록일': v.created_at ? new Date(v.created_at).toLocaleDateString('ko-KR') : ''
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(vehicleRows), '차량 목록');
+
+    // 회차별 상세 데이터 로드
+    const roundIds = ppmoRounds.map(r => r.id);
+    let allMeas = [], allFeed = [], fullRounds = [];
+    if (roundIds.length) {
+      const [rRes, mRes, fRes] = await Promise.all([
+        _supabase.from('ppmo_rounds').select('*').in('id', roundIds),
+        _supabase.from('ppmo_measurements').select('*').in('round_id', roundIds),
+        _supabase.from('ppmo_feedback').select('*').in('round_id', roundIds)
+      ]);
+      fullRounds = rRes.data || [];
+      allMeas = mRes.data || [];
+      allFeed = fRes.data || [];
+    }
+    // 회차 시트
+    const roundRows = fullRounds.map(r => {
+      const v = ppmoVehicles.find(x => x.id === r.vehicle_id) || {};
+      const meas = allMeas.filter(m => m.round_id === r.id);
+      const feed = allFeed.filter(f => f.round_id === r.id);
+      const minRtd = meas.length ? Math.min(...meas.map(m => m.rtd_mm)) : null;
+      const avgRtd = meas.length ? (meas.reduce((a,m) => a+m.rtd_mm, 0) / meas.length) : null;
+      return {
+        '차량번호': v.vehicle_no,
+        '담당자': v.created_by || '',
+        '회차': r.round_no === 0 ? '초기 설치' : `${r.round_no}회차`,
+        '검사일': r.inspected_at ? new Date(r.inspected_at).toLocaleDateString('ko-KR') : '',
+        '주행거리 (km)': r.mileage_km,
+        '최소 RTD (mm)': minRtd != null ? Number(minRtd.toFixed(2)) : '',
+        '평균 RTD (mm)': avgRtd != null ? Number(avgRtd.toFixed(2)) : '',
+        '로테이션': r.rotated ? 'O' : '',
+        '피드백': feed.map(f => f.note || f.category).join(' | '),
+        '비고': r.notes || '',
+        '기록자': r.inspected_by
+      };
+    }).sort((a,b) => a['차량번호'].localeCompare(b['차량번호']));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(roundRows), '회차 요약');
+
+    // 측정값 상세 시트 (포지션×점별)
+    const measRows = allMeas.map(m => {
+      const r = fullRounds.find(x => x.id === m.round_id) || {};
+      const v = ppmoVehicles.find(x => x.id === r.vehicle_id) || {};
+      return {
+        '차량번호': v.vehicle_no,
+        '회차': r.round_no === 0 ? '초기' : `${r.round_no}회차`,
+        '주행거리': r.mileage_km,
+        '포지션': m.position,
+        '측정점': m.point === 'outer' ? '외' : m.point === 'center' ? '중' : m.point === 'inner' ? '내' : m.point,
+        'RTD (mm)': m.rtd_mm
+      };
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(measRows), 'RTD 상세');
+
+    XLSX.writeFile(wb, `PPMo_전체_${new Date().toISOString().slice(0,10)}.xlsx`);
+  } catch(e) {
+    alert('Excel 생성 실패: ' + e.message);
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }
+};
+
+// ═══ Excel: 단일 차량 상세 ═══
+window.downloadVehicleExcel = async function(vehicleId) {
+  const v = ppmoVehicles.find(x => x.id === vehicleId);
+  if (!v || !window.XLSX) return;
+  try {
+    const rIds = ppmoRounds.filter(r => r.vehicle_id === vehicleId).map(r => r.id);
+    const [rRes, mRes, fRes] = await Promise.all([
+      _supabase.from('ppmo_rounds').select('*').eq('vehicle_id', vehicleId).order('round_no'),
+      rIds.length ? _supabase.from('ppmo_measurements').select('*').in('round_id', rIds) : { data: [] },
+      rIds.length ? _supabase.from('ppmo_feedback').select('*').in('round_id', rIds) : { data: [] }
+    ]);
+    const rounds = rRes.data || [], meas = mRes.data || [], feed = fRes.data || [];
+    const wb = XLSX.utils.book_new();
+    // 차량 정보 시트
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+      ['항목', '값'],
+      ['차량번호', v.vehicle_no],
+      ['담당자', v.created_by],
+      ['모델·연식', `${v.vehicle_type || ''} ${v.model_year || ''}`],
+      ['제품', v.product || ''],
+      ['아티클', v.article || ''],
+      ['사이즈', v.tire_size || ''],
+      ['하중지수', v.load_index || ''],
+      ['속도지수', v.speed_index || ''],
+      ['NTD (mm)', v.ntd_mm ?? ''],
+      ['장착 주행거리 (km)', v.initial_mileage_km ?? ''],
+      ['딜러', v.dealer_name || ''],
+      ['등록일', v.created_at ? new Date(v.created_at).toLocaleString('ko-KR') : '']
+    ]), '차량 정보');
+    // 회차별 요약 시트
+    const summary = rounds.map(r => {
+      const m = meas.filter(x => x.round_id === r.id);
+      const f = feed.filter(x => x.round_id === r.id);
+      return {
+        '회차': r.round_no === 0 ? '초기' : `${r.round_no}회차`,
+        '검사일': new Date(r.inspected_at).toLocaleDateString('ko-KR'),
+        '주행거리 (km)': r.mileage_km,
+        '최소 RTD': m.length ? Number(Math.min(...m.map(x => x.rtd_mm)).toFixed(2)) : '',
+        '평균 RTD': m.length ? Number((m.reduce((a,x) => a+x.rtd_mm, 0)/m.length).toFixed(2)) : '',
+        '로테이션': r.rotated ? 'O' : '',
+        '피드백': f.map(x => x.note || x.category).join(' | '),
+        '비고': r.notes || ''
+      };
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), '회차별 요약');
+    // 측정 상세
+    const detail = meas.map(m => {
+      const r = rounds.find(x => x.id === m.round_id) || {};
+      return {
+        '회차': r.round_no === 0 ? '초기' : `${r.round_no}회차`,
+        '주행거리': r.mileage_km,
+        '포지션': m.position,
+        '측정점': m.point,
+        'RTD (mm)': m.rtd_mm
+      };
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detail), 'RTD 상세');
+    XLSX.writeFile(wb, `${v.vehicle_no}_${new Date().toISOString().slice(0,10)}.xlsx`);
+  } catch(e) {
+    alert('Excel 생성 실패: ' + e.message);
+  }
+};
+
+// ═══ ZIP: 차량 전체 사진 ═══
+window.downloadVehiclePhotosZip = async function(vehicleId) {
+  const v = ppmoVehicles.find(x => x.id === vehicleId);
+  if (!v || !window.JSZip) return alert('ZIP 라이브러리 로드 실패');
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = '⋯ 다운로드 중';
+  btn.disabled = true;
+  try {
+    const rIds = ppmoRounds.filter(r => r.vehicle_id === vehicleId).map(r => r.id);
+    if (!rIds.length) return alert('회차 데이터 없음');
+    const [rRes, pRes] = await Promise.all([
+      _supabase.from('ppmo_rounds').select('*').in('id', rIds),
+      _supabase.from('ppmo_photos').select('*').in('round_id', rIds)
+    ]);
+    const rounds = rRes.data || [];
+    const photos = pRes.data || [];
+    if (!photos.length) return alert('업로드된 사진 없음');
+    const zip = new JSZip();
+    let downloaded = 0;
+    for (const p of photos) {
+      const r = rounds.find(x => x.id === p.round_id);
+      const roundLabel = r ? (r.round_no === 0 ? '0_초기' : `${r.round_no}회차`) : 'unknown';
+      const slotLabel = SLOT_LABEL_BY_ID[p.photo_type] || p.photo_type;
+      try {
+        const res = await fetch(p.url);
+        const blob = await res.blob();
+        zip.file(`${roundLabel}/${slotLabel}.jpg`, blob);
+        downloaded++;
+        btn.textContent = `⋯ ${downloaded}/${photos.length}`;
+      } catch(e) {
+        console.warn(`Failed: ${p.url}`, e);
+      }
+    }
+    const zipBlob = await zip.generateAsync({ type: 'blob' }, meta => {
+      if (meta.percent > 0) btn.textContent = `⋯ 압축 ${Math.round(meta.percent)}%`;
+    });
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${v.vehicle_no}_photos_${new Date().toISOString().slice(0,10)}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('ZIP 생성 실패: ' + e.message);
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
   }
 };
 
