@@ -1077,19 +1077,25 @@ const PPMO_PHOTO_SLOTS = [
 const SLOT_LABEL_BY_ID = Object.fromEntries(PPMO_PHOTO_SLOTS.map(s => [s.id, s.label]));
 const MTD_MM = 1.6;  // 법정 최저 트레드 깊이
 
-// 예상 마일리지 계산: 회차별 (mileage_km, min RTD across 6 positions)로 선형 회귀
-// 반환: { slope, intercept, kmUntilMtd, currentMinRtd, sample }
+// 예상 마일리지 계산: (mileage_km, min RTD)로 선형 회귀
+// - 초기 회차(0)는 측정값 없이 (initial_mileage_km, ntd_mm)를 시드포인트로 사용
+// 반환: { points, slope, intercept, kmAtMtd, remainingKm, totalLifeKm, currentMinRtd }
 function calcMileagePrediction(vehicle, rounds, measurements) {
   if (!vehicle.ntd_mm) return null;
   const points = [];
-  rounds.forEach(r => {
+  // 초기 시드포인트: 장착 시점 = NTD
+  const round0 = rounds.find(r => r.round_no === 0);
+  if (round0 && vehicle.initial_mileage_km != null) {
+    points.push({ km: vehicle.initial_mileage_km, rtd: vehicle.ntd_mm });
+  }
+  // 실측 회차(1~5)
+  rounds.filter(r => r.round_no > 0).forEach(r => {
     const rMeas = measurements.filter(m => m.round_id === r.id);
     if (!rMeas.length) return;
     const minRtd = Math.min(...rMeas.map(m => m.rtd_mm));
     points.push({ km: r.mileage_km, rtd: minRtd });
   });
   if (points.length < 2) return { points, insufficient: true };
-  // 선형 회귀 (y=slope*x+intercept where y=rtd, x=km)
   const n = points.length;
   const sumX = points.reduce((a,p) => a+p.km, 0);
   const sumY = points.reduce((a,p) => a+p.rtd, 0);
@@ -1097,8 +1103,7 @@ function calcMileagePrediction(vehicle, rounds, measurements) {
   const sumX2 = points.reduce((a,p) => a+p.km*p.km, 0);
   const slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);
   const intercept = (sumY - slope*sumX) / n;
-  // RTD=MTD_MM이 되는 km
-  if (slope >= 0) return { points, slope, intercept, invalid: true }; // 마모율이 증가/평평
+  if (slope >= 0) return { points, slope, intercept, invalid: true };
   const kmAtMtd = (MTD_MM - intercept) / slope;
   const latest = points[points.length-1];
   const totalLifeKm = kmAtMtd - (vehicle.initial_mileage_km || 0);
