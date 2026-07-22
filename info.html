@@ -200,7 +200,14 @@
 const SUPABASE_URL = 'https://thosddtgtffapakvmrhn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_HmrBU9WFhkCTM_TquLM31g_IPovXtXm';
 const ALLOWED_DOMAIN = 'continental.com';
-const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    storage: window.sessionStorage,   // 탭 닫으면 세션 소멸 (딜러 기기 오용 방지)
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false
+  }
+});
 
 let _currentEmail = null;
 let ccCodes = [];
