@@ -368,6 +368,10 @@ const PHOTO_SLOTS = [
 ];
 const SLOT_BY_ID = Object.fromEntries(PHOTO_SLOTS.map(s => [s.id, s]));
 
+// 초기 설치 시점(0회차)은 RTD 측정 자체가 없으므로 RTD 사진 8개 제외 (8칸만)
+const PHOTO_SLOTS_ROUND0 = PHOTO_SLOTS.filter(s => !s.id.startsWith('rtd_'));
+function getSlots(n) { return n === 0 ? PHOTO_SLOTS_ROUND0 : PHOTO_SLOTS; }
+
 // 피드백 퀵픽 칩 (다중 선택 가능, "특이사항 없음"은 배타적)
 const FEEDBACK_CHIPS = [
   { category: '없음', label: '특이사항 없음', exclusive: true },
@@ -784,15 +788,16 @@ function renderDoneBody(n) {
   });
   const rtdSummary = POSITIONS.map(p => `<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:0.5px solid var(--border);"><span>${p}</span><span style="font-weight:600;">${minRtdByPos[p] != null ? minRtdByPos[p].toFixed(1) + ' mm' : '—'}</span></div>`).join('');
 
-  // 사진 슬롯 (읽기 전용)
-  const photoSlotsHtml = `<div class="photo-slot-grid">${PHOTO_SLOTS.map(slot => {
+  // 사진 슬롯 (읽기 전용) — 회차별 슬롯 개수 다름
+  const slotsForThisRound = getSlots(n);
+  const photoSlotsHtml = `<div class="photo-slot-grid">${slotsForThisRound.map(slot => {
     const p = s.photosBySlot[slot.id];
     return `<div class="photo-slot ${p ? 'filled' : 'empty'}">
       <div class="photo-slot-label">${escapeHtml(slot.label)}</div>
       <div class="photo-slot-body">${p ? `<img src="${p.url}" onclick="window.open('${p.url}','_blank')">` : '<span style="color:var(--text-tertiary);font-size:11px;">—</span>'}</div>
     </div>`;
   }).join('')}</div>`;
-  const filledCount = PHOTO_SLOTS.filter(slot => s.photosBySlot[slot.id]).length;
+  const filledCount = slotsForThisRound.filter(slot => s.photosBySlot[slot.id]).length;
 
   // 피드백 (칩 + 자유 메모 분리)
   const chipFeedbacks = s.feedback.filter(f => !f.note || FEEDBACK_CHIPS.some(c => c.label === f.note));
@@ -814,7 +819,7 @@ function renderDoneBody(n) {
          <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;">NTD 기준값 사용 · 별도 측정 없음</div>`
       : `<div class="section-head">측정값 (포지션별 최소 RTD)</div>
          <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;">${rtdSummary}</div>`}
-    <div class="section-head">사진 (${filledCount}/${PHOTO_SLOTS.length})</div>
+    <div class="section-head">사진 (${filledCount}/${slotsForThisRound.length})</div>
     ${photoSlotsHtml}
     <div class="section-head">주관 피드백</div>
     ${feedbackHtml}
@@ -838,8 +843,8 @@ function renderEditBody(n, isRound0, mileage) {
       </div>` : ''}
     </div>
 
-    <div class="section-head">사진 업로드 (총 ${PHOTO_SLOTS.length}칸)</div>
-    <div class="photo-slots-progress" id="progress-${n}">0/${PHOTO_SLOTS.length} 업로드됨</div>
+    <div class="section-head">사진 업로드 (총 ${getSlots(n).length}칸)</div>
+    <div class="photo-slots-progress" id="progress-${n}">0/${getSlots(n).length} 업로드됨</div>
     <div class="photo-slot-grid" id="pslots-${n}"></div>
     <input type="file" id="fileInp-${n}" accept="image/*" capture="environment" class="hidden" onchange="onSlotFileChosen(${n}, event)">
 
@@ -878,7 +883,8 @@ function renderPhotoSlots(n) {
   const s = _roundsState[n];
   const wrap = document.getElementById(`pslots-${n}`);
   if (!wrap) return;
-  wrap.innerHTML = PHOTO_SLOTS.map(slot => {
+  const slots = getSlots(n);
+  wrap.innerHTML = slots.map(slot => {
     const pending = s.pendingBySlot[slot.id];
     if (pending) {
       return `<div class="photo-slot filled">
@@ -897,7 +903,7 @@ function renderPhotoSlots(n) {
   }).join('');
   const filled = Object.keys(s.pendingBySlot).length;
   const prog = document.getElementById(`progress-${n}`);
-  if (prog) prog.textContent = `${filled}/${PHOTO_SLOTS.length} 업로드됨`;
+  if (prog) prog.textContent = `${filled}/${slots.length} 업로드됨`;
 }
 window.triggerSlotUpload = function(n, slotId) {
   _fileInputTargetRound = n;
@@ -997,8 +1003,9 @@ window.validateRoundSave = function(n) {
   const dateOk = dateEl && !!dateEl.value;
   // 2. 주행거리 (0회차는 자동 적용이라 무조건 OK)
   const mileageOk = isRound0 || (document.getElementById(`mile-${n}`)?.value !== '');
-  // 3. 사진 16개 슬롯 전부
-  const photoOk = Object.keys(s.pendingBySlot).length === PHOTO_SLOTS.length;
+  // 3. 사진 전 슬롯 채움 (회차별로 개수 다름 - 0회차 8칸 / 1~5회차 16칸)
+  const slotsRequired = getSlots(n);
+  const photoOk = Object.keys(s.pendingBySlot).length === slotsRequired.length;
   // 4. RTD 18개 (초기 회차는 스킵 — NTD가 대체)
   let rtdOk = true;
   let rtdInputs = [];
@@ -1014,7 +1021,7 @@ window.validateRoundSave = function(n) {
     const missing = [];
     if (!dateOk) missing.push('날짜');
     if (!mileageOk) missing.push('주행거리');
-    if (!photoOk) missing.push(`사진 ${Object.keys(s.pendingBySlot).length}/${PHOTO_SLOTS.length}`);
+    if (!photoOk) missing.push(`사진 ${Object.keys(s.pendingBySlot).length}/${slotsRequired.length}`);
     if (!rtdOk) {
       const filled = [...rtdInputs].filter(i => i.value !== '' && !isNaN(parseFloat(i.value))).length;
       missing.push(`RTD ${filled}/${rtdInputs.length || 18}`);

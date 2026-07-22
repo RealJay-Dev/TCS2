@@ -1075,6 +1075,9 @@ const PPMO_PHOTO_SLOTS = [
   { id: 'rtd_8', label: 'RTD 측정8' },
 ];
 const SLOT_LABEL_BY_ID = Object.fromEntries(PPMO_PHOTO_SLOTS.map(s => [s.id, s.label]));
+// 0회차는 RTD 측정 사진 8개 없음 → 8칸만 사용
+const PPMO_PHOTO_SLOTS_ROUND0 = PPMO_PHOTO_SLOTS.filter(s => !s.id.startsWith('rtd_'));
+function getPpmoSlots(n) { return n === 0 ? PPMO_PHOTO_SLOTS_ROUND0 : PPMO_PHOTO_SLOTS; }
 const MTD_MM = 1.6;  // 법정 최저 트레드 깊이
 
 // 예상 마일리지 계산: (mileage_km, min RTD)로 선형 회귀
@@ -1203,9 +1206,10 @@ window.showPpmoDetail = async function(vehicleId) {
       const rtdSummary = Object.entries(minByPos).map(([pos, mm]) => `${pos}: <b>${mm.toFixed(1)}</b>`).join(' · ') || '—';
       const feedbackTags = rFeed.map(f => `<span style="display:inline-block;background:var(--bg-info);color:var(--text-info);padding:2px 8px;border-radius:8px;font-size:11px;margin:2px 3px 0 0;">${escapeHtmlAdm(f.note || f.category)}</span>`).join('');
 
-      // 사진 그리드 (16 슬롯, 클릭 시 다운로드/새창)
+      // 사진 그리드 (회차별 슬롯 개수 다름 - 0회차 8칸 / 1~5회차 16칸)
+      const slotsForThisRound = getPpmoSlots(n);
       const photoGridHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin-top:8px;">${
-        PPMO_PHOTO_SLOTS.map(slot => {
+        slotsForThisRound.map(slot => {
           const p = photosBySlot[slot.id];
           if (p) {
             return `<div style="text-align:center;">
@@ -1226,8 +1230,8 @@ window.showPpmoDetail = async function(vehicleId) {
           <div style="font-weight:700;font-size:14px;">${title} · ${new Date(r.inspected_at).toLocaleDateString('ko-KR')}</div>
           <div style="font-size:11px;color:var(--text-tertiary);">${Number(r.mileage_km).toLocaleString('ko-KR')} km${r.rotated ? ' · 로테이션' : ''}</div>
         </div>
-        <div style="color:var(--text-secondary);margin-bottom:2px;">RTD (포지션별 min) — ${rtdSummary}</div>
-        <div style="margin-top:6px;">사진: ${rPhotos.length}/${PPMO_PHOTO_SLOTS.length}${feedbackTags ? ' · ' + feedbackTags : ''}</div>
+        <div style="color:var(--text-secondary);margin-bottom:2px;">RTD (포지션별 min) — ${n === 0 ? 'NTD 기준 (측정 생략)' : rtdSummary}</div>
+        <div style="margin-top:6px;">사진: ${rPhotos.length}/${slotsForThisRound.length}${feedbackTags ? ' · ' + feedbackTags : ''}</div>
         ${photoGridHtml}
         ${r.notes ? `<div style="margin-top:8px;padding:6px 10px;background:var(--bg-secondary);border-radius:6px;color:var(--text-secondary);font-style:italic;">📝 ${escapeHtmlAdm(r.notes)}</div>` : ''}
       </div>`;
