@@ -1077,7 +1077,29 @@ const PPMO_PHOTO_SLOTS = [
 const SLOT_LABEL_BY_ID = Object.fromEntries(PPMO_PHOTO_SLOTS.map(s => [s.id, s.label]));
 // 0회차는 RTD 측정 사진 8개 없음 → 8칸만 사용
 const PPMO_PHOTO_SLOTS_ROUND0 = PPMO_PHOTO_SLOTS.filter(s => !s.id.startsWith('rtd_'));
-function getPpmoSlots(n) { return n === 0 ? PPMO_PHOTO_SLOTS_ROUND0 : PPMO_PHOTO_SLOTS; }
+const REAR_TIRE_SLOT_IDS = ['tire_rl_outer','tire_rl_inner','tire_rr_outer','tire_rr_inner'];
+const RTD_SLOTS_EXCLUDED_FRONT_ONLY = ['rtd_4','rtd_5','rtd_6','rtd_7','rtd_8'];
+
+function getPpmoSlots(n, frontOnly) {
+  let slots = n === 0 ? PPMO_PHOTO_SLOTS_ROUND0 : PPMO_PHOTO_SLOTS;
+  if (frontOnly) {
+    slots = slots.filter(s => !REAR_TIRE_SLOT_IDS.includes(s.id) && !RTD_SLOTS_EXCLUDED_FRONT_ONLY.includes(s.id));
+  }
+  return slots;
+}
+
+// 6개 타이어 포지션 (DB 코드 + 표시 라벨)
+const PPMO_TIRE_POSITIONS = [
+  { pos: '1축-좌',   label: '전륜좌측' },
+  { pos: '1축-우',   label: '전륜우측' },
+  { pos: '2축-좌외', label: '후륜좌측1' },
+  { pos: '2축-좌내', label: '후륜좌측2' },
+  { pos: '2축-우외', label: '후륜우측1' },
+  { pos: '2축-우내', label: '후륜우측2' },
+];
+function getPpmoTirePositions(frontOnly) {
+  return frontOnly ? PPMO_TIRE_POSITIONS.filter(t => t.pos.startsWith('1축')) : PPMO_TIRE_POSITIONS;
+}
 const MTD_MM = 1.6;  // 법정 최저 트레드 깊이
 
 // 예상 마일리지 계산: (mileage_km, min RTD)로 선형 회귀
@@ -1124,11 +1146,13 @@ window.showPpmoDetail = async function(vehicleId) {
   document.getElementById('ppmoDetailContent').innerHTML = '<div class="loading-state">회차 데이터 로딩 중...</div>';
   try {
     const roundIds = ppmoRounds.filter(r => r.vehicle_id === vehicleId).map(r => r.id);
-    let measurements = [], photos = [], feedback = [], fullRounds = [];
-    const [rRes] = await Promise.all([
-      _supabase.from('ppmo_rounds').select('*').eq('vehicle_id', vehicleId).order('round_no')
+    let measurements = [], photos = [], feedback = [], tires = [], fullRounds = [];
+    const [rRes, tRes] = await Promise.all([
+      _supabase.from('ppmo_rounds').select('*').eq('vehicle_id', vehicleId).order('round_no'),
+      _supabase.from('ppmo_tires').select('*').eq('vehicle_id', vehicleId)
     ]);
     fullRounds = rRes.data || [];
+    tires = tRes.data || [];
     if (fullRounds.length) {
       const roundIdsFromFull = fullRounds.map(r => r.id);
       const [m, p, f] = await Promise.all([
@@ -1140,11 +1164,21 @@ window.showPpmoDetail = async function(vehicleId) {
       photos = p.data || [];
       feedback = f.data || [];
     }
+    // 사진 path 정규화 + signed URL 일괄 생성
+    photos.forEach(p => { p.path = extractPathAdm(p.url); });
+    const photoPaths = photos.map(p => p.path).filter(Boolean);
+    const signedUrlMap = await getSignedUrls(photoPaths, 3600);
+    photos.forEach(p => { p.signedUrl = signedUrlMap[p.path] || null; });
+
+    // 타이어 정보를 position 키로 매핑
+    const tireByPos = {};
+    tires.forEach(t => { tireByPos[t.position] = t; });
     // 차량 정보 요약 + 액션 버튼
     const info = [
       ['차량번호', v.vehicle_no],
       ['담당자', v.created_by],
       ['모델·연식', [v.vehicle_type, v.model_year && `${v.model_year}년식`].filter(Boolean).join(' · ') || '—'],
+      ['모니터링 범위', v.front_only ? '🔧 전륜만 (2본)' : '전체 (6본)'],
       ['제품', v.product || '—'],
       ['아티클', v.article || '—'],
       ['타이어 사이즈', v.tire_size ? `${v.tire_size} ${v.load_index || ''}${v.speed_index || ''}` : '—'],
@@ -1207,15 +1241,22 @@ window.showPpmoDetail = async function(vehicleId) {
       const feedbackTags = rFeed.map(f => `<span style="display:inline-block;background:var(--bg-info);color:var(--text-info);padding:2px 8px;border-radius:8px;font-size:11px;margin:2px 3px 0 0;">${escapeHtmlAdm(f.note || f.category)}</span>`).join('');
 
       // 사진 그리드 (회차별 슬롯 개수 다름 - 0회차 8칸 / 1~5회차 16칸)
-      const slotsForThisRound = getPpmoSlots(n);
+      const slotsForThisRound = getPpmoSlots(n, v.front_only);
       const photoGridHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin-top:8px;">${
         slotsForThisRound.map(slot => {
           const p = photosBySlot[slot.id];
-          if (p) {
+          if (p && p.signedUrl && p.path) {
+            const dlName = `${v.vehicle_no}_R${n}_${slot.id}.jpg`;
             return `<div style="text-align:center;">
-              <a href="${p.url}" target="_blank" rel="noopener" title="${escapeHtmlAdm(slot.label)} - 클릭 시 원본 열기"><img src="${p.url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:5px;border:0.5px solid var(--border);"></a>
+              <a href="${p.signedUrl}" target="_blank" rel="noopener" title="${escapeHtmlAdm(slot.label)} - 클릭 시 원본 열기"><img src="${p.signedUrl}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:5px;border:0.5px solid var(--border);"></a>
               <div style="font-size:9px;color:var(--text-tertiary);margin-top:2px;line-height:1.2;">${escapeHtmlAdm(slot.label)}</div>
-              <a href="${p.url}" download="${v.vehicle_no}_R${n}_${slot.id}.jpg" style="font-size:9px;color:var(--text-info);text-decoration:none;">⬇ 다운</a>
+              <a href="javascript:void(0)" onclick="downloadPhotoByPath('${escapeAttr(p.path)}', '${escapeAttr(dlName)}')" style="font-size:9px;color:var(--text-info);text-decoration:none;">⬇ 다운</a>
+            </div>`;
+          }
+          if (p && !p.signedUrl) {
+            return `<div style="text-align:center;">
+              <div style="width:100%;aspect-ratio:1;border:0.5px solid var(--text-danger);border-radius:5px;background:var(--bg-danger);display:flex;align-items:center;justify-content:center;color:var(--text-danger);font-size:10px;">서명 실패</div>
+              <div style="font-size:9px;color:var(--text-tertiary);margin-top:2px;line-height:1.2;">${escapeHtmlAdm(slot.label)}</div>
             </div>`;
           }
           return `<div style="text-align:center;">
@@ -1225,6 +1266,17 @@ window.showPpmoDetail = async function(vehicleId) {
         }).join('')
       }</div>`;
 
+      // 0회차만 타이어 DOT/바코드 표시
+      const tireInfoHtml = n === 0 && tires.length ? `
+        <div style="margin-top:8px;padding:8px 10px;background:var(--bg-secondary);border-radius:6px;font-size:11.5px;line-height:1.7;">
+          <div style="font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;font-size:10px;">타이어 정보 (DOT · 바코드)</div>
+          ${getPpmoTirePositions(v.front_only).map(t => {
+            const tire = tireByPos[t.pos];
+            if (!tire) return `<div><b>${t.label}</b> <span style="color:var(--text-tertiary)">— 미입력</span></div>`;
+            return `<div><b>${t.label}</b> · <span style="font-family:monospace;">DOT ${escapeHtmlAdm(tire.dot_code || '—')} · BC ${escapeHtmlAdm(tire.barcode || '—')}</span></div>`;
+          }).join('')}
+        </div>` : '';
+
       roundsHtml += `<div style="padding:12px 14px;margin-bottom:8px;background:var(--bg);border:0.5px solid var(--border);border-radius:8px;font-size:12.5px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <div style="font-weight:700;font-size:14px;">${title} · ${new Date(r.inspected_at).toLocaleDateString('ko-KR')}</div>
@@ -1233,6 +1285,7 @@ window.showPpmoDetail = async function(vehicleId) {
         <div style="color:var(--text-secondary);margin-bottom:2px;">RTD (포지션별 min) — ${n === 0 ? 'NTD 기준 (측정 생략)' : rtdSummary}</div>
         <div style="margin-top:6px;">사진: ${rPhotos.length}/${slotsForThisRound.length}${feedbackTags ? ' · ' + feedbackTags : ''}</div>
         ${photoGridHtml}
+        ${tireInfoHtml}
         ${r.notes ? `<div style="margin-top:8px;padding:6px 10px;background:var(--bg-secondary);border-radius:6px;color:var(--text-secondary);font-style:italic;">📝 ${escapeHtmlAdm(r.notes)}</div>` : ''}
       </div>`;
     }
@@ -1262,10 +1315,7 @@ window.deletePpmoVehicle = async function(vehicleId, vehicleNo) {
     if (roundIds.length) {
       const { data: photos } = await _supabase.from('ppmo_photos').select('url').in('round_id', roundIds);
       if (photos && photos.length) {
-        const paths = photos.map(p => {
-          const m = p.url && p.url.match(/\/ppmo-photos\/(.+)$/);
-          return m ? m[1] : null;
-        }).filter(Boolean);
+        const paths = photos.map(p => extractPathAdm(p.url)).filter(Boolean);
         if (paths.length) {
           const { error: rmErr } = await _supabase.storage.from('ppmo-photos').remove(paths);
           if (rmErr) console.warn('사진 파일 일부 삭제 실패 (계속 진행):', rmErr.message);
@@ -1308,6 +1358,7 @@ window.exportPpmoExcel = async function() {
       '담당자': v.created_by || '',
       '모델': v.vehicle_type || '',
       '연식': v.model_year || '',
+      '모니터링 범위': v.front_only ? '전륜만' : '전체',
       '제품': v.product || '',
       '아티클': v.article || '',
       '사이즈': v.tire_size || '',
@@ -1400,6 +1451,7 @@ window.downloadVehicleExcel = async function(vehicleId) {
       ['차량번호', v.vehicle_no],
       ['담당자', v.created_by],
       ['모델·연식', `${v.vehicle_type || ''} ${v.model_year || ''}`],
+      ['모니터링 범위', v.front_only ? '전륜만 (2본)' : '전체 (6본)'],
       ['제품', v.product || ''],
       ['아티클', v.article || ''],
       ['사이즈', v.tire_size || ''],
@@ -1444,40 +1496,53 @@ window.downloadVehicleExcel = async function(vehicleId) {
   }
 };
 
-// ═══ ZIP: 차량 전체 사진 ═══
+// ═══ ZIP: 차량 전체 사진 (signed URL로 다운로드 후 압축) ═══
 window.downloadVehiclePhotosZip = async function(vehicleId) {
   const v = ppmoVehicles.find(x => x.id === vehicleId);
   if (!v || !window.JSZip) return alert('ZIP 라이브러리 로드 실패');
   const btn = event.target;
   const orig = btn.textContent;
-  btn.textContent = '⋯ 다운로드 중';
+  btn.textContent = '⋯ 준비 중';
   btn.disabled = true;
   try {
     const rIds = ppmoRounds.filter(r => r.vehicle_id === vehicleId).map(r => r.id);
-    if (!rIds.length) return alert('회차 데이터 없음');
+    if (!rIds.length) { alert('회차 데이터 없음'); return; }
     const [rRes, pRes] = await Promise.all([
       _supabase.from('ppmo_rounds').select('*').in('id', rIds),
       _supabase.from('ppmo_photos').select('*').in('round_id', rIds)
     ]);
     const rounds = rRes.data || [];
     const photos = pRes.data || [];
-    if (!photos.length) return alert('업로드된 사진 없음');
+    if (!photos.length) { alert('업로드된 사진 없음'); return; }
+
+    // 모든 사진에 대해 signed URL 일괄 생성
+    photos.forEach(p => { p.path = extractPathAdm(p.url); });
+    const paths = photos.map(p => p.path).filter(Boolean);
+    const signedUrlMap = await getSignedUrls(paths, 3600);
+
     const zip = new JSZip();
-    let downloaded = 0;
+    let downloaded = 0, failed = 0;
     for (const p of photos) {
       const r = rounds.find(x => x.id === p.round_id);
       const roundLabel = r ? (r.round_no === 0 ? '0_초기' : `${r.round_no}회차`) : 'unknown';
       const slotLabel = SLOT_LABEL_BY_ID[p.photo_type] || p.photo_type;
+      const signedUrl = signedUrlMap[p.path];
+      if (!signedUrl) { failed++; console.warn(`서명 URL 없음: ${p.path}`); continue; }
       try {
-        const res = await fetch(p.url);
+        const res = await fetch(signedUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const blob = await res.blob();
+        // 유효성: JPEG 최소 크기 및 컨텐트 타입 확인
+        if (blob.size < 500) { console.warn(`파일 크기 이상 (${blob.size}B): ${p.path}`); failed++; continue; }
         zip.file(`${roundLabel}/${slotLabel}.jpg`, blob);
         downloaded++;
         btn.textContent = `⋯ ${downloaded}/${photos.length}`;
       } catch(e) {
-        console.warn(`Failed: ${p.url}`, e);
+        failed++;
+        console.warn(`Failed: ${p.path}`, e);
       }
     }
+    if (!downloaded) { alert(`다운로드 실패 · 전체 ${photos.length}장, 성공 0장 (콘솔 확인)`); return; }
     const zipBlob = await zip.generateAsync({ type: 'blob' }, meta => {
       if (meta.percent > 0) btn.textContent = `⋯ 압축 ${Math.round(meta.percent)}%`;
     });
@@ -1487,6 +1552,7 @@ window.downloadVehiclePhotosZip = async function(vehicleId) {
     a.download = `${v.vehicle_no}_photos_${new Date().toISOString().slice(0,10)}.zip`;
     a.click();
     URL.revokeObjectURL(url);
+    if (failed) alert(`전체 ${photos.length}장 중 ${downloaded}장 성공, ${failed}장 실패`);
   } catch(e) {
     alert('ZIP 생성 실패: ' + e.message);
   } finally {
@@ -1522,6 +1588,49 @@ window.exportPpmoCSV = function() {
 
 function escapeHtmlAdm(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(s) { return String(s ?? '').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+// 저장된 값이 전체 URL이든 path든 항상 path만 반환 (v10 마이그레이션 이전 데이터 호환)
+function extractPathAdm(urlOrPath) {
+  if (!urlOrPath) return null;
+  if (urlOrPath.startsWith('http')) {
+    const m = urlOrPath.match(/\/ppmo-photos\/(.+?)(\?|$)/);
+    return m ? m[1] : null;
+  }
+  return urlOrPath;
+}
+
+// 다수 path에 대해 signed URL을 한 번에 생성 (1시간 만료)
+async function getSignedUrls(paths, expiresIn = 3600) {
+  if (!paths || !paths.length) return {};
+  const map = {};
+  try {
+    const { data, error } = await _supabase.storage.from('ppmo-photos').createSignedUrls(paths, expiresIn);
+    if (error) throw error;
+    (data || []).forEach(item => { if (item.path && item.signedUrl) map[item.path] = item.signedUrl; });
+  } catch(e) {
+    console.warn('일부 사진 URL 서명 실패:', e);
+  }
+  return map;
+}
+
+// 단일 파일 다운로드 (강제 attachment로 지정된 파일명 사용)
+async function downloadPhotoByPath(path, filename) {
+  try {
+    const { data, error } = await _supabase.storage.from('ppmo-photos')
+      .createSignedUrl(path, 60, { download: filename });
+    if (error) throw error;
+    const a = document.createElement('a');
+    a.href = data.signedUrl;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch(e) {
+    alert('다운로드 실패: ' + e.message);
+  }
+}
+window.downloadPhotoByPath = downloadPhotoByPath;
 </script>
 
 <!-- PPMo 차량 상세 모달 -->
