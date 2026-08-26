@@ -387,8 +387,7 @@ const POINTS = [['outer','외'], ['center','중'], ['inner','내']];
 const TOTAL_ROUNDS = 6; // 0(초기) + 1~5
 
 // ── 사진 슬롯 정의 ──
-// 안내 문구가 필요한 슬롯은 hint 필드 포함
-// 0회차(최초장착): 전면/후면/주행거리계 + 타이어별(전체 + NTD측정)
+// 0회차(최초장착): 전면/후면/주행거리계 + 타이어별(전체 + NTD측정) + 얼라인먼트
 const PHOTO_SLOTS_ROUND0 = [
   { id: 'front', label: '차량 전면', hint: '차량 전체와 번호판이 모두 보이도록 촬영 (번호판 클로즈업 X)' },
   { id: 'rear', label: '차량 후면', hint: '차량 전체와 번호판이 모두 보이도록 촬영 (번호판 클로즈업 X)' },
@@ -401,6 +400,7 @@ const PHOTO_SLOTS_ROUND0 = [
   { id: 'ntd_rl', label: '후륜 좌측 NTD (그루브 4개)', hint: '그루브 4개가 모두 보이도록 측정 사진' },
   { id: 'tire_rr', label: '후륜 우측 (전체)' },
   { id: 'ntd_rr', label: '후륜 우측 NTD (그루브 4개)', hint: '그루브 4개가 모두 보이도록 측정 사진' },
+  { id: 'alignment', label: '휠 얼라인먼트 (측정지)', hint: '얼라인먼트 기기 측정 결과지' },
 ];
 
 // 1~5회차: 위와 동일 구조지만 NTD → RTD
@@ -416,6 +416,7 @@ const PHOTO_SLOTS = [
   { id: 'rtd_rl', label: '후륜 좌측 RTD (그루브 4개)', hint: '그루브 4개가 모두 보이도록 측정 사진' },
   { id: 'tire_rr', label: '후륜 우측 (전체)' },
   { id: 'rtd_rr', label: '후륜 우측 RTD (그루브 4개)', hint: '그루브 4개가 모두 보이도록 측정 사진' },
+  { id: 'alignment', label: '휠 얼라인먼트 (측정지)', hint: '얼라인먼트 기기 측정 결과지' },
 ];
 const SLOT_BY_ID = Object.fromEntries(PHOTO_SLOTS.map(s => [s.id, s]));
 
@@ -448,16 +449,23 @@ const TIRE_POSITIONS = [
   { pos: '2축-우내', label: '후륜우측2',  slotId: 'tire_rr_inner' },
 ];
 
-// 0회차 NTD/DOT용 4포지션 (단륜 기준: 전륜좌/우, 후륜좌/우)
-const NTD_POSITIONS = [
+// 0회차 NTD/DOT용 포지션 — 복륜/단륜에 따라 동적
+const NTD_POSITIONS_SINGLE = [
   { pos: '전륜-좌', label: '전륜 좌측' },
   { pos: '전륜-우', label: '전륜 우측' },
   { pos: '후륜-좌', label: '후륜 좌측' },
   { pos: '후륜-우', label: '후륜 우측' },
 ];
+const NTD_POSITIONS_DUAL = [
+  { pos: '전륜-좌',   label: '전륜 좌측' },
+  { pos: '전륜-우',   label: '전륜 우측' },
+  { pos: '후륜-좌외', label: '후륜 좌측(외)' },
+  { pos: '후륜-좌내', label: '후륜 좌측(내)' },
+  { pos: '후륜-우외', label: '후륜 우측(외)' },
+  { pos: '후륜-우내', label: '후륜 우측(내)' },
+];
 function getNtdPositions() {
-  const frontOnly = _currentVehicle?.front_only || false;
-  return frontOnly ? NTD_POSITIONS.filter(p => p.pos.startsWith('전륜')) : NTD_POSITIONS;
+  return _currentVehicle?.rear_dual ? NTD_POSITIONS_DUAL : NTD_POSITIONS_SINGLE;
 }
 
 // 전륜만 모드에서 제외할 사진 슬롯 ID (뒷타이어 전체+측정 사진)
@@ -605,6 +613,8 @@ window.showNewVehicleForm = function() {
 function showDetail(vehicle) {
   _currentVehicle = vehicle;
   _roundsState = {};
+  // 0회차 저장 전이면 후륜 타입 미선택 상태로 (선택 강제)
+  if (_currentVehicle.rear_dual == null) _currentVehicle.rear_dual = null;
   document.getElementById('view-list').classList.add('hidden');
   document.getElementById('view-new').classList.add('hidden');
   document.getElementById('view-detail').classList.remove('hidden');
@@ -988,12 +998,17 @@ function renderDoneBody(n) {
     <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;">${surveyHtml}</div>`;
   }
 
-  // ── 1~5회차 (기존 유지) ──
-  const minRtdByPos = {};
-  s.measurements.forEach(m => {
-    if (minRtdByPos[m.position] == null || m.rtd_mm < minRtdByPos[m.position]) minRtdByPos[m.position] = m.rtd_mm;
-  });
-  const rtdSummary = getPositions().map(p => `<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:0.5px solid var(--border);"><span>${p}</span><span style="font-weight:600;">${minRtdByPos[p] != null ? minRtdByPos[p].toFixed(1) + ' mm' : '—'}</span></div>`).join('');
+  // ── 1~5회차 ──
+  const measByPos = {};
+  s.measurements.forEach(m => { measByPos[m.position] = m; });
+  const rtdSummary = getNtdPositions().map(t => {
+    const m = measByPos[t.pos];
+    if (!m || m.skip_measure) return `<div style="padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px;"><b>${t.label}</b> <span style="color:var(--text-tertiary);">기입 안 함</span></div>`;
+    const grooves = [m.groove1, m.groove2, m.groove3, m.groove4].map(g => g != null ? g.toFixed(1) : '—').join(' / ');
+    const gv = [m.groove1, m.groove2, m.groove3, m.groove4].filter(g => g != null);
+    const minG = gv.length ? Math.min(...gv).toFixed(1) : '—';
+    return `<div style="padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px;"><b>${t.label}</b> <span style="color:var(--text-tertiary);">(최소 ${minG}mm)</span><br><span style="font-family:monospace;">G1~G4: ${grooves} mm</span></div>`;
+  }).join('');
   const chipFeedbacks = s.feedback.filter(f => !f.note || FEEDBACK_CHIPS.some(c => c.label === f.note));
   const freeFeedbacks = s.feedback.filter(f => f.note && !FEEDBACK_CHIPS.some(c => c.label === f.note));
   const feedbackHtml = (chipFeedbacks.length || freeFeedbacks.length)
@@ -1008,7 +1023,7 @@ function renderDoneBody(n) {
       <div>주행거리: <b>${fmtKm(s.round.mileage_km)}</b></div>
       ${s.round.rotated ? '<div>로테이션: <b>실시</b></div>' : ''}
     </div>
-    <div class="section-head">측정값 (포지션별 최소 RTD)</div>
+    <div class="section-head">RTD 측정 (그루브 4개)</div>
     <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;">${rtdSummary}</div>
     <div class="section-head">사진 (${filledCount}/${slotsForThisRound.length})</div>
     ${photoSlotsHtml}
@@ -1029,9 +1044,16 @@ function renderEditBody(n, isRound0, mileage) {
       </div>
     </div>
 
+    <div class="section-head">후륜 타입 선택 *</div>
+    <div class="sub-label" style="margin-bottom:8px;">후륜이 복륜(더블)인지 단륜(싱글)인지 선택하세요. 이후 회차에 그대로 적용됩니다.</div>
+    <div class="survey-opts" id="rearTypeWrap">
+      <label class="survey-opt" id="rearOpt-single"><input type="radio" name="rearType" onchange="onRearTypeChange(false)"> 단륜 (싱글) · 후륜 좌/우</label>
+      <label class="survey-opt" id="rearOpt-dual"><input type="radio" name="rearType" onchange="onRearTypeChange(true)"> 복륜 (더블) · 후륜 좌외/좌내/우외/우내</label>
+    </div>
+
     <div class="section-head">NTD 측정 (mm) · 포지션별 그루브 4개</div>
     <div class="sub-label" style="margin-bottom:8px;">신품 트레드 깊이를 직접 측정하여 각 그루브(1~4) 값을 입력하세요. 측정 대상이 아닌 포지션은 '측정 안 함'을 체크하세요.</div>
-    <div id="ntdWrap-${n}"></div>
+    <div id="ntdWrap-${n}"><div class="sub-label" style="padding:12px;text-align:center;">↑ 먼저 후륜 타입을 선택하세요</div></div>
 
     <div class="section-head">타이어 정보 (DOT · 바코드)</div>
     <div class="sub-label" style="margin-bottom:6px;">DOT 예: <b>16Y032TF3 1024</b> · 바코드 예: <b>6280495159</b> · 입력이 어려운 경우 '입력하지 않음' 체크</div>
@@ -1099,6 +1121,16 @@ window.toggleRound = function(n) {
   }
 };
 
+window.onRearTypeChange = function(isDual) {
+  _currentVehicle.rear_dual = isDual;
+  document.getElementById('rearOpt-single').classList.toggle('active', !isDual);
+  document.getElementById('rearOpt-dual').classList.toggle('active', isDual);
+  // 포지션 개수가 바뀌므로 NTD/DOT 그리드 다시 렌더
+  renderNtdGrid(0);
+  renderTireInfoGrid();
+  validateRoundSave(0);
+};
+
 // ── 0회차: NTD 그루브 4개 입력 그리드 ──
 function readNtdInputs(n) {
   // 현재 DOM 입력값을 state에 백업
@@ -1116,6 +1148,10 @@ function renderNtdGrid(n) {
   const wrap = document.getElementById(`ntdWrap-${n}`);
   if (!wrap) return;
   const s = _roundsState[n];
+  if (n === 0 && _currentVehicle.rear_dual == null) {
+    wrap.innerHTML = '<div class="sub-label" style="padding:12px;text-align:center;">↑ 먼저 후륜 타입을 선택하세요</div>';
+    return;
+  }
   if (!s.ntdSkip) s.ntdSkip = new Set();
   if (!s.ntdVals) s.ntdVals = {};
   wrap.innerHTML = getNtdPositions().map(t => {
@@ -1190,6 +1226,7 @@ function renderTireInfoGrid() {
   const wrap = document.getElementById('tireInfoGrid');
   if (!wrap) return;
   const s = _roundsState[0];
+  if (_currentVehicle.rear_dual == null) { wrap.innerHTML = ''; return; }
   if (!s.dotSkip) s.dotSkip = new Set();
   if (!s.dotVals) s.dotVals = {};
   const existing = _currentVehicleTires || {};
@@ -1342,23 +1379,45 @@ window.toggleChip = function(n, i) {
   validateRoundSave(n);
 };
 
+function readRtdInputs(n) {
+  const s = _roundsState[n];
+  if (!s.rtdVals) s.rtdVals = {};
+  getNtdPositions().forEach(t => {
+    const inputs = document.querySelectorAll(`.rtdInput-${n}[data-pos="${CSS.escape(t.pos)}"]`);
+    if (inputs.length) {
+      if (!s.rtdVals[t.pos]) s.rtdVals[t.pos] = {};
+      inputs.forEach(i => { s.rtdVals[t.pos]['g' + i.dataset.groove] = i.value; });
+    }
+  });
+}
 function buildRtdGrid(n) {
   const wrap = document.getElementById(`rtdWrap-${n}`);
   if (!wrap) return;
-  wrap.innerHTML = getPositions().map(pos => `
-    <div class="rtd-block">
-      <div class="rtd-pos-title">${pos}</div>
-      <div class="rtd-points">
-        ${POINTS.map(([key, label]) => `<div><label>${label}</label><input type="number" step="0.1" min="0" max="20" class="rtdInput-${n}" data-pos="${pos}" data-point="${key}" placeholder="mm" oninput="onRtdInput(${n},'${pos}')"></div>`).join('')}
+  const s = _roundsState[n];
+  if (!s.rtdSkip) s.rtdSkip = new Set();
+  if (!s.rtdVals) s.rtdVals = {};
+  wrap.innerHTML = getNtdPositions().map(t => {
+    const skipped = s.rtdSkip.has(t.pos);
+    const saved = s.rtdVals[t.pos] || {};
+    return `<div class="ntd-block ${skipped ? 'is-skipped' : ''}">
+      <div class="ntd-pos-title">${t.label}</div>
+      <div class="groove-points" ${skipped ? 'style="display:none;"' : ''}>
+        ${[1,2,3,4].map(g => `<div><label>그루브 ${g}</label><input type="number" step="0.1" min="0" max="20" class="rtdInput-${n}" data-pos="${t.pos}" data-groove="${g}" value="${saved['g'+g] || ''}" placeholder="mm" oninput="validateRoundSave(${n})"></div>`).join('')}
       </div>
-      <div class="rtd-min-badge" id="rtdMin-${n}-${pos}"></div>
-    </div>`).join('');
+      <label class="tire-skip-check">
+        <input type="checkbox" ${skipped ? 'checked' : ''} onchange="toggleRtdSkip(${n},'${t.pos}')">
+        이 포지션 기입 안 함
+      </label>
+    </div>`;
+  }).join('');
 }
-window.onRtdInput = function(n, pos) {
-  const inputs = document.querySelectorAll(`.rtdInput-${n}[data-pos="${CSS.escape(pos)}"]`);
-  const vals = [...inputs].map(i => parseFloat(i.value)).filter(v => !isNaN(v));
-  const badge = document.getElementById(`rtdMin-${n}-${pos}`);
-  if (vals.length) badge.textContent = `최소 RTD: ${Math.min(...vals).toFixed(1)}mm`;
+window.toggleRtdSkip = function(n, pos) {
+  readRtdInputs(n);
+  const s = _roundsState[n];
+  if (!s.rtdSkip) s.rtdSkip = new Set();
+  if (s.rtdSkip.has(pos)) s.rtdSkip.delete(pos);
+  else s.rtdSkip.add(pos);
+  buildRtdGrid(n);
   validateRoundSave(n);
 };
 window.validateRoundSave = function(n) {
@@ -1377,6 +1436,9 @@ window.validateRoundSave = function(n) {
   const photoOk = photoDone === slotsRequired.length;
 
   if (isRound0) {
+    // 0. 후륜 타입 선택 필수
+    const rearTypeOk = _currentVehicle.rear_dual === true || _currentVehicle.rear_dual === false;
+
     // NTD: 각 포지션이 스킵됐거나 그루브 4개 다 채워졌으면 OK
     if (!s.ntdSkip) s.ntdSkip = new Set();
     let ntdOk = true, ntdFilledPos = 0;
@@ -1405,10 +1467,11 @@ window.validateRoundSave = function(n) {
     if (!s.survey) s.survey = { driving_env: null, priorities: new Set(), load_level: null };
     const surveyOk = !!s.survey.driving_env && s.survey.priorities.size > 0 && !!s.survey.load_level;
 
-    btn.disabled = !(dateOk && photoOk && ntdOk && tireOk && surveyOk);
+    btn.disabled = !(dateOk && rearTypeOk && photoOk && ntdOk && tireOk && surveyOk);
     if (btn.disabled) {
       const missing = [];
       if (!dateOk) missing.push('날짜');
+      if (!rearTypeOk) missing.push('후륜타입');
       if (!ntdOk) missing.push(`NTD ${ntdFilledPos}/${getNtdPositions().length}`);
       if (!tireOk) missing.push(`DOT ${tireFilled}/${getNtdPositions().length}`);
       if (!photoOk) missing.push(`사진 ${photoDone}/${slotsRequired.length}`);
@@ -1420,10 +1483,19 @@ window.validateRoundSave = function(n) {
     return;
   }
 
-  // ── 1~5회차 (기존 로직 유지) ──
+  // ── 1~5회차 ──
   const mileageOk = (document.getElementById(`mile-${n}`)?.value !== '');
-  let rtdInputs = document.querySelectorAll(`.rtdInput-${n}`);
-  const rtdOk = rtdInputs.length > 0 && [...rtdInputs].every(i => i.value !== '' && !isNaN(parseFloat(i.value)));
+  // RTD: 각 포지션이 스킵됐거나 그루브 4개 다 채워졌으면 OK
+  if (!s.rtdSkip) s.rtdSkip = new Set();
+  let rtdOk = true, rtdFilledPos = 0;
+  getNtdPositions().forEach(t => {
+    if (s.rtdSkip.has(t.pos)) { rtdFilledPos++; return; }
+    const inputs = document.querySelectorAll(`.rtdInput-${n}[data-pos="${CSS.escape(t.pos)}"]`);
+    const allFilled = inputs.length === 4 && [...inputs].every(i => i.value !== '' && !isNaN(parseFloat(i.value)));
+    if (allFilled) rtdFilledPos++;
+    else rtdOk = false;
+  });
+  rtdOk = rtdOk && rtdFilledPos === getNtdPositions().length;
   const feedbackOk = s.pendingChips.size > 0;
   btn.disabled = !(dateOk && mileageOk && photoOk && rtdOk && feedbackOk);
   if (btn.disabled) {
@@ -1431,10 +1503,7 @@ window.validateRoundSave = function(n) {
     if (!dateOk) missing.push('날짜');
     if (!mileageOk) missing.push('주행거리');
     if (!photoOk) missing.push(`사진 ${photoDone}/${slotsRequired.length}`);
-    if (!rtdOk) {
-      const filled = [...rtdInputs].filter(i => i.value !== '' && !isNaN(parseFloat(i.value))).length;
-      missing.push(`RTD ${filled}/${rtdInputs.length || 18}`);
-    }
+    if (!rtdOk) missing.push(`RTD ${rtdFilledPos}/${getNtdPositions().length}`);
     if (!feedbackOk) missing.push('피드백');
     btn.textContent = `미완료: ${missing.join(', ')}`;
   } else {
@@ -1491,6 +1560,9 @@ window.saveRound = async function(n) {
     if (rErr) throw rErr;
 
     if (isRound0) {
+      // 0-0. 후륜 타입(rear_dual)을 차량에 저장
+      await _supabase.from('ppmo_vehicles').update({ rear_dual: _currentVehicle.rear_dual }).eq('id', _currentVehicle.id);
+
       readNtdInputs(n); // 현재 DOM 값 백업에 반영
       // 2-0. NTD 측정값 (포지션별 그루브 4개) → ppmo_measurements
       const ntdRows = [];
@@ -1515,12 +1587,27 @@ window.saveRound = async function(n) {
         if (mErr) throw mErr;
       }
     } else {
-      // 2. RTD 측정값 (기존 3점 방식 — 2단계에서 개편)
-      const measurements = [...document.querySelectorAll(`.rtdInput-${n}`)].map(i => ({
-        round_id: round.id, position: i.dataset.pos, point: i.dataset.point, rtd_mm: parseFloat(i.value)
-      }));
-      if (measurements.length) {
-        const { error: mErr } = await _supabase.from('ppmo_measurements').insert(measurements);
+      readRtdInputs(n); // DOM 값 백업 반영
+      // 2. RTD 측정값 (포지션별 그루브 4개)
+      const rtdRows = [];
+      getNtdPositions().forEach(t => {
+        if (s.rtdSkip && s.rtdSkip.has(t.pos)) {
+          rtdRows.push({ round_id: round.id, position: t.pos, skip_measure: true });
+          return;
+        }
+        const saved = (s.rtdVals && s.rtdVals[t.pos]) || {};
+        const g1 = parseFloat(saved.g1), g2 = parseFloat(saved.g2), g3 = parseFloat(saved.g3), g4 = parseFloat(saved.g4);
+        const grooveVals = [g1, g2, g3, g4].filter(v => !isNaN(v));
+        rtdRows.push({
+          round_id: round.id, position: t.pos,
+          groove1: isNaN(g1) ? null : g1, groove2: isNaN(g2) ? null : g2,
+          groove3: isNaN(g3) ? null : g3, groove4: isNaN(g4) ? null : g4,
+          rtd_mm: grooveVals.length ? Math.min(...grooveVals) : null,
+          skip_measure: false
+        });
+      });
+      if (rtdRows.length) {
+        const { error: mErr } = await _supabase.from('ppmo_measurements').insert(rtdRows);
         if (mErr) throw mErr;
       }
     }
