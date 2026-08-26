@@ -324,20 +324,14 @@
           </div>
         </div>
         <div class="field search-wrap">
-          <div class="label">아티클 <span style="color:var(--text-tertiary);font-weight:400;">(VanContact AP2만 표시 · 번호/사이즈로 검색)</span></div>
-          <input type="text" id="fNewArticle" placeholder="예: 195/70 또는 아티클 앞자리" oninput="onArticleInput()" autocomplete="off">
+          <div class="label">아티클 <span style="color:var(--text-tertiary);font-weight:400;">(VanContact AP2 · 번호/사이즈로 검색)</span></div>
+          <input type="text" id="fNewArticle" placeholder="예: 195/70 또는 아티클 번호" oninput="onArticleInput()" autocomplete="off">
           <div class="search-dropdown hidden" id="articleDropdown"></div>
           <div id="articleLookupStatus" style="font-size:11px;margin-top:6px;min-height:14px;"></div>
         </div>
         <div class="field">
           <div class="label">딜러/점포명</div>
           <input type="text" id="fNewDealer" placeholder="딜러명">
-        </div>
-        <div class="field" style="padding:12px 14px;background:var(--bg-secondary);border-radius:var(--radius-sm);">
-          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
-            <input type="checkbox" id="fNewFrontOnly" style="width:18px;height:18px;margin-top:2px;flex-shrink:0;">
-            <span style="font-size:13px;line-height:1.5;"><b>전륜만 진행 (LT 전륜 2본)</b><br><span style="color:var(--text-secondary);font-size:12px;">뒷타이어 4본 관련 사진/RTD/DOT/바코드 요구사항 생략. 차량 생성 후 변경 불가.</span></span>
-          </label>
         </div>
         <div class="row field" id="tireSpecRow">
           <div class="field locked" style="margin:0;">
@@ -352,10 +346,6 @@
             <div class="label">속도지수</div>
             <input type="text" id="fNewSpeedIndex" placeholder="—" disabled>
           </div>
-        </div>
-        <div class="field locked" id="ntdField">
-          <div class="label">NTD - 신품 트레드 깊이 (mm)</div>
-          <input type="number" step="0.1" min="0" max="30" id="fNewNtd" placeholder="아티클 선택 시 자동" disabled>
         </div>
         <input type="hidden" id="fNewProduct" value="VanContact AP2">
         <button class="btn full" id="btnCreateVehicle" onclick="createVehicle()" disabled>생성하기</button>
@@ -608,7 +598,6 @@ window.showNewVehicleForm = function() {
   ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewDealer','fNewArticle'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fNewProduct').value = 'VanContact AP2';
   document.getElementById('articleLookupStatus').textContent = '';
-  document.getElementById('fNewFrontOnly').checked = false;
   _selectedArticle = null;
   lockDependentFields();
   document.getElementById('btnCreateVehicle').disabled = true;
@@ -705,19 +694,14 @@ window.onArticleInput = function() {
   status.textContent = '⋯ 검색 중';
   _articleSearchTimer = setTimeout(async () => {
     try {
-      // VanContact AP2 아티클만: pattern 또는 description 컨테인
+      // PPMo 전용 아티클 테이블에서 검색
       const { data, error } = await _supabase
-        .from('articles')
-        .select('article, ntd, size, pattern, description, li_ss')
-        .or('pattern.ilike.%VanContact AP2%,description.ilike.%VanContact AP2%')
+        .from('ppmo_articles')
+        .select('article, description, size, load_speed, ply, ntd')
         .or(`article.ilike.%${q}%,size.ilike.%${q}%,description.ilike.%${q}%`)
         .limit(20);
       if (error) throw error;
-      // 클라이언트 사이드 이중 필터: VanContact AP2에 해당하는지 재확인
-      const filtered = (data || []).filter(a =>
-        (a.pattern || '').toLowerCase().includes('vancontact ap2') ||
-        (a.description || '').toLowerCase().includes('vancontact ap2')
-      );
+      const filtered = data || [];
       if (!filtered.length) {
         dd.innerHTML = `<div class="search-dropdown-empty">일치하는 VanContact AP2 아티클이 없습니다</div>`;
         dd.classList.remove('hidden');
@@ -727,7 +711,7 @@ window.onArticleInput = function() {
       dd.innerHTML = filtered.map(a => `
         <div class="search-dropdown-item" onclick='selectArticle(${JSON.stringify(a).replace(/'/g, "&apos;")})'>
           <span class="art-no">${escapeHtml(a.article)}</span>
-          <span class="art-sub">${escapeHtml(a.size || '')} · ${escapeHtml(a.li_ss || '')} · NTD ${a.ntd || '?'}mm</span>
+          <span class="art-sub">${escapeHtml(a.size || '')} · ${escapeHtml(a.load_speed || '')} · ${escapeHtml(a.ply || '')}</span>
         </div>`).join('');
       dd.classList.remove('hidden');
       status.textContent = `${filtered.length}개 후보`;
@@ -745,29 +729,27 @@ window.selectArticle = function(a) {
   document.getElementById('articleDropdown').classList.add('hidden');
   // 자동 채움
   document.getElementById('fNewTireSize').value = a.size || '';
-  document.getElementById('fNewNtd').value = a.ntd || '';
-  // li_ss 예: "106/104R" → 분리
-  if (a.li_ss) {
-    const m = a.li_ss.match(/^(\d+(?:\/\d+)?)([A-Z]+)$/);
+  // load_speed 예: "104/102R" → 하중지수 + 속도지수 분리
+  if (a.load_speed) {
+    const m = a.load_speed.match(/^(\d+(?:\/\d+)?)([A-Z]+.*)$/);
     if (m) {
       document.getElementById('fNewLoadIndex').value = m[1];
       document.getElementById('fNewSpeedIndex').value = m[2];
     } else {
-      document.getElementById('fNewLoadIndex').value = a.li_ss;
+      document.getElementById('fNewLoadIndex').value = a.load_speed;
       document.getElementById('fNewSpeedIndex').value = '';
     }
   }
-  document.getElementById('fNewProduct').value = a.pattern || 'VanContact AP2';
-  // 잠금 해제
+  document.getElementById('fNewProduct').value = 'VanContact AP2';
   unlockDependentFields();
   const status = document.getElementById('articleLookupStatus');
   status.style.color = 'var(--text-success)';
-  status.textContent = `✓ ${a.pattern || 'VanContact AP2'} 선택됨`;
+  status.textContent = `✓ VanContact AP2 선택됨`;
   validateNewVehicle();
 };
 
 function lockDependentFields() {
-  ['fNewTireSize','fNewLoadIndex','fNewSpeedIndex','fNewNtd'].forEach(id => {
+  ['fNewTireSize','fNewLoadIndex','fNewSpeedIndex'].forEach(id => {
     const el = document.getElementById(id);
     el.disabled = true;
     el.value = '';
@@ -775,7 +757,7 @@ function lockDependentFields() {
   });
 }
 function unlockDependentFields() {
-  ['fNewTireSize','fNewLoadIndex','fNewSpeedIndex','fNewNtd'].forEach(id => {
+  ['fNewTireSize','fNewLoadIndex','fNewSpeedIndex'].forEach(id => {
     const el = document.getElementById(id);
     el.disabled = false;
     el.parentElement.classList.remove('locked');
@@ -790,7 +772,7 @@ document.addEventListener('click', e => {
 });
 
 window.validateNewVehicle = function() {
-  const ok = ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewTireSize','fNewNtd'].every(id => document.getElementById(id).value.trim())
+  const ok = ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewTireSize'].every(id => document.getElementById(id).value.trim())
     && _selectedArticle != null;
   document.getElementById('btnCreateVehicle').disabled = !ok;
 };
@@ -808,8 +790,6 @@ window.createVehicle = async function() {
     tire_size: document.getElementById('fNewTireSize').value.trim(),
     load_index: document.getElementById('fNewLoadIndex').value.trim(),
     speed_index: document.getElementById('fNewSpeedIndex').value.trim(),
-    ntd_mm: parseFloat(document.getElementById('fNewNtd').value),
-    front_only: document.getElementById('fNewFrontOnly').checked,
     created_by: _currentEmail
   };
   try {
