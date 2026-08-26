@@ -194,6 +194,42 @@
 
   /* Uploading indicator */
   .uploading { display: inline-block; padding: 4px 10px; font-size: 11px; background: var(--bg-warning); color: var(--text-warning); border-radius: 10px; margin-left: 8px; }
+
+  /* Photo rows (new list style with hints + skip) */
+  .photo-row { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 0.5px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; background: var(--bg); }
+  .photo-row.is-skipped { background: var(--bg-secondary); opacity: 0.75; }
+  .photo-row-info { flex: 1; min-width: 0; }
+  .photo-row-label { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .photo-row-hint { font-size: 11.5px; color: var(--text-warning); background: var(--bg-warning); padding: 5px 8px; border-radius: 6px; line-height: 1.4; margin-bottom: 8px; }
+  .photo-skip-check { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-tertiary); cursor: pointer; }
+  .photo-skip-check input { width: 15px; height: 15px; flex-shrink: 0; }
+  .photo-row-thumb { width: 76px; height: 76px; border-radius: var(--radius-sm); flex-shrink: 0; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+  .photo-row-thumb.empty { background: var(--bg-secondary); border: 1.5px dashed var(--border-strong); font-size: 24px; color: var(--text-tertiary); cursor: pointer; }
+  .photo-row-thumb.filled { border: 0.5px solid var(--border); }
+  .photo-row-thumb.filled img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-row-thumb.skipped { background: var(--bg-secondary); border: 0.5px solid var(--border); font-size: 10px; color: var(--text-tertiary); text-align: center; }
+  .photo-row-thumb .del { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; background: rgba(0,0,0,0.65); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+  /* Survey (0회차) */
+  .survey-q { margin-bottom: 18px; }
+  .survey-q-label { font-size: 14px; font-weight: 600; margin-bottom: 8px; line-height: 1.4; }
+  .survey-opts { display: flex; flex-direction: column; gap: 6px; }
+  .survey-opt { display: flex; align-items: center; gap: 10px; padding: 11px 13px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 13.5px; cursor: pointer; }
+  .survey-opt.active { background: var(--bg-info); border-color: var(--text-info); color: var(--text-info); font-weight: 600; }
+  .survey-opt input { width: 16px; height: 16px; flex-shrink: 0; }
+
+  /* NTD groove inputs (0회차) */
+  .ntd-block { border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 10px; background: var(--bg-secondary); }
+  .ntd-pos-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .groove-points { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .groove-points label { font-size: 10px; color: var(--text-tertiary); display: block; margin-bottom: 3px; text-align: center; }
+  .groove-points input { text-align: center; padding: 9px 4px; font-size: 14px; background: var(--bg); }
+
+  /* DOT skip */
+  .tire-skip-check { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-tertiary); cursor: pointer; margin-top: 8px; }
+  .tire-skip-check input { width: 14px; height: 14px; }
+  .tire-info-block.is-skipped { opacity: 0.6; }
+  .tire-info-block.is-skipped input[type=text] { display: none; }
 </style>
 </head>
 <body>
@@ -360,29 +396,57 @@ const POSITIONS = ['1축-좌','1축-우','2축-좌외','2축-좌내','2축-우�
 const POINTS = [['outer','외'], ['center','중'], ['inner','내']];
 const TOTAL_ROUNDS = 6; // 0(초기) + 1~5
 
-// 사진 슬롯 16개 (사용자 정의)
-const PHOTO_SLOTS = [
-  { id: 'front', label: '차량전면(번호판)' },
+// ── 사진 슬롯 정의 ──
+// 안내 문구가 필요한 슬롯은 hint 필드 포함
+// 0회차(최초장착): 전면/후면/주행거리계 + 타이어별(전체 + NTD측정)
+const PHOTO_SLOTS_ROUND0 = [
+  { id: 'front', label: '차량 전면', hint: '차량 전체와 번호판이 모두 보이도록 촬영 (번호판 클로즈업 X)' },
+  { id: 'rear', label: '차량 후면', hint: '차량 전체와 번호판이 모두 보이도록 촬영 (번호판 클로즈업 X)' },
   { id: 'odometer', label: '주행거리계' },
-  { id: 'tire_fl', label: '전륜좌측' },
-  { id: 'tire_fr', label: '전륜우측' },
-  { id: 'tire_rl_outer', label: '후륜좌측1' },
-  { id: 'tire_rl_inner', label: '후륜좌측2' },
-  { id: 'tire_rr_outer', label: '후륜우측1' },
-  { id: 'tire_rr_inner', label: '후륜우측2' },
-  { id: 'rtd_1', label: 'RTD 측정1' },
-  { id: 'rtd_2', label: 'RTD 측정2' },
-  { id: 'rtd_3', label: 'RTD 측정3' },
-  { id: 'rtd_4', label: 'RTD 측정4' },
-  { id: 'rtd_5', label: 'RTD 측정5' },
-  { id: 'rtd_6', label: 'RTD 측정6' },
-  { id: 'rtd_7', label: 'RTD 측정7' },
-  { id: 'rtd_8', label: 'RTD 측정8' },
+  { id: 'tire_fl', label: '전륜 좌측 (전체)' },
+  { id: 'ntd_fl', label: '전륜 좌측 NTD (그루브 4개)', hint: '그루브 4개가 모두 보이도록 측정 사진' },
+  { id: 'tire_fr', label: '전륜 우측 (전체)' },
+  { id: 'ntd_fr', label: '전륜 우측 NTD (그루브 4개)', hint: '그루브 4개가 모두 보이도록 측정 사진' },
+  { id: 'tire_rl', label: '후륜 좌측 (전체)' },
+  { id: 'ntd_rl', label: '후륜 좌측 NTD (그루브 4개)', hint: '그루브 4개가 모두 보이도록 측정 사진' },
+  { id: 'tire_rr', label: '후륜 우측 (전체)' },
+  { id: 'ntd_rr', label: '후륜 우측 NTD (그루브 4개)', hint: '그루브 4개가 모두 보이도록 측정 사진' },
+];
+
+// 1~5회차: 위와 동일 구조지만 NTD → RTD
+const PHOTO_SLOTS = [
+  { id: 'front', label: '차량 전면', hint: '차량 전체와 번호판이 모두 보이도록 촬영 (번호판 클로즈업 X)' },
+  { id: 'rear', label: '차량 후면', hint: '차량 전체와 번호판이 모두 보이도록 촬영 (번호판 클로즈업 X)' },
+  { id: 'odometer', label: '주행거리계' },
+  { id: 'tire_fl', label: '전륜 좌측 (전체)' },
+  { id: 'rtd_fl', label: '전륜 좌측 RTD (그루브 4개)', hint: '그루브 4개가 모두 보이도록 측정 사진' },
+  { id: 'tire_fr', label: '전륜 우측 (전체)' },
+  { id: 'rtd_fr', label: '전륜 우측 RTD (그루브 4개)', hint: '그루브 4개가 모두 보이도록 측정 사진' },
+  { id: 'tire_rl', label: '후륜 좌측 (전체)' },
+  { id: 'rtd_rl', label: '후륜 좌측 RTD (그루브 4개)', hint: '그루브 4개가 모두 보이도록 측정 사진' },
+  { id: 'tire_rr', label: '후륜 우측 (전체)' },
+  { id: 'rtd_rr', label: '후륜 우측 RTD (그루브 4개)', hint: '그루브 4개가 모두 보이도록 측정 사진' },
 ];
 const SLOT_BY_ID = Object.fromEntries(PHOTO_SLOTS.map(s => [s.id, s]));
 
-// 초기 설치 시점(0회차)은 RTD 측정 자체가 없으므로 RTD 사진 8개 제외 (8칸만)
-const PHOTO_SLOTS_ROUND0 = PHOTO_SLOTS.filter(s => !s.id.startsWith('rtd_'));
+// 사전 설문 (0회차 전용)
+const SURVEY = {
+  driving_env: {
+    label: '주로 주행하는 환경은 어떤가요?',
+    multi: false,
+    options: ['고속도로 주행 위주', '시내 주행 위주', '고속도로 위주 + 시내 복합', '시내 위주 + 고속도로 복합']
+  },
+  priorities: {
+    label: '타이어를 교환할 때 가장 신경 쓰는 부분은? (복수 선택 가능)',
+    multi: true,
+    options: ['구매 가격', '타이어 수명(마일리지)', '마른노면 성능', '젖은노면 성능', '소음 성능', '연비', '외관']
+  },
+  load_level: {
+    label: '보통 주행하는 차량의 화물 하중은 어떤 편인가요?',
+    multi: false,
+    options: ['최대 적재하중 대비 가벼운 편', '최대 적재하중에 근접하는 편', '최대 적재하중보다 무거운 편']
+  }
+};
 
 // 6개 타이어 포지션 (DB 코드 + 표시 라벨 + 사진 슬롯 매핑)
 const TIRE_POSITIONS = [
@@ -394,16 +458,27 @@ const TIRE_POSITIONS = [
   { pos: '2축-우내', label: '후륜우측2',  slotId: 'tire_rr_inner' },
 ];
 
-// 전륜만 모드에서 제외할 사진 슬롯 ID (뒷타이어 4장 + RTD 사진 8→3 축소)
-const REAR_TIRE_SLOT_IDS = ['tire_rl_outer','tire_rl_inner','tire_rr_outer','tire_rr_inner'];
-const RTD_SLOTS_EXCLUDED_FRONT_ONLY = ['rtd_4','rtd_5','rtd_6','rtd_7','rtd_8'];
+// 0회차 NTD/DOT용 4포지션 (단륜 기준: 전륜좌/우, 후륜좌/우)
+const NTD_POSITIONS = [
+  { pos: '전륜-좌', label: '전륜 좌측' },
+  { pos: '전륜-우', label: '전륜 우측' },
+  { pos: '후륜-좌', label: '후륜 좌측' },
+  { pos: '후륜-우', label: '후륜 우측' },
+];
+function getNtdPositions() {
+  const frontOnly = _currentVehicle?.front_only || false;
+  return frontOnly ? NTD_POSITIONS.filter(p => p.pos.startsWith('전륜')) : NTD_POSITIONS;
+}
+
+// 전륜만 모드에서 제외할 사진 슬롯 ID (뒷타이어 전체+측정 사진)
+const REAR_TIRE_SLOT_IDS = ['tire_rl','tire_rr','ntd_rl','ntd_rr','rtd_rl','rtd_rr'];
 
 // _currentVehicle.front_only 반영해서 회차별 슬롯/포지션 반환
 function getSlots(n) {
   const frontOnly = _currentVehicle?.front_only || false;
   let slots = n === 0 ? PHOTO_SLOTS_ROUND0 : PHOTO_SLOTS;
   if (frontOnly) {
-    slots = slots.filter(s => !REAR_TIRE_SLOT_IDS.includes(s.id) && !RTD_SLOTS_EXCLUDED_FRONT_ONLY.includes(s.id));
+    slots = slots.filter(s => !REAR_TIRE_SLOT_IDS.includes(s.id));
   }
   return slots;
 }
@@ -432,6 +507,7 @@ const FEEDBACK_CHIPS = [
 let _currentEmail = null;
 let _currentVehicle = null;      // detail view의 대상 차량
 let _currentVehicleTires = {};   // { position: {dot_code, barcode} } - 차량 단위
+let _currentVehicleSurvey = null;// 사전 설문 (0회차)
 let _roundsState = {};           // { round_no: { round, measurements, photosBySlot, pendingBySlot, feedback, pendingChips, activeSlot } }
 let _fileInputTargetRound = null;
 let _fileInputTargetSlot = null;
@@ -752,11 +828,13 @@ async function renderRounds() {
   const wrap = document.getElementById('roundsWrap');
   wrap.innerHTML = '<div class="empty-state">회차 데이터를 불러오는 중...</div>';
   try {
-    // 차량 단위 데이터 (tires) + 회차 데이터 병렬 로드
-    const [{ data: rounds }, { data: tires }] = await Promise.all([
+    // 차량 단위 데이터 (tires, survey) + 회차 데이터 병렬 로드
+    const [{ data: rounds }, { data: tires }, { data: surveys }] = await Promise.all([
       _supabase.from('ppmo_rounds').select('*').eq('vehicle_id', _currentVehicle.id),
-      _supabase.from('ppmo_tires').select('*').eq('vehicle_id', _currentVehicle.id)
+      _supabase.from('ppmo_tires').select('*').eq('vehicle_id', _currentVehicle.id),
+      _supabase.from('ppmo_survey').select('*').eq('vehicle_id', _currentVehicle.id).order('created_at', { ascending: false })
     ]);
+    _currentVehicleSurvey = (surveys && surveys[0]) || null;
     // 타이어 정보를 position 키로 매핑해서 저장
     _currentVehicleTires = {};
     (tires || []).forEach(t => { _currentVehicleTires[t.position] = t; });
@@ -815,6 +893,7 @@ async function renderRounds() {
         feedback: r ? allFeedback.filter(f => f.round_id === r.id) : [],
         photosBySlot,           // { slot_id: photoRow } — 저장된 사진
         pendingBySlot: {},      // { slot_id: {file, previewUrl, sizeKb} } — 업로드 대기
+        skippedSlots: new Set(),// 사진 첨부 안 함 처리한 슬롯 id
         pendingChips: new Set() // 선택된 피드백 칩 인덱스
       };
     }
@@ -826,9 +905,14 @@ async function renderRounds() {
       const n = parseInt(firstOpen);
       document.querySelector(`.round-card[data-n="${n}"]`).classList.add('open');
       renderPhotoSlots(n);
-      if (n !== 0) buildRtdGrid(n);
-      if (n === 0) renderTireInfoGrid();
-      renderFeedbackChips(n);
+      if (n === 0) {
+        renderNtdGrid(n);
+        renderTireInfoGrid();
+        renderSurvey(n);
+      } else {
+        buildRtdGrid(n);
+        renderFeedbackChips(n);
+      }
       validateRoundSave(n);
     }
   } catch(e) {
@@ -863,24 +947,73 @@ function buildRoundCard(n) {
 }
 function renderDoneBody(n) {
   const s = _roundsState[n];
+
+  // 사진 슬롯 (읽기 전용)
+  const slotsForThisRound = getSlots(n);
+  const photoSlotsHtml = `<div class="photo-slot-grid">${slotsForThisRound.map(slot => {
+    const p = s.photosBySlot[slot.id];
+    const isSkipped = p && p.skipped;
+    return `<div class="photo-slot ${p && !isSkipped ? 'filled' : 'empty'}">
+      <div class="photo-slot-label">${escapeHtml(slot.label)}</div>
+      <div class="photo-slot-body">${
+        isSkipped ? '<span style="color:var(--text-tertiary);font-size:10px;">첨부 안 함</span>'
+        : (p && p.signedUrl ? `<img src="${p.signedUrl}" onclick="window.open('${p.signedUrl}','_blank')">` : '<span style="color:var(--text-tertiary);font-size:11px;">—</span>')
+      }</div>
+    </div>`;
+  }).join('')}</div>`;
+  const filledCount = slotsForThisRound.filter(slot => { const p = s.photosBySlot[slot.id]; return p && !p.skipped; }).length;
+
+  if (n === 0) {
+    // NTD 그루브 표시
+    const measByPos = {};
+    s.measurements.forEach(m => { measByPos[m.position] = m; });
+    const ntdHtml = getNtdPositions().map(t => {
+      const m = measByPos[t.pos];
+      if (!m || m.skip_measure) return `<div style="padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px;"><b>${t.label}</b> <span style="color:var(--text-tertiary);">측정 안 함</span></div>`;
+      const grooves = [m.groove1, m.groove2, m.groove3, m.groove4].map(g => g != null ? g.toFixed(1) : '—').join(' / ');
+      return `<div style="padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px;"><b>${t.label}</b><br><span style="font-family:monospace;">G1~G4: ${grooves} mm</span></div>`;
+    }).join('');
+
+    // DOT
+    const dotHtml = getNtdPositions().map(t => {
+      const cur = _currentVehicleTires[t.pos] || {};
+      if (cur.skip_tire_info) return `<div style="padding:4px 0;border-bottom:0.5px solid var(--border);"><b>${t.label}</b> <span style="color:var(--text-tertiary);">입력 안 함</span></div>`;
+      const dot = cur.dot_code || '—';
+      const bc = cur.barcode || '—';
+      return `<div style="padding:4px 0;border-bottom:0.5px solid var(--border);"><b>${t.label}</b><br><span style="font-family:monospace;">DOT: ${escapeHtml(dot)} · BC: ${escapeHtml(bc)}</span></div>`;
+    }).join('');
+
+    // 설문
+    const sv = _currentVehicleSurvey;
+    const surveyHtml = sv ? `
+      <div style="font-size:13px;line-height:1.7;">
+        <div><b>주행 환경:</b> ${escapeHtml(sv.driving_env || '—')}</div>
+        <div><b>중시 항목:</b> ${(sv.priorities || []).map(escapeHtml).join(', ') || '—'}</div>
+        <div><b>화물 하중:</b> ${escapeHtml(sv.load_level || '—')}</div>
+      </div>` : '<div class="sub-label">설문 응답 없음</div>';
+
+    return `
+    <div class="section-head">기본 정보</div>
+    <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;line-height:1.8;">
+      <div>장착일: <b>${new Date(s.round.inspected_at).toLocaleDateString('ko-KR')}</b></div>
+      <div>주행거리: <b>${fmtKm(s.round.mileage_km)}</b></div>
+    </div>
+    <div class="section-head">NTD 측정 (그루브 4개)</div>
+    <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:10px 14px;">${ntdHtml}</div>
+    <div class="section-head">타이어 정보 (DOT · 바코드)</div>
+    <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:10px 14px;font-size:12.5px;line-height:1.7;">${dotHtml}</div>
+    <div class="section-head">사진 (${filledCount}/${slotsForThisRound.length})</div>
+    ${photoSlotsHtml}
+    <div class="section-head">사전 설문조사</div>
+    <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;">${surveyHtml}</div>`;
+  }
+
+  // ── 1~5회차 (기존 유지) ──
   const minRtdByPos = {};
   s.measurements.forEach(m => {
     if (minRtdByPos[m.position] == null || m.rtd_mm < minRtdByPos[m.position]) minRtdByPos[m.position] = m.rtd_mm;
   });
   const rtdSummary = getPositions().map(p => `<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:0.5px solid var(--border);"><span>${p}</span><span style="font-weight:600;">${minRtdByPos[p] != null ? minRtdByPos[p].toFixed(1) + ' mm' : '—'}</span></div>`).join('');
-
-  // 사진 슬롯 (읽기 전용) — 회차별 슬롯 개수 다름
-  const slotsForThisRound = getSlots(n);
-  const photoSlotsHtml = `<div class="photo-slot-grid">${slotsForThisRound.map(slot => {
-    const p = s.photosBySlot[slot.id];
-    return `<div class="photo-slot ${p ? 'filled' : 'empty'}">
-      <div class="photo-slot-label">${escapeHtml(slot.label)}</div>
-      <div class="photo-slot-body">${p && p.signedUrl ? `<img src="${p.signedUrl}" onclick="window.open('${p.signedUrl}','_blank')">` : '<span style="color:var(--text-tertiary);font-size:11px;">—</span>'}</div>
-    </div>`;
-  }).join('')}</div>`;
-  const filledCount = slotsForThisRound.filter(slot => s.photosBySlot[slot.id]).length;
-
-  // 피드백 (칩 + 자유 메모 분리)
   const chipFeedbacks = s.feedback.filter(f => !f.note || FEEDBACK_CHIPS.some(c => c.label === f.note));
   const freeFeedbacks = s.feedback.filter(f => f.note && !FEEDBACK_CHIPS.some(c => c.label === f.note));
   const feedbackHtml = (chipFeedbacks.length || freeFeedbacks.length)
@@ -895,20 +1028,8 @@ function renderDoneBody(n) {
       <div>주행거리: <b>${fmtKm(s.round.mileage_km)}</b></div>
       ${s.round.rotated ? '<div>로테이션: <b>실시</b></div>' : ''}
     </div>
-    ${n === 0
-      ? `<div class="section-head">RTD (초기)</div>
-         <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;">NTD 기준값 사용 · 별도 측정 없음</div>
-         <div class="section-head">타이어 정보 (DOT · 바코드)</div>
-         <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:10px 14px;font-size:12.5px;line-height:1.7;">${
-           getTirePositions().map(t => {
-             const cur = _currentVehicleTires[t.pos] || {};
-             const dot = cur.dot_code || '<span style="color:var(--text-tertiary)">—</span>';
-             const bc = cur.barcode || '<span style="color:var(--text-tertiary)">—</span>';
-             return `<div style="padding:4px 0;border-bottom:0.5px solid var(--border);"><b>${t.label}</b><br><span style="font-family:monospace;">DOT: ${dot} · BC: ${bc}</span></div>`;
-           }).join('')
-         }</div>`
-      : `<div class="section-head">측정값 (포지션별 최소 RTD)</div>
-         <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;">${rtdSummary}</div>`}
+    <div class="section-head">측정값 (포지션별 최소 RTD)</div>
+    <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;">${rtdSummary}</div>
     <div class="section-head">사진 (${filledCount}/${slotsForThisRound.length})</div>
     ${photoSlotsHtml}
     <div class="section-head">주관 피드백</div>
@@ -918,34 +1039,55 @@ function renderDoneBody(n) {
 
 function renderEditBody(n, isRound0, mileage) {
   const today = new Date().toISOString().slice(0, 10);
-  return `
-    ${isRound0
-      ? `<div class="sub-label" style="margin:12px 0;padding:10px 12px;background:var(--bg-info);color:var(--text-info);border-radius:var(--radius-sm);">타이어 장착 시점의 초기 상태를 기록합니다. 주행거리는 차량 생성 시 입력한 <b>${fmtKm(mileage)}</b>이 자동 적용됩니다.</div>`
-      : ''}
+  if (isRound0) {
+    return `
+    <div class="sub-label" style="margin:12px 0;padding:10px 12px;background:var(--bg-info);color:var(--text-info);border-radius:var(--radius-sm);">타이어 장착 시점의 초기 상태를 기록합니다. 주행거리는 차량 생성 시 입력한 <b>${fmtKm(mileage)}</b>이 자동 적용됩니다.</div>
     <div class="row field" style="margin-top:12px;">
       <div>
-        <div class="label">${isRound0 ? '장착일 *' : '측정일 *'}</div>
+        <div class="label">장착일 *</div>
         <input type="date" id="date-${n}" value="${today}" oninput="validateRoundSave(${n})">
       </div>
-      ${!isRound0 ? `<div>
+    </div>
+
+    <div class="section-head">NTD 측정 (mm) · 포지션별 그루브 4개</div>
+    <div class="sub-label" style="margin-bottom:8px;">신품 트레드 깊이를 직접 측정하여 각 그루브(1~4) 값을 입력하세요. 측정 대상이 아닌 포지션은 '측정 안 함'을 체크하세요.</div>
+    <div id="ntdWrap-${n}"></div>
+
+    <div class="section-head">타이어 정보 (DOT · 바코드)</div>
+    <div class="sub-label" style="margin-bottom:6px;">DOT 예: <b>16Y032TF3 1024</b> · 바코드 예: <b>6280495159</b> · 입력이 어려운 경우 '입력하지 않음' 체크</div>
+    <div class="tire-info-grid" id="tireInfoGrid"></div>
+
+    <div class="section-head">사진 업로드</div>
+    <div class="photo-slots-progress" id="progress-${n}">0/${getSlots(n).length} 처리됨</div>
+    <div id="pslots-${n}"></div>
+    <input type="file" id="fileInp-${n}" accept="image/*" capture="environment" class="hidden" onchange="onSlotFileChosen(${n}, event)">
+
+    <div class="section-head">사전 설문조사</div>
+    <div id="surveyWrap-${n}"></div>
+
+    <button class="btn full" id="save-${n}" onclick="saveRound(${n})" disabled style="margin-top:16px;">초기 데이터 저장</button>`;
+  }
+
+  // 1~5회차 (2단계에서 개편 예정 — 현재는 기존 유지)
+  return `
+    <div class="row field" style="margin-top:12px;">
+      <div>
+        <div class="label">측정일 *</div>
+        <input type="date" id="date-${n}" value="${today}" oninput="validateRoundSave(${n})">
+      </div>
+      <div>
         <div class="label">주행거리 (km) *</div>
         <input type="number" id="mile-${n}" placeholder="누적 주행거리" value="${mileage || ''}" oninput="validateRoundSave(${n})">
-      </div>` : ''}
+      </div>
     </div>
 
     <div class="section-head">사진 업로드 (총 ${getSlots(n).length}칸)</div>
-    <div class="photo-slots-progress" id="progress-${n}">0/${getSlots(n).length} 업로드됨</div>
-    <div class="photo-slot-grid" id="pslots-${n}"></div>
+    <div class="photo-slots-progress" id="progress-${n}">0/${getSlots(n).length} 처리됨</div>
+    <div id="pslots-${n}"></div>
     <input type="file" id="fileInp-${n}" accept="image/*" capture="environment" class="hidden" onchange="onSlotFileChosen(${n}, event)">
 
-    ${isRound0
-      ? `<div class="section-head">타이어 정보 (DOT · 바코드) · 6포지션 필수</div>
-         <div class="sub-label" style="margin-bottom:6px;">DOT 예: <b>16Y032TF3 1024</b> (9자 공장/제품 + 4자 주차/년도) · 바코드 예: <b>6280495159</b> (10자)</div>
-         <div class="tire-info-grid" id="tireInfoGrid"></div>
-
-         <div class="sub-label" style="margin:14px 0 6px;padding:10px 12px;background:var(--bg-secondary);border-radius:var(--radius-sm);">💡 초기 설치 시점은 <b>NTD(신품 트레드 깊이)</b>를 그대로 사용하므로 RTD 측정을 생략합니다.</div>`
-      : `<div class="section-head">RTD 측정 (mm) · 6본 × 외/중/내</div>
-         <div id="rtdWrap-${n}"></div>`}
+    <div class="section-head">RTD 측정 (mm) · 6본 × 외/중/내</div>
+    <div id="rtdWrap-${n}"></div>
 
     <div class="section-head">주관 피드백</div>
     <div class="feedback-chips" id="chips-${n}"></div>
@@ -956,7 +1098,7 @@ function renderEditBody(n, isRound0, mileage) {
       이번 방문 전/후 타이어 로테이션 실시
     </label>
 
-    <button class="btn full" id="save-${n}" onclick="saveRound(${n})" disabled style="margin-top:12px;">${isRound0 ? '초기 데이터 저장' : n + '회차 저장'}</button>`;
+    <button class="btn full" id="save-${n}" onclick="saveRound(${n})" disabled style="margin-top:12px;">${n}회차 저장</button>`;
 }
 
 window.toggleRound = function(n) {
@@ -964,30 +1106,108 @@ window.toggleRound = function(n) {
   const wasOpen = card.classList.contains('open');
   card.classList.toggle('open');
   if (!wasOpen && !_roundsState[n].round) {
-    // 편집 UI 초기화
     renderPhotoSlots(n);
-    if (n !== 0) buildRtdGrid(n);          // 초기 회차는 RTD 생략
-    if (n === 0) renderTireInfoGrid();     // 초기 회차만 DOT/바코드 입력
-    renderFeedbackChips(n);
+    if (n === 0) {
+      renderNtdGrid(n);
+      renderTireInfoGrid();
+      renderSurvey(n);
+    } else {
+      buildRtdGrid(n);
+      renderFeedbackChips(n);
+    }
     validateRoundSave(n);
   }
+};
+
+// ── 0회차: NTD 그루브 4개 입력 그리드 ──
+function renderNtdGrid(n) {
+  const wrap = document.getElementById(`ntdWrap-${n}`);
+  if (!wrap) return;
+  const s = _roundsState[n];
+  if (!s.ntdSkip) s.ntdSkip = new Set();
+  wrap.innerHTML = getNtdPositions().map(t => {
+    const skipped = s.ntdSkip.has(t.pos);
+    return `<div class="ntd-block ${skipped ? 'is-skipped' : ''}">
+      <div class="ntd-pos-title">${t.label}</div>
+      <div class="groove-points" ${skipped ? 'style="display:none;"' : ''}>
+        ${[1,2,3,4].map(g => `<div><label>그루브 ${g}</label><input type="number" step="0.1" min="0" max="30" class="ntdInput-${n}" data-pos="${t.pos}" data-groove="${g}" placeholder="mm" oninput="validateRoundSave(${n})"></div>`).join('')}
+      </div>
+      <label class="tire-skip-check">
+        <input type="checkbox" ${skipped ? 'checked' : ''} onchange="toggleNtdSkip(${n},'${t.pos}')">
+        이 포지션 측정 안 함
+      </label>
+    </div>`;
+  }).join('');
+}
+window.toggleNtdSkip = function(n, pos) {
+  const s = _roundsState[n];
+  if (!s.ntdSkip) s.ntdSkip = new Set();
+  if (s.ntdSkip.has(pos)) s.ntdSkip.delete(pos);
+  else s.ntdSkip.add(pos);
+  renderNtdGrid(n);
+  validateRoundSave(n);
+};
+
+// ── 0회차: 사전 설문 ──
+function renderSurvey(n) {
+  const wrap = document.getElementById(`surveyWrap-${n}`);
+  if (!wrap) return;
+  const s = _roundsState[n];
+  if (!s.survey) s.survey = { driving_env: null, priorities: new Set(), load_level: null };
+  wrap.innerHTML = Object.entries(SURVEY).map(([key, q]) => {
+    const opts = q.options.map(opt => {
+      let active;
+      if (q.multi) active = s.survey[key].has(opt);
+      else active = s.survey[key] === opt;
+      return `<label class="survey-opt ${active ? 'active' : ''}">
+        <input type="${q.multi ? 'checkbox' : 'radio'}" name="survey-${key}-${n}" ${active ? 'checked' : ''} onchange="onSurveyChange(${n},'${key}','${escapeHtml(opt)}',${q.multi})">
+        ${escapeHtml(opt)}
+      </label>`;
+    }).join('');
+    return `<div class="survey-q"><div class="survey-q-label">${escapeHtml(q.label)}</div><div class="survey-opts">${opts}</div></div>`;
+  }).join('');
+}
+window.onSurveyChange = function(n, key, opt, multi) {
+  const s = _roundsState[n];
+  if (multi) {
+    if (s.survey[key].has(opt)) s.survey[key].delete(opt);
+    else s.survey[key].add(opt);
+  } else {
+    s.survey[key] = opt;
+  }
+  renderSurvey(n);
+  validateRoundSave(n);
 };
 
 // 타이어 정보(DOT/바코드) 그리드 렌더 - 0회차 전용
 function renderTireInfoGrid() {
   const wrap = document.getElementById('tireInfoGrid');
   if (!wrap) return;
-  // _currentVehicleTires에서 기존 값 로드 (재편집 대비)
+  const s = _roundsState[0];
+  if (!s.dotSkip) s.dotSkip = new Set();
   const existing = _currentVehicleTires || {};
-  wrap.innerHTML = getTirePositions().map(t => {
+  wrap.innerHTML = getNtdPositions().map(t => {
     const cur = existing[t.pos] || {};
-    return `<div class="tire-info-block">
+    const skipped = s.dotSkip.has(t.pos);
+    return `<div class="tire-info-block ${skipped ? 'is-skipped' : ''}">
       <div class="tire-info-pos">${t.label}</div>
       <input type="text" id="dot-${t.pos}" placeholder="DOT: 16Y032TF3 1024" value="${escapeHtml(cur.dot_code || '')}" maxlength="20" oninput="validateRoundSave(0)">
       <input type="text" id="barcode-${t.pos}" placeholder="바코드: 6280495159" value="${escapeHtml(cur.barcode || '')}" maxlength="15" inputmode="numeric" oninput="validateRoundSave(0)">
+      <label class="tire-skip-check">
+        <input type="checkbox" ${skipped ? 'checked' : ''} onchange="toggleDotSkip('${t.pos}')">
+        입력하지 않음
+      </label>
     </div>`;
   }).join('');
 }
+window.toggleDotSkip = function(pos) {
+  const s = _roundsState[0];
+  if (!s.dotSkip) s.dotSkip = new Set();
+  if (s.dotSkip.has(pos)) s.dotSkip.delete(pos);
+  else s.dotSkip.add(pos);
+  renderTireInfoGrid();
+  validateRoundSave(0);
+};
 
 // ── Photo slots ──
 function renderPhotoSlots(n) {
@@ -997,25 +1217,50 @@ function renderPhotoSlots(n) {
   const slots = getSlots(n);
   wrap.innerHTML = slots.map(slot => {
     const pending = s.pendingBySlot[slot.id];
+    const skipped = s.skippedSlots.has(slot.id);
+    const hintHtml = slot.hint ? `<div class="photo-row-hint">💡 ${escapeHtml(slot.hint)}</div>` : '';
+    let thumbHtml;
     if (pending) {
-      return `<div class="photo-slot filled">
-        <div class="photo-slot-label">${escapeHtml(slot.label)}</div>
-        <div class="photo-slot-body">
-          <img src="${pending.previewUrl}">
-          <div class="del" onclick="removeSlotPhoto(${n},'${slot.id}')">✕</div>
-          <div class="pending-badge">대기</div>
-        </div>
+      thumbHtml = `<div class="photo-row-thumb filled">
+        <img src="${pending.previewUrl}">
+        <div class="del" onclick="removeSlotPhoto(${n},'${slot.id}')">✕</div>
       </div>`;
+    } else if (skipped) {
+      thumbHtml = `<div class="photo-row-thumb skipped">첨부 안 함</div>`;
+    } else {
+      thumbHtml = `<div class="photo-row-thumb empty" onclick="triggerSlotUpload(${n},'${slot.id}')">＋</div>`;
     }
-    return `<div class="photo-slot empty">
-      <div class="photo-slot-label">${escapeHtml(slot.label)}</div>
-      <div class="photo-slot-body" onclick="triggerSlotUpload(${n},'${slot.id}')">＋</div>
+    return `<div class="photo-row ${skipped ? 'is-skipped' : ''}">
+      <div class="photo-row-info">
+        <div class="photo-row-label">${escapeHtml(slot.label)}</div>
+        ${hintHtml}
+        <label class="photo-skip-check">
+          <input type="checkbox" ${skipped ? 'checked' : ''} onchange="toggleSkipSlot(${n},'${slot.id}')">
+          사진 첨부하지 않고 진행
+        </label>
+      </div>
+      ${thumbHtml}
     </div>`;
   }).join('');
-  const filled = Object.keys(s.pendingBySlot).length;
+  const filled = Object.keys(s.pendingBySlot).length + s.skippedSlots.size;
   const prog = document.getElementById(`progress-${n}`);
-  if (prog) prog.textContent = `${filled}/${slots.length} 업로드됨`;
+  if (prog) prog.textContent = `${filled}/${slots.length} 처리됨`;
 }
+window.toggleSkipSlot = function(n, slotId) {
+  const s = _roundsState[n];
+  if (s.skippedSlots.has(slotId)) {
+    s.skippedSlots.delete(slotId);
+  } else {
+    s.skippedSlots.add(slotId);
+    // 스킵하면 대기 중인 사진 제거
+    if (s.pendingBySlot[slotId]) {
+      URL.revokeObjectURL(s.pendingBySlot[slotId].previewUrl);
+      delete s.pendingBySlot[slotId];
+    }
+  }
+  renderPhotoSlots(n);
+  validateRoundSave(n);
+};
 window.triggerSlotUpload = function(n, slotId) {
   _fileInputTargetRound = n;
   _fileInputTargetSlot = slotId;
@@ -1033,6 +1278,7 @@ window.onSlotFileChosen = async function(n, e) {
     const newKb = Math.round(compressed.size / 1024);
     // 기존 pending 있으면 previewUrl 해제
     if (s.pendingBySlot[slotId]) URL.revokeObjectURL(s.pendingBySlot[slotId].previewUrl);
+    s.skippedSlots.delete(slotId); // 사진 넣으면 스킵 해제
     s.pendingBySlot[slotId] = {
       file: compressed,
       previewUrl: URL.createObjectURL(compressed),
@@ -1109,50 +1355,79 @@ window.validateRoundSave = function(n) {
   if (!btn) return;
   const s = _roundsState[n];
   const isRound0 = n === 0;
+
   // 1. 날짜
   const dateEl = document.getElementById(`date-${n}`);
   const dateOk = dateEl && !!dateEl.value;
-  // 2. 주행거리 (0회차는 자동 적용이라 무조건 OK)
-  const mileageOk = isRound0 || (document.getElementById(`mile-${n}`)?.value !== '');
-  // 3. 사진 전 슬롯 채움 (회차별로 개수 다름 - 0회차 8칸 / 1~5회차 16칸)
+
+  // 사진: 각 슬롯이 업로드됐거나 스킵 처리됐으면 OK
   const slotsRequired = getSlots(n);
-  const photoOk = Object.keys(s.pendingBySlot).length === slotsRequired.length;
-  // 4. RTD 18개 (초기 회차는 스킵 — NTD가 대체)
-  let rtdOk = true;
-  let rtdInputs = [];
-  if (!isRound0) {
-    rtdInputs = document.querySelectorAll(`.rtdInput-${n}`);
-    rtdOk = rtdInputs.length > 0 && [...rtdInputs].every(i => i.value !== '' && !isNaN(parseFloat(i.value)));
-  }
-  // 5. 피드백 최소 1개 (없음 포함)
-  const feedbackOk = s.pendingChips.size > 0;
-  // 6. 타이어 정보 (0회차 전용): 6포지션 × 2필드 = 12개 다 채워야 함
-  let tireOk = true;
-  let tireFilled = 0;
+  const photoDone = slotsRequired.filter(sl => s.pendingBySlot[sl.id] || s.skippedSlots.has(sl.id)).length;
+  const photoOk = photoDone === slotsRequired.length;
+
   if (isRound0) {
-    getTirePositions().forEach(t => {
+    // NTD: 각 포지션이 스킵됐거나 그루브 4개 다 채워졌으면 OK
+    if (!s.ntdSkip) s.ntdSkip = new Set();
+    let ntdOk = true, ntdFilledPos = 0;
+    getNtdPositions().forEach(t => {
+      if (s.ntdSkip.has(t.pos)) { ntdFilledPos++; return; }
+      const inputs = document.querySelectorAll(`.ntdInput-${n}[data-pos="${CSS.escape(t.pos)}"]`);
+      const allFilled = inputs.length === 4 && [...inputs].every(i => i.value !== '' && !isNaN(parseFloat(i.value)));
+      if (allFilled) ntdFilledPos++;
+      else ntdOk = false;
+    });
+    ntdOk = ntdOk && ntdFilledPos === getNtdPositions().length;
+
+    // DOT: 각 포지션이 스킵됐거나 dot+barcode 둘 다 채워졌으면 OK
+    if (!s.dotSkip) s.dotSkip = new Set();
+    let tireOk = true, tireFilled = 0;
+    getNtdPositions().forEach(t => {
+      if (s.dotSkip.has(t.pos)) { tireFilled++; return; }
       const dot = document.getElementById(`dot-${t.pos}`)?.value.trim();
       const bc  = document.getElementById(`barcode-${t.pos}`)?.value.trim();
       if (dot && bc) tireFilled++;
+      else tireOk = false;
     });
-    tireOk = tireFilled === getTirePositions().length;
+    tireOk = tireOk && tireFilled === getNtdPositions().length;
+
+    // 설문: 3문항 다 응답 (priorities는 최소 1개)
+    if (!s.survey) s.survey = { driving_env: null, priorities: new Set(), load_level: null };
+    const surveyOk = !!s.survey.driving_env && s.survey.priorities.size > 0 && !!s.survey.load_level;
+
+    btn.disabled = !(dateOk && photoOk && ntdOk && tireOk && surveyOk);
+    if (btn.disabled) {
+      const missing = [];
+      if (!dateOk) missing.push('날짜');
+      if (!ntdOk) missing.push(`NTD ${ntdFilledPos}/${getNtdPositions().length}`);
+      if (!tireOk) missing.push(`DOT ${tireFilled}/${getNtdPositions().length}`);
+      if (!photoOk) missing.push(`사진 ${photoDone}/${slotsRequired.length}`);
+      if (!surveyOk) missing.push('설문');
+      btn.textContent = `미완료: ${missing.join(', ')}`;
+    } else {
+      btn.textContent = '초기 데이터 저장';
+    }
+    return;
   }
-  btn.disabled = !(dateOk && mileageOk && photoOk && rtdOk && feedbackOk && tireOk);
-  // 진행 상태 표시
+
+  // ── 1~5회차 (기존 로직 유지) ──
+  const mileageOk = (document.getElementById(`mile-${n}`)?.value !== '');
+  let rtdInputs = document.querySelectorAll(`.rtdInput-${n}`);
+  const rtdOk = rtdInputs.length > 0 && [...rtdInputs].every(i => i.value !== '' && !isNaN(parseFloat(i.value)));
+  const feedbackOk = s.pendingChips.size > 0;
+  btn.disabled = !(dateOk && mileageOk && photoOk && rtdOk && feedbackOk);
   if (btn.disabled) {
     const missing = [];
     if (!dateOk) missing.push('날짜');
     if (!mileageOk) missing.push('주행거리');
-    if (!photoOk) missing.push(`사진 ${Object.keys(s.pendingBySlot).length}/${slotsRequired.length}`);
+    if (!photoOk) missing.push(`사진 ${photoDone}/${slotsRequired.length}`);
     if (!rtdOk) {
       const filled = [...rtdInputs].filter(i => i.value !== '' && !isNaN(parseFloat(i.value))).length;
       missing.push(`RTD ${filled}/${rtdInputs.length || 18}`);
     }
-    if (!tireOk) missing.push(`타이어 ${tireFilled}/${getTirePositions().length}`);
     if (!feedbackOk) missing.push('피드백');
     btn.textContent = `미완료: ${missing.join(', ')}`;
   } else {
-    btn.textContent = isRound0 ? '초기 데이터 저장' : `${n}회차 저장`;
+    btn.textContent = `${n}회차 저장`;
   }
 };
 
@@ -1187,10 +1462,9 @@ window.saveRound = async function(n) {
   btn.disabled = true; btn.textContent = '저장 중...';
   const isRound0 = n === 0;
   const mileage = isRound0 ? _currentVehicle.initial_mileage_km : parseFloat(document.getElementById(`mile-${n}`).value);
-  const rotated = document.getElementById(`rot-${n}`).checked;
-  const notes = document.getElementById(`notes-${n}`).value.trim() || null;
+  const rotated = isRound0 ? false : document.getElementById(`rot-${n}`).checked;
+  const notes = isRound0 ? null : (document.getElementById(`notes-${n}`).value.trim() || null);
   const dateStr = document.getElementById(`date-${n}`).value;
-  // 사용자 입력 날짜 → 정오(12:00) timestamptz로 저장 (시간대 이슈 회피)
   const inspectedAt = dateStr ? new Date(dateStr + 'T12:00:00').toISOString() : new Date().toISOString();
   const s = _roundsState[n];
   try {
@@ -1202,60 +1476,97 @@ window.saveRound = async function(n) {
     }).select().single();
     if (rErr) throw rErr;
 
-    // 2. RTD 측정값
-    const measurements = [...document.querySelectorAll(`.rtdInput-${n}`)].map(i => ({
-      round_id: round.id, position: i.dataset.pos, point: i.dataset.point, rtd_mm: parseFloat(i.value)
-    }));
-    if (measurements.length) {
-      const { error: mErr } = await _supabase.from('ppmo_measurements').insert(measurements);
-      if (mErr) throw mErr;
-    }
-
-    // 3. 사진 업로드 (슬롯별) — photo_type에 slot.id 저장
-    const slotEntries = Object.entries(s.pendingBySlot);
-    for (let i = 0; i < slotEntries.length; i++) {
-      const [slotId, p] = slotEntries[i];
-      btn.textContent = `사진 업로드 ${i+1}/${slotEntries.length}`;
-      const path = `${_currentVehicle.id}/${round.id}/${slotId}_${Date.now()}.jpg`;
-      const { error: upErr } = await _supabase.storage.from('ppmo-photos').upload(path, p.file, {
-        contentType: 'image/jpeg',
-        cacheControl: '3600',
-        upsert: false
-      });
-      if (upErr) throw upErr;
-      // url 컬럼에 path만 저장 (표시/다운로드 시 signed URL 생성)
-      await _supabase.from('ppmo_photos').insert({ round_id: round.id, photo_type: slotId, url: path });
-    }
-
-    // 4. 피드백 (선택된 칩 각각 1행 + 자유 메모 1행)
-    const feedbackRows = [];
-    s.pendingChips.forEach(i => {
-      const chip = FEEDBACK_CHIPS[i];
-      feedbackRows.push({ round_id: round.id, category: chip.category, note: chip.label });
-    });
-    // 자유 메모는 notes 컬럼에 이미 저장했으므로 피드백 테이블에는 중복 저장 안 함
-    if (feedbackRows.length) {
-      const { error: fErr } = await _supabase.from('ppmo_feedback').insert(feedbackRows);
-      if (fErr) throw fErr;
-    }
-
-    // 5. 타이어 정보 (0회차 전용): 6포지션 DOT/바코드 upsert
     if (isRound0) {
-      const tireRows = getTirePositions().map(t => ({
-        vehicle_id: _currentVehicle.id,
-        position: t.pos,
-        dot_code: document.getElementById(`dot-${t.pos}`).value.trim(),
-        barcode: document.getElementById(`barcode-${t.pos}`).value.trim()
+      // 2-0. NTD 측정값 (포지션별 그루브 4개) → ppmo_measurements
+      const ntdRows = [];
+      getNtdPositions().forEach(t => {
+        if (s.ntdSkip && s.ntdSkip.has(t.pos)) {
+          ntdRows.push({ round_id: round.id, position: t.pos, skip_measure: true });
+          return;
+        }
+        const inputs = document.querySelectorAll(`.ntdInput-${n}[data-pos="${CSS.escape(t.pos)}"]`);
+        const g = {};
+        inputs.forEach(i => { g['groove' + i.dataset.groove] = parseFloat(i.value); });
+        const grooveVals = [g.groove1, g.groove2, g.groove3, g.groove4].filter(v => !isNaN(v));
+        ntdRows.push({
+          round_id: round.id, position: t.pos,
+          groove1: g.groove1, groove2: g.groove2, groove3: g.groove3, groove4: g.groove4,
+          rtd_mm: grooveVals.length ? Math.min(...grooveVals) : null, // 최소값 저장 (호환)
+          skip_measure: false
+        });
+      });
+      if (ntdRows.length) {
+        const { error: mErr } = await _supabase.from('ppmo_measurements').insert(ntdRows);
+        if (mErr) throw mErr;
+      }
+    } else {
+      // 2. RTD 측정값 (기존 3점 방식 — 2단계에서 개편)
+      const measurements = [...document.querySelectorAll(`.rtdInput-${n}`)].map(i => ({
+        round_id: round.id, position: i.dataset.pos, point: i.dataset.point, rtd_mm: parseFloat(i.value)
       }));
-      const { error: tErr } = await _supabase
-        .from('ppmo_tires')
-        .upsert(tireRows, { onConflict: 'vehicle_id,position' });
-      if (tErr) throw tErr;
+      if (measurements.length) {
+        const { error: mErr } = await _supabase.from('ppmo_measurements').insert(measurements);
+        if (mErr) throw mErr;
+      }
     }
 
-    // pending 이미지 URL 해제
-    Object.values(s.pendingBySlot).forEach(p => URL.revokeObjectURL(p.previewUrl));
+    // 3. 사진 업로드 (스킵된 슬롯은 skipped 플래그로 기록)
+    const slotsForRound = getSlots(n);
+    let uploadIdx = 0;
+    const uploadTargets = slotsForRound.filter(sl => s.pendingBySlot[sl.id]);
+    for (const slot of slotsForRound) {
+      if (s.pendingBySlot[slot.id]) {
+        uploadIdx++;
+        btn.textContent = `사진 업로드 ${uploadIdx}/${uploadTargets.length}`;
+        const p = s.pendingBySlot[slot.id];
+        const path = `${_currentVehicle.id}/${round.id}/${slot.id}_${Date.now()}.jpg`;
+        const { error: upErr } = await _supabase.storage.from('ppmo-photos').upload(path, p.file, {
+          contentType: 'image/jpeg', cacheControl: '3600', upsert: false
+        });
+        if (upErr) throw upErr;
+        await _supabase.from('ppmo_photos').insert({ round_id: round.id, photo_type: slot.id, url: path, skipped: false });
+      } else if (s.skippedSlots.has(slot.id)) {
+        await _supabase.from('ppmo_photos').insert({ round_id: round.id, photo_type: slot.id, url: null, skipped: true });
+      }
+    }
 
+    if (isRound0) {
+      // 4-0. DOT/바코드 (스킵 반영) → ppmo_tires
+      const tireRows = getNtdPositions().map(t => {
+        const skipped = s.dotSkip && s.dotSkip.has(t.pos);
+        return {
+          vehicle_id: _currentVehicle.id,
+          position: t.pos,
+          dot_code: skipped ? null : document.getElementById(`dot-${t.pos}`).value.trim(),
+          barcode: skipped ? null : document.getElementById(`barcode-${t.pos}`).value.trim(),
+          skip_tire_info: !!skipped
+        };
+      });
+      const { error: tErr } = await _supabase.from('ppmo_tires').upsert(tireRows, { onConflict: 'vehicle_id,position' });
+      if (tErr) throw tErr;
+
+      // 5-0. 사전 설문 → ppmo_survey
+      const { error: svErr } = await _supabase.from('ppmo_survey').insert({
+        vehicle_id: _currentVehicle.id,
+        driving_env: s.survey.driving_env,
+        priorities: [...s.survey.priorities],
+        load_level: s.survey.load_level
+      });
+      if (svErr) throw svErr;
+    } else {
+      // 4. 피드백 (칩)
+      const feedbackRows = [];
+      s.pendingChips.forEach(i => {
+        const chip = FEEDBACK_CHIPS[i];
+        feedbackRows.push({ round_id: round.id, category: chip.category, note: chip.label });
+      });
+      if (feedbackRows.length) {
+        const { error: fErr } = await _supabase.from('ppmo_feedback').insert(feedbackRows);
+        if (fErr) throw fErr;
+      }
+    }
+
+    Object.values(s.pendingBySlot).forEach(p => URL.revokeObjectURL(p.previewUrl));
     toast(isRound0 ? '초기 데이터가 저장되었습니다' : `${n}회차 데이터가 저장되었습니다`);
     await renderRounds();
   } catch(e) {
