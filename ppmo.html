@@ -1100,17 +1100,31 @@ window.toggleRound = function(n) {
 };
 
 // ── 0회차: NTD 그루브 4개 입력 그리드 ──
+function readNtdInputs(n) {
+  // 현재 DOM 입력값을 state에 백업
+  const s = _roundsState[n];
+  if (!s.ntdVals) s.ntdVals = {};
+  getNtdPositions().forEach(t => {
+    const inputs = document.querySelectorAll(`.ntdInput-${n}[data-pos="${CSS.escape(t.pos)}"]`);
+    if (inputs.length) {
+      if (!s.ntdVals[t.pos]) s.ntdVals[t.pos] = {};
+      inputs.forEach(i => { s.ntdVals[t.pos]['g' + i.dataset.groove] = i.value; });
+    }
+  });
+}
 function renderNtdGrid(n) {
   const wrap = document.getElementById(`ntdWrap-${n}`);
   if (!wrap) return;
   const s = _roundsState[n];
   if (!s.ntdSkip) s.ntdSkip = new Set();
+  if (!s.ntdVals) s.ntdVals = {};
   wrap.innerHTML = getNtdPositions().map(t => {
     const skipped = s.ntdSkip.has(t.pos);
+    const saved = s.ntdVals[t.pos] || {};
     return `<div class="ntd-block ${skipped ? 'is-skipped' : ''}">
       <div class="ntd-pos-title">${t.label}</div>
       <div class="groove-points" ${skipped ? 'style="display:none;"' : ''}>
-        ${[1,2,3,4].map(g => `<div><label>그루브 ${g}</label><input type="number" step="0.1" min="0" max="30" class="ntdInput-${n}" data-pos="${t.pos}" data-groove="${g}" placeholder="mm" oninput="validateRoundSave(${n})"></div>`).join('')}
+        ${[1,2,3,4].map(g => `<div><label>그루브 ${g}</label><input type="number" step="0.1" min="0" max="30" class="ntdInput-${n}" data-pos="${t.pos}" data-groove="${g}" value="${saved['g'+g] || ''}" placeholder="mm" oninput="validateRoundSave(${n})"></div>`).join('')}
       </div>
       <label class="tire-skip-check">
         <input type="checkbox" ${skipped ? 'checked' : ''} onchange="toggleNtdSkip(${n},'${t.pos}')">
@@ -1120,6 +1134,7 @@ function renderNtdGrid(n) {
   }).join('');
 }
 window.toggleNtdSkip = function(n, pos) {
+  readNtdInputs(n); // 토글 전 현재 입력값 백업
   const s = _roundsState[n];
   if (!s.ntdSkip) s.ntdSkip = new Set();
   if (s.ntdSkip.has(pos)) s.ntdSkip.delete(pos);
@@ -1160,19 +1175,34 @@ window.onSurveyChange = function(n, key, opt, multi) {
 };
 
 // 타이어 정보(DOT/바코드) 그리드 렌더 - 0회차 전용
+function readDotInputs() {
+  const s = _roundsState[0];
+  if (!s.dotVals) s.dotVals = {};
+  getNtdPositions().forEach(t => {
+    const dotEl = document.getElementById(`dot-${t.pos}`);
+    const bcEl = document.getElementById(`barcode-${t.pos}`);
+    if (dotEl || bcEl) {
+      s.dotVals[t.pos] = { dot: dotEl ? dotEl.value : '', bc: bcEl ? bcEl.value : '' };
+    }
+  });
+}
 function renderTireInfoGrid() {
   const wrap = document.getElementById('tireInfoGrid');
   if (!wrap) return;
   const s = _roundsState[0];
   if (!s.dotSkip) s.dotSkip = new Set();
+  if (!s.dotVals) s.dotVals = {};
   const existing = _currentVehicleTires || {};
   wrap.innerHTML = getNtdPositions().map(t => {
     const cur = existing[t.pos] || {};
+    const saved = s.dotVals[t.pos];
+    const dotVal = saved ? saved.dot : (cur.dot_code || '');
+    const bcVal = saved ? saved.bc : (cur.barcode || '');
     const skipped = s.dotSkip.has(t.pos);
     return `<div class="tire-info-block ${skipped ? 'is-skipped' : ''}">
       <div class="tire-info-pos">${t.label}</div>
-      <input type="text" id="dot-${t.pos}" placeholder="DOT: 16Y032TF3 1024" value="${escapeHtml(cur.dot_code || '')}" maxlength="20" oninput="validateRoundSave(0)">
-      <input type="text" id="barcode-${t.pos}" placeholder="바코드: 6280495159" value="${escapeHtml(cur.barcode || '')}" maxlength="15" inputmode="numeric" oninput="validateRoundSave(0)">
+      <input type="text" id="dot-${t.pos}" placeholder="DOT: 16Y032TF3 1024" value="${escapeHtml(dotVal)}" maxlength="20" oninput="validateRoundSave(0)">
+      <input type="text" id="barcode-${t.pos}" placeholder="바코드: 6280495159" value="${escapeHtml(bcVal)}" maxlength="15" inputmode="numeric" oninput="validateRoundSave(0)">
       <label class="tire-skip-check">
         <input type="checkbox" ${skipped ? 'checked' : ''} onchange="toggleDotSkip('${t.pos}')">
         입력하지 않음
@@ -1181,6 +1211,7 @@ function renderTireInfoGrid() {
   }).join('');
 }
 window.toggleDotSkip = function(pos) {
+  readDotInputs(); // 토글 전 현재 입력값 백업
   const s = _roundsState[0];
   if (!s.dotSkip) s.dotSkip = new Set();
   if (s.dotSkip.has(pos)) s.dotSkip.delete(pos);
@@ -1448,6 +1479,9 @@ window.saveRound = async function(n) {
   const inspectedAt = dateStr ? new Date(dateStr + 'T12:00:00').toISOString() : new Date().toISOString();
   const s = _roundsState[n];
   try {
+    // 기존 동일 회차가 있으면 먼저 삭제 (재저장 허용, 중복 제약 회피)
+    await _supabase.from('ppmo_rounds').delete().eq('vehicle_id', _currentVehicle.id).eq('round_no', n);
+
     // 1. 회차 insert
     const { data: round, error: rErr } = await _supabase.from('ppmo_rounds').insert({
       vehicle_id: _currentVehicle.id, round_no: n, mileage_km: mileage, rotated, notes,
@@ -1457,6 +1491,7 @@ window.saveRound = async function(n) {
     if (rErr) throw rErr;
 
     if (isRound0) {
+      readNtdInputs(n); // 현재 DOM 값 백업에 반영
       // 2-0. NTD 측정값 (포지션별 그루브 4개) → ppmo_measurements
       const ntdRows = [];
       getNtdPositions().forEach(t => {
@@ -1464,14 +1499,14 @@ window.saveRound = async function(n) {
           ntdRows.push({ round_id: round.id, position: t.pos, skip_measure: true });
           return;
         }
-        const inputs = document.querySelectorAll(`.ntdInput-${n}[data-pos="${CSS.escape(t.pos)}"]`);
-        const g = {};
-        inputs.forEach(i => { g['groove' + i.dataset.groove] = parseFloat(i.value); });
-        const grooveVals = [g.groove1, g.groove2, g.groove3, g.groove4].filter(v => !isNaN(v));
+        const saved = (s.ntdVals && s.ntdVals[t.pos]) || {};
+        const g1 = parseFloat(saved.g1), g2 = parseFloat(saved.g2), g3 = parseFloat(saved.g3), g4 = parseFloat(saved.g4);
+        const grooveVals = [g1, g2, g3, g4].filter(v => !isNaN(v));
         ntdRows.push({
           round_id: round.id, position: t.pos,
-          groove1: g.groove1, groove2: g.groove2, groove3: g.groove3, groove4: g.groove4,
-          rtd_mm: grooveVals.length ? Math.min(...grooveVals) : null, // 최소값 저장 (호환)
+          groove1: isNaN(g1) ? null : g1, groove2: isNaN(g2) ? null : g2,
+          groove3: isNaN(g3) ? null : g3, groove4: isNaN(g4) ? null : g4,
+          rtd_mm: grooveVals.length ? Math.min(...grooveVals) : null,
           skip_measure: false
         });
       });
@@ -1511,21 +1546,24 @@ window.saveRound = async function(n) {
     }
 
     if (isRound0) {
+      readDotInputs(); // 현재 DOM 값 백업 반영
       // 4-0. DOT/바코드 (스킵 반영) → ppmo_tires
       const tireRows = getNtdPositions().map(t => {
         const skipped = s.dotSkip && s.dotSkip.has(t.pos);
+        const saved = (s.dotVals && s.dotVals[t.pos]) || { dot: '', bc: '' };
         return {
           vehicle_id: _currentVehicle.id,
           position: t.pos,
-          dot_code: skipped ? null : document.getElementById(`dot-${t.pos}`).value.trim(),
-          barcode: skipped ? null : document.getElementById(`barcode-${t.pos}`).value.trim(),
+          dot_code: skipped ? null : (saved.dot || '').trim(),
+          barcode: skipped ? null : (saved.bc || '').trim(),
           skip_tire_info: !!skipped
         };
       });
       const { error: tErr } = await _supabase.from('ppmo_tires').upsert(tireRows, { onConflict: 'vehicle_id,position' });
       if (tErr) throw tErr;
 
-      // 5-0. 사전 설문 → ppmo_survey
+      // 5-0. 사전 설문 → ppmo_survey (재저장 시 기존 삭제 후 재삽입)
+      await _supabase.from('ppmo_survey').delete().eq('vehicle_id', _currentVehicle.id);
       const { error: svErr } = await _supabase.from('ppmo_survey').insert({
         vehicle_id: _currentVehicle.id,
         driving_env: s.survey.driving_env,
