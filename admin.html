@@ -1074,17 +1074,19 @@ const PPMO_PHOTO_SLOTS = [
   { id: 'rtd_7', label: 'RTD 측정7' },
   { id: 'rtd_8', label: 'RTD 측정8' },
 ];
-const SLOT_LABEL_BY_ID = Object.fromEntries(PPMO_PHOTO_SLOTS.map(s => [s.id, s.label]));
+const PPMO_ALIGN_PHOTO_SLOT = { id: 'alignment', label: '얼라인먼트 결과' };
+const SLOT_LABEL_BY_ID = Object.fromEntries([...PPMO_PHOTO_SLOTS, PPMO_ALIGN_PHOTO_SLOT].map(s => [s.id, s.label]));
 // 0회차는 RTD 측정 사진 8개 없음 → 8칸만 사용
 const PPMO_PHOTO_SLOTS_ROUND0 = PPMO_PHOTO_SLOTS.filter(s => !s.id.startsWith('rtd_'));
 const REAR_TIRE_SLOT_IDS = ['tire_rl_outer','tire_rl_inner','tire_rr_outer','tire_rr_inner'];
 const RTD_SLOTS_EXCLUDED_FRONT_ONLY = ['rtd_4','rtd_5','rtd_6','rtd_7','rtd_8'];
 
-function getPpmoSlots(n, frontOnly) {
-  let slots = n === 0 ? PPMO_PHOTO_SLOTS_ROUND0 : PPMO_PHOTO_SLOTS;
+function getPpmoSlots(n, frontOnly, alignDone) {
+  let slots = PPMO_PHOTO_SLOTS;   // ppmo.html과 동일: 0회차도 RTD 사진 포함
   if (frontOnly) {
     slots = slots.filter(s => !REAR_TIRE_SLOT_IDS.includes(s.id) && !RTD_SLOTS_EXCLUDED_FRONT_ONLY.includes(s.id));
   }
+  if (n === 0 || alignDone) slots = [...slots, PPMO_ALIGN_PHOTO_SLOT];
   return slots;
 }
 
@@ -1253,7 +1255,7 @@ window.showPpmoDetail = async function(vehicleId) {
       const feedbackTags = rFeed.map(f => `<span style="display:inline-block;background:var(--bg-info);color:var(--text-info);padding:2px 8px;border-radius:8px;font-size:11px;margin:2px 3px 0 0;">${escapeHtmlAdm(f.note || f.category)}</span>`).join('');
 
       // 사진 그리드 (회차별 슬롯 개수 다름 - 0회차 8칸 / 1~5회차 16칸)
-      const slotsForThisRound = getPpmoSlots(n, v.front_only);
+      const slotsForThisRound = getPpmoSlots(n, v.front_only, r.alignment_done);
       const photoGridHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin-top:8px;">${
         slotsForThisRound.map(slot => {
           const p = photosBySlot[slot.id];
@@ -1289,7 +1291,6 @@ window.showPpmoDetail = async function(vehicleId) {
             <a href="javascript:void(0)" onclick="downloadPhotoByPath('${escapeAttr(p.path)}', '${escapeAttr(dl)}')" style="font-size:9px;color:var(--text-info);text-decoration:none;">⬇ 다운</a></div>`; }).join('')
         }</div>` : '';
       // 0회차만 타이어 DOT/바코드 표시
-      // 얼라인먼트 / 위치교환 (회차별)
       const rAl = alignRows.filter(a => a.round_id === r.id);
       const alignHtml = n === 0
         ? (rAl.length ? admAlignBlock('휠 얼라인먼트 (초기, °)', rAl.filter(a => a.phase === 'initial'), null, v.front_only) : '')
@@ -1325,7 +1326,6 @@ window.showPpmoDetail = async function(vehicleId) {
       </div>`;
     }
 
-    // 타이어별 위치 이력 (회차 순서대로 교환 반영)
     const rnoById = Object.fromEntries(fullRounds.map(x => [x.id, x.round_no]));
     const tpos = getPpmoTirePositions(v.front_only);
     const posNow = Object.fromEntries(tpos.map(t => [t.pos, t.pos]));
@@ -1470,7 +1470,6 @@ window.exportPpmoExcel = async function() {
     });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(measRows), 'RTD 상세');
 
-    // 얼라인먼트 / 위치교환 시트
     try {
       const [alAll, roAll] = await Promise.all([
         _supabase.from('ppmo_alignment').select('*'),
@@ -1688,7 +1687,6 @@ function admTireName(key, tireByPos, frontOnly) {
   const dot = tireByPos[key]?.dot_code;
   return `<b>T${idx + 1}</b> <span style="color:var(--text-tertiary);">(최초 ${escapeHtmlAdm(admPosLabel(key))}${dot ? ' · ' + escapeHtmlAdm(dot) : ''})</span>`;
 }
-// 얼라인먼트 표: after가 null이면 단일 값, 있으면 전/후/Δ
 function admAlignBlock(title, before, after, frontOnly) {
   const wheels = frontOnly ? ADM_WHEELS.filter(w => w.front) : ADM_WHEELS;
   const b = Object.fromEntries((before || []).map(r => [r.wheel, r]));

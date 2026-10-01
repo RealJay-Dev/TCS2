@@ -424,7 +424,15 @@ const PHOTO_SLOTS = [
   { id: 'rtd_7', label: 'RTD 측정7' },
   { id: 'rtd_8', label: 'RTD 측정8' },
 ];
-const SLOT_BY_ID = Object.fromEntries(PHOTO_SLOTS.map(s => [s.id, s]));
+// 얼라인먼트 증빙 사진 (0회차 항상 / 1~5회차는 얼라인먼트 실시 시에만)
+const ALIGN_PHOTO_SLOT = { id: 'alignment', label: '얼라인먼트 결과' };
+const SLOT_BY_ID = Object.fromEntries([...PHOTO_SLOTS, ALIGN_PHOTO_SLOT].map(s => [s.id, s]));
+function needsAlignPhoto(n) {
+  if (n === 0) return true;
+  const st = _roundsState[n];
+  if (st && st.round) return !!st.round.alignment_done;              // 저장된 회차
+  return !!document.getElementById(`alchk-${n}`)?.checked;          // 입력 중인 회차
+}
 
 // (삭제됨) 이전엔 0회차 RTD 사진 생략했으나, 그루브별 실측이 필요해서 되돌림
 
@@ -449,6 +457,7 @@ function getSlots(n) {
   if (frontOnly) {
     slots = slots.filter(s => !REAR_TIRE_SLOT_IDS.includes(s.id) && !RTD_SLOTS_EXCLUDED_FRONT_ONLY.includes(s.id));
   }
+  if (needsAlignPhoto(n)) slots = [...slots, ALIGN_PHOTO_SLOT];
   return slots;
 }
 function getPositions() {
@@ -512,7 +521,7 @@ function getAlignWheels() {
   return _currentVehicle?.front_only ? ALIGN_WHEELS.filter(x => x.front) : ALIGN_WHEELS;
 }
 function alignFieldsFor(wheel) { return ALIGN_FIELDS.filter(f => !f.frontOnly || wheel.front); }
-const POS_LABEL = {};  // '1축-좌' → '전륜좌측' (TIRE_POSITIONS 정의 후 채움)
+const POS_LABEL = {};  // '1축-좌' → '전륜좌측'
 let _vehicleAlignment = [];   // ppmo_alignment rows (차량 전체)
 let _vehicleRotations = [];   // ppmo_rotations rows (차량 전체)
 let _currentVehicleTires = {};   // { position: {dot_code, barcode} } - 차량 단위
@@ -1034,7 +1043,7 @@ function renderEditBody(n, isRound0, mileage) {
       </div>` : ''}
     </div>
 
-    <div class="section-head">사진 업로드 (총 ${getSlots(n).length}칸)</div>
+    <div class="section-head" id="photoHead-${n}">사진 업로드 (총 ${getSlots(n).length}칸)</div>
     ${isRound0
       ? `<div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">💡 타이어 사진은 <b>그루브 ${_currentVehicle?.groove_count || 3}개가 모두 보이도록</b> 촬영해주세요.</div>`
       : `<div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">💡 RTD 측정 사진은 <b>그루브 ${_currentVehicle?.groove_count || 3}개가 모두 보이도록</b> 촬영해주세요.</div>`}
@@ -1052,14 +1061,14 @@ function renderEditBody(n, isRound0, mileage) {
     <div id="rtdWrap-${n}"></div>
 
     ${isRound0 ? `<div class="section-head">휠 얼라인먼트 측정 (°) · 필수</div>
-    <div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">💡 테스트 시작 전 차륜 정렬을 완료한 상태의 <b>최종 측정값</b>을 입력하세요. 토: + toe-in / − toe-out</div>
+    <div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">💡 테스트 시작 전 차륜 정렬을 완료한 상태의 <b>최종 측정값</b>을 입력하세요. 토: + toe-in / − toe-out. 증빙용 얼라인먼트 결과 사진은 위 사진 업로드의 <b>'얼라인먼트 결과'</b> 칸에 첨부하세요.</div>
     ${renderAlignPhase(n, 'initial')}
     <div class="section-head">사전 설문조사 · 필수</div>
     <div id="surveyWrap-${n}"></div>` : `
     <div class="section-head">휠 얼라인먼트</div>
     <label class="opt-toggle"><input type="checkbox" id="alchk-${n}" onchange="onAlignToggle(${n})"> 이번 방문에서 얼라인먼트 측정/조정 실시</label>
     <div id="alWrap-${n}" class="hidden" style="margin-top:10px;">
-      <div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">단위 °, 토: + toe-in / − toe-out. 조정하지 않았으면 조정 후 = 조정 전과 동일하게 입력.</div>
+      <div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">단위 °, 토: + toe-in / − toe-out. 조정하지 않았으면 조정 후 = 조정 전과 동일하게 입력. 체크하면 사진 업로드에 <b>'얼라인먼트 결과'</b> 칸이 추가됩니다.</div>
       ${renderAlignPhase(n, 'before')}
       <button type="button" class="btn outline sm" style="margin:-2px 0 10px;" onclick="copyAlignBeforeToAfter(${n})">↓ 조정 전 값을 조정 후에 복사</button>
       ${renderAlignPhase(n, 'after')}
@@ -1150,7 +1159,6 @@ function renderSurveyDone() {
 
 // ── 휠 얼라인먼트 ──
 function lastAlignValues(beforeRound) {
-  // beforeRound 이전 회차의 가장 최근 최종값(initial 또는 after) → placeholder 힌트
   const rnoById = {};
   Object.values(_roundsState).forEach(st => { if (st.round) rnoById[st.round.id] = st.round.round_no; });
   const rows = _vehicleAlignment
@@ -1180,7 +1188,6 @@ function renderAlignPhase(n, phase) {
     <div class="align-meta" id="alMeta-${n}-${phase}"></div>
   </div>`;
 }
-// 해당 단계 입력값 수집 → 완성 시 rows, 미완성 시 null
 function collectAlign(n, phase) {
   const rows = [];
   for (const w of getAlignWheels()) {
@@ -1217,6 +1224,17 @@ window.onAlignInput = function(n) {
 window.onAlignToggle = function(n) {
   const on = document.getElementById(`alchk-${n}`).checked;
   document.getElementById(`alWrap-${n}`).classList.toggle('hidden', !on);
+  // 얼라인먼트 증빙 사진 칸 추가/제거
+  const s = _roundsState[n];
+  if (!on) {
+    if (s.pendingBySlot[ALIGN_PHOTO_SLOT.id]) {
+      URL.revokeObjectURL(s.pendingBySlot[ALIGN_PHOTO_SLOT.id].previewUrl);
+      delete s.pendingBySlot[ALIGN_PHOTO_SLOT.id];
+    }
+    if (s.skippedSlots) s.skippedSlots.delete(ALIGN_PHOTO_SLOT.id);
+  }
+  renderPhotoSlots(n);
+  updatePhotoHead(n);
   validateRoundSave(n);
 };
 window.copyAlignBeforeToAfter = function(n) {
@@ -1232,7 +1250,6 @@ function fmtDelta(d) {
   if (Math.abs(v) < 0.005) return '<span class="delta-zero">0.00</span>';
   return `<span class="delta-pos">${v > 0 ? '+' : ''}${v.toFixed(2)}</span>`;
 }
-// 조정 전/후 비교표 (rowsBefore/rowsAfter: [{wheel, camber_deg, ...}])
 function alignCompareTable(rowsBefore, rowsAfter) {
   const b = Object.fromEntries((rowsBefore || []).map(r => [r.wheel, r]));
   const a = Object.fromEntries((rowsAfter || []).map(r => [r.wheel, r]));
@@ -1281,13 +1298,11 @@ function renderAlignDone(n) {
 }
 
 // ── 타이어 위치교환 ──
-// 타이어 식별자(tire_key) = 초기 장착 포지션. ppmo_tires(DOT/바코드)와 position으로 연결.
 function roundNoById() {
   const m = {};
   Object.values(_roundsState).forEach(st => { if (st.round) m[st.round.id] = st.round.round_no; });
   return m;
 }
-// beforeRound 회차 시작 시점의 { tire_key: 현재 position }
 function currentTirePositions(beforeRound) {
   const map = {};
   getTirePositions().forEach(t => { map[t.pos] = t.pos; });
@@ -1309,7 +1324,6 @@ function renderRotationEditor(n) {
   const cur = currentTirePositions(n);
   const positions = getTirePositions();
   const opts = sel => positions.map(p => `<option value="${p.pos}" ${p.pos === sel ? 'selected' : ''}>${escapeHtml(p.label)}</option>`).join('');
-  // 현재 위치 순서(전륜좌 → …)로 정렬해서 표시
   const order = Object.fromEntries(positions.map((p, i) => [p.pos, i]));
   const keys = positions.map(p => p.pos).sort((a, b) => (order[cur[a]] ?? 99) - (order[cur[b]] ?? 99));
   wrap.innerHTML = `<div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">각 타이어가 교환 후 장착된 위치를 선택하세요. 위치가 바뀌지 않은 타이어는 그대로 두면 됩니다.</div>
@@ -1329,7 +1343,6 @@ window.onRotToggle = function(n) {
   if (on) renderRotationEditor(n);
   validateRoundSave(n);
 };
-// { ok, moves:[{tire_key,from_position,to_position}], msg }
 function checkRotation(n) {
   const sels = [...document.querySelectorAll(`.rotSel-${n}`)];
   const targets = sels.map(s => s.value);
@@ -1356,6 +1369,10 @@ function renderRotationDone(n) {
 }
 
 // ── Photo slots ──
+function updatePhotoHead(n) {
+  const h = document.getElementById(`photoHead-${n}`);
+  if (h) h.textContent = `사진 업로드 (총 ${getSlots(n).length}칸)`;
+}
 function renderPhotoSlots(n) {
   const s = _roundsState[n];
   const wrap = document.getElementById(`pslots-${n}`);
@@ -1540,7 +1557,6 @@ window.validateRoundSave = function(n) {
     const sv = ensureSurveyState(n);
     surveyOk = !!sv.driving_env && sv.priorities.size > 0 && !!sv.load_level;
   }
-  // 8. 얼라인먼트: 0회차 필수 / 1~5회차는 체크 시 전·후 모두 필수
   let alignOk = true, alignMsg = '';
   if (isRound0) {
     alignOk = !!collectAlign(n, 'initial');
@@ -1552,7 +1568,6 @@ window.validateRoundSave = function(n) {
       alignMsg = `얼라인먼트 ${alignFilledCount(n, 'before') + alignFilledCount(n, 'after')}/${tot}`;
     }
   }
-  // 9. 위치교환: 체크 시 유효한 교환 내역 필수
   let rotOk = true;
   if (!isRound0 && document.getElementById(`rot-${n}`)?.checked) {
     const chk = checkRotation(n);
@@ -1615,7 +1630,6 @@ window.saveRound = async function(n) {
   const mileage = isRound0 ? _currentVehicle.initial_mileage_km : parseFloat(document.getElementById(`mile-${n}`).value);
   const rotated = isRound0 ? false : !!document.getElementById(`rot-${n}`)?.checked;
   const alignDone = isRound0 ? true : !!document.getElementById(`alchk-${n}`)?.checked;
-  // 얼라인먼트 / 위치교환 값은 DOM이 다시 그려지기 전에 미리 수집
   const alignRows = isRound0 ? (collectAlign(n, 'initial') || [])
     : (alignDone ? [...(collectAlign(n, 'before') || []), ...(collectAlign(n, 'after') || [])] : []);
   const rotMoves = rotated ? (checkRotation(n).moves || []) : [];
