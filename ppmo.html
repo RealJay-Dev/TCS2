@@ -986,7 +986,7 @@ function renderEditBody(n, isRound0, mileage) {
       : `<div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">💡 RTD 측정 사진은 <b>그루브 ${_currentVehicle?.groove_count || 3}개가 모두 보이도록</b> 촬영해주세요.</div>`}
     <div class="photo-slots-progress" id="progress-${n}">0/${getSlots(n).length} 처리됨</div>
     <div class="photo-slot-grid" id="pslots-${n}"></div>
-    <input type="file" id="fileInp-${n}" accept="image/*" capture="environment" class="hidden" onchange="onSlotFileChosen(${n}, event)">
+    <input type="file" id="fileInp-${n}" accept="image/*" class="hidden" onchange="onSlotFileChosen(${n}, event)">
 
     ${isRound0 ? `
       <div class="section-head">타이어 정보 (DOT · 바코드) · ${getTirePositions().length}포지션 필수</div>
