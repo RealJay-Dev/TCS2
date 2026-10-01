@@ -1146,6 +1146,12 @@ window.showPpmoDetail = async function(vehicleId) {
     ]);
     const { data: svData } = await _supabase.from('ppmo_survey').select('*').eq('vehicle_id', vehicleId).order('created_at', { ascending: false }).limit(1);
     const survey = (svData && svData[0]) || null;
+    const [alRes, roRes] = await Promise.all([
+      _supabase.from('ppmo_alignment').select('*').eq('vehicle_id', vehicleId),
+      _supabase.from('ppmo_rotations').select('*').eq('vehicle_id', vehicleId)
+    ]);
+    const alignRows = alRes.data || [];
+    const rotRows = roRes.data || [];
     fullRounds = rRes.data || [];
     tires = tRes.data || [];
     if (fullRounds.length) {
@@ -1283,6 +1289,16 @@ window.showPpmoDetail = async function(vehicleId) {
             <a href="javascript:void(0)" onclick="downloadPhotoByPath('${escapeAttr(p.path)}', '${escapeAttr(dl)}')" style="font-size:9px;color:var(--text-info);text-decoration:none;">⬇ 다운</a></div>`; }).join('')
         }</div>` : '';
       // 0회차만 타이어 DOT/바코드 표시
+      // 얼라인먼트 / 위치교환 (회차별)
+      const rAl = alignRows.filter(a => a.round_id === r.id);
+      const alignHtml = n === 0
+        ? (rAl.length ? admAlignBlock('휠 얼라인먼트 (초기, °)', rAl.filter(a => a.phase === 'initial'), null, v.front_only) : '')
+        : (r.alignment_done ? admAlignBlock('휠 얼라인먼트 (°) · 조정 전 → 후', rAl.filter(a => a.phase === 'before'), rAl.filter(a => a.phase === 'after'), v.front_only) : '');
+      const rRot = rotRows.filter(x => x.round_id === r.id);
+      const rotHtml = rRot.length ? `<div style="margin-top:8px;padding:8px 10px;background:var(--bg-secondary);border-radius:6px;font-size:11.5px;line-height:1.7;">
+          <div style="font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;font-size:10px;">타이어 위치교환</div>
+          ${rRot.map(m => `<div>${admTireName(m.tire_key, tireByPos, v.front_only)} : <b>${admPosLabel(m.from_position)}</b> → <b>${admPosLabel(m.to_position)}</b></div>`).join('')}
+        </div>` : '';
       const tireInfoHtml = n === 0 && tires.length ? `
         <div style="margin-top:8px;padding:8px 10px;background:var(--bg-secondary);border-radius:6px;font-size:11.5px;line-height:1.7;">
           <div style="font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;font-size:10px;">타이어 정보 (DOT · 바코드)</div>
@@ -1296,18 +1312,31 @@ window.showPpmoDetail = async function(vehicleId) {
       roundsHtml += `<div style="padding:12px 14px;margin-bottom:8px;background:var(--bg);border:0.5px solid var(--border);border-radius:8px;font-size:12.5px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <div style="font-weight:700;font-size:14px;">${title} · ${new Date(r.inspected_at).toLocaleDateString('ko-KR')}</div>
-          <div style="font-size:11px;color:var(--text-tertiary);">${Number(r.mileage_km).toLocaleString('ko-KR')} km${r.rotated ? ' · 로테이션' : ''}</div>
+          <div style="font-size:11px;color:var(--text-tertiary);">${Number(r.mileage_km).toLocaleString('ko-KR')} km${r.rotated ? ' · 로테이션' : ''}${n > 0 && r.alignment_done ? ' · 얼라인먼트' : ''}</div>
         </div>
         <div style="color:var(--text-secondary);margin-bottom:2px;">${n === 0 ? 'NTD' : 'RTD'} (포지션별 min) — ${rtdSummary}</div>
         <div style="margin-top:6px;">사진: ${rPhotos.filter(p => p.path).length}/${slotsForThisRound.length}${feedbackTags ? ' · ' + feedbackTags : ''}</div>
         ${photoGridHtml}
         ${extraHtml}
         ${tireInfoHtml}
+        ${alignHtml}
+        ${rotHtml}
         ${r.notes ? `<div style="margin-top:8px;padding:6px 10px;background:var(--bg-secondary);border-radius:6px;color:var(--text-secondary);font-style:italic;">📝 ${escapeHtmlAdm(r.notes)}</div>` : ''}
       </div>`;
     }
 
-    document.getElementById('ppmoDetailContent').innerHTML = infoHtml + surveyHtml + predHtml + roundsHtml;
+    // 타이어별 위치 이력 (회차 순서대로 교환 반영)
+    const rnoById = Object.fromEntries(fullRounds.map(x => [x.id, x.round_no]));
+    const tpos = getPpmoTirePositions(v.front_only);
+    const posNow = Object.fromEntries(tpos.map(t => [t.pos, t.pos]));
+    const hist = Object.fromEntries(tpos.map(t => [t.pos, [admPosLabel(t.pos)]]));
+    rotRows.filter(x => rnoById[x.round_id] != null).sort((a, b) => rnoById[a.round_id] - rnoById[b.round_id])
+      .forEach(m => { posNow[m.tire_key] = m.to_position; hist[m.tire_key]?.push(`${admPosLabel(m.to_position)}(R${rnoById[m.round_id]})`); });
+    const tireHistHtml = rotRows.length ? `<div style="background:var(--bg-secondary);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:12.5px;line-height:1.7;">
+        <div style="font-size:12px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">🔄 타이어 위치 이력</div>
+        ${tpos.map(t => `<div>${admTireName(t.pos, tireByPos, v.front_only)} : ${hist[t.pos].join(' → ')} <span style="color:var(--text-tertiary);">· 현재 ${admPosLabel(posNow[t.pos])}</span></div>`).join('')}
+      </div>` : '';
+    document.getElementById('ppmoDetailContent').innerHTML = infoHtml + surveyHtml + tireHistHtml + predHtml + roundsHtml;
   } catch(e) {
     document.getElementById('ppmoDetailContent').innerHTML = `<div class="empty-state">불러오기 실패: ${e.message}</div>`;
   }
@@ -1441,6 +1470,26 @@ window.exportPpmoExcel = async function() {
     });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(measRows), 'RTD 상세');
 
+    // 얼라인먼트 / 위치교환 시트
+    try {
+      const [alAll, roAll] = await Promise.all([
+        _supabase.from('ppmo_alignment').select('*'),
+        _supabase.from('ppmo_rotations').select('*')
+      ]);
+      const rById = Object.fromEntries(fullRounds.map(x => [x.id, x]));
+      const alSheet = (alAll.data || []).map(a => {
+        const r = rById[a.round_id] || {}; const v = ppmoVehicles.find(x => x.id === a.vehicle_id) || {};
+        return { '차량번호': v.vehicle_no || '', '회차': r.round_no === 0 ? '초기' : `${r.round_no}회차`, '주행거리 (km)': r.mileage_km ?? '',
+                 '단계': ADM_PHASE_LABEL[a.phase] || a.phase, '휠': a.wheel, '캠버(°)': a.camber_deg ?? '', '캐스터(°)': a.caster_deg ?? '', '토(°)': a.toe_deg ?? '' };
+      }).sort((x, y) => (x['차량번호'] + x['회차']).localeCompare(y['차량번호'] + y['회차']));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(alSheet.length ? alSheet : [{ '차량번호': '데이터 없음' }]), '얼라인먼트');
+      const roSheet = (roAll.data || []).map(m => {
+        const r = rById[m.round_id] || {}; const v = ppmoVehicles.find(x => x.id === m.vehicle_id) || {};
+        return { '차량번호': v.vehicle_no || '', '회차': `${r.round_no}회차`, '주행거리 (km)': r.mileage_km ?? '',
+                 '타이어(최초 위치)': admPosLabel(m.tire_key), '교환 전': admPosLabel(m.from_position), '교환 후': admPosLabel(m.to_position) };
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(roSheet.length ? roSheet : [{ '차량번호': '데이터 없음' }]), '위치교환');
+    } catch(e) { console.warn('얼라인먼트/위치교환 시트 생성 실패:', e); }
     // 사전 설문 시트
     try {
       const { data: svAll } = await _supabase.from('ppmo_survey').select('*');
@@ -1518,6 +1567,20 @@ window.downloadVehicleExcel = async function(vehicleId) {
       };
     });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detail), 'RTD 상세');
+    try {
+      const [alR, roR] = await Promise.all([
+        _supabase.from('ppmo_alignment').select('*').eq('vehicle_id', vehicleId),
+        _supabase.from('ppmo_rotations').select('*').eq('vehicle_id', vehicleId)
+      ]);
+      const rb = Object.fromEntries(rounds.map(x => [x.id, x]));
+      const al = (alR.data || []).map(a => ({ '회차': rb[a.round_id]?.round_no === 0 ? '초기' : `${rb[a.round_id]?.round_no}회차`,
+        '주행거리 (km)': rb[a.round_id]?.mileage_km ?? '', '단계': ADM_PHASE_LABEL[a.phase] || a.phase, '휠': a.wheel,
+        '캠버(°)': a.camber_deg ?? '', '캐스터(°)': a.caster_deg ?? '', '토(°)': a.toe_deg ?? '' }));
+      if (al.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(al), '얼라인먼트');
+      const ro = (roR.data || []).map(m => ({ '회차': `${rb[m.round_id]?.round_no}회차`, '주행거리 (km)': rb[m.round_id]?.mileage_km ?? '',
+        '타이어(최초 위치)': admPosLabel(m.tire_key), '교환 전': admPosLabel(m.from_position), '교환 후': admPosLabel(m.to_position) }));
+      if (ro.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ro), '위치교환');
+    } catch(e) { console.warn('얼라인먼트/위치교환 시트 실패:', e); }
     XLSX.writeFile(wb, `${v.vehicle_no}_${new Date().toISOString().slice(0,10)}.xlsx`);
   } catch(e) {
     alert('Excel 생성 실패: ' + e.message);
@@ -1614,6 +1677,39 @@ window.exportPpmoCSV = function() {
   URL.revokeObjectURL(url);
 };
 
+const ADM_PHASE_LABEL = { initial: '초기', before: '조정 전', after: '조정 후' };
+const ADM_WHEELS = [
+  { w: 'FL', label: '전륜 좌', front: true }, { w: 'FR', label: '전륜 우', front: true },
+  { w: 'RL', label: '후륜 좌', front: false }, { w: 'RR', label: '후륜 우', front: false }
+];
+function admPosLabel(pos) { return (PPMO_TIRE_POSITIONS.find(t => t.pos === pos) || {}).label || pos || '—'; }
+function admTireName(key, tireByPos, frontOnly) {
+  const idx = getPpmoTirePositions(frontOnly).findIndex(t => t.pos === key);
+  const dot = tireByPos[key]?.dot_code;
+  return `<b>T${idx + 1}</b> <span style="color:var(--text-tertiary);">(최초 ${escapeHtmlAdm(admPosLabel(key))}${dot ? ' · ' + escapeHtmlAdm(dot) : ''})</span>`;
+}
+// 얼라인먼트 표: after가 null이면 단일 값, 있으면 전/후/Δ
+function admAlignBlock(title, before, after, frontOnly) {
+  const wheels = frontOnly ? ADM_WHEELS.filter(w => w.front) : ADM_WHEELS;
+  const b = Object.fromEntries((before || []).map(r => [r.wheel, r]));
+  const a = after ? Object.fromEntries(after.map(r => [r.wheel, r])) : null;
+  const f2 = x => (x == null ? '—' : Number(x).toFixed(2));
+  const cell = (w, f) => {
+    if (f === 'caster_deg' && !w.front) return '—';
+    if (!a) return f2(b[w.w]?.[f]);
+    const bv = b[w.w]?.[f], av = a[w.w]?.[f];
+    const d = (bv != null && av != null) ? Number(av) - Number(bv) : null;
+    const ds = d == null ? '' : (Math.abs(d) < 0.005 ? '' : ` <span style="color:var(--text-danger);font-weight:700;">(${d > 0 ? '+' : ''}${d.toFixed(2)})</span>`);
+    return `${f2(bv)} → ${f2(av)}${ds}`;
+  };
+  const th = 'style="padding:3px 6px;text-align:left;color:var(--text-tertiary);font-weight:600;"';
+  const td = 'style="padding:3px 6px;"';
+  return `<div style="margin-top:8px;padding:8px 10px;background:var(--bg-secondary);border-radius:6px;font-size:11.5px;overflow-x:auto;">
+    <div style="font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;font-size:10px;">${title}</div>
+    <table style="border-collapse:collapse;width:100%;"><tr><th ${th}></th><th ${th}>캠버</th><th ${th}>캐스터</th><th ${th}>토</th></tr>
+    ${wheels.map(w => `<tr><td ${td}><b>${w.label}</b></td><td ${td}>${cell(w, 'camber_deg')}</td><td ${td}>${cell(w, 'caster_deg')}</td><td ${td}>${cell(w, 'toe_deg')}</td></tr>`).join('')}
+    </table></div>`;
+}
 function isNum(x) { return x !== null && x !== undefined && x !== '' && !isNaN(Number(x)); }
 function escapeHtmlAdm(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(s) { return String(s ?? '').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
