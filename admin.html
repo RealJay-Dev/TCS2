@@ -1179,6 +1179,7 @@ window.showPpmoDetail = async function(vehicleId) {
       ['담당자', v.created_by],
       ['모델·연식', [v.vehicle_type, v.model_year && `${v.model_year}년식`].filter(Boolean).join(' · ') || '—'],
       ['모니터링 범위', v.front_only ? '🔧 전륜만 (2본)' : '전체 (6본)'],
+      ['그루브 수', `${v.groove_count || 3}개`],
       ['제품', v.product || '—'],
       ['아티클', v.article || '—'],
       ['타이어 사이즈', v.tire_size ? `${v.tire_size} ${v.load_index || ''}${v.speed_index || ''}` : '—'],
@@ -1359,6 +1360,7 @@ window.exportPpmoExcel = async function() {
       '모델': v.vehicle_type || '',
       '연식': v.model_year || '',
       '모니터링 범위': v.front_only ? '전륜만' : '전체',
+      '그루브 수': v.groove_count || 3,
       '제품': v.product || '',
       '아티클': v.article || '',
       '사이즈': v.tire_size || '',
@@ -1417,7 +1419,7 @@ window.exportPpmoExcel = async function() {
         '회차': r.round_no === 0 ? '초기' : `${r.round_no}회차`,
         '주행거리': r.mileage_km,
         '포지션': m.position,
-        '측정점': m.point === 'outer' ? '외' : m.point === 'center' ? '중' : m.point === 'inner' ? '내' : m.point,
+        '측정점': ({outer:'외',center:'중',inner:'내',groove_1:'G1',groove_2:'G2',groove_3:'G3',groove_4:'G4',groove_5:'G5'}[m.point]) || m.point,
         'RTD (mm)': m.rtd_mm
       };
     });
@@ -1452,6 +1454,7 @@ window.downloadVehicleExcel = async function(vehicleId) {
       ['담당자', v.created_by],
       ['모델·연식', `${v.vehicle_type || ''} ${v.model_year || ''}`],
       ['모니터링 범위', v.front_only ? '전륜만 (2본)' : '전체 (6본)'],
+      ['그루브 수', `${v.groove_count || 3}개`],
       ['제품', v.product || ''],
       ['아티클', v.article || ''],
       ['사이즈', v.tire_size || ''],
