@@ -167,6 +167,9 @@
   .survey-opt { display: flex; align-items: center; gap: 10px; padding: 11px 13px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 13.5px; cursor: pointer; }
   .survey-opt.active { background: var(--bg-info); border-color: var(--text-info); color: var(--text-info); font-weight: 600; }
   .survey-opt input { width: 16px; height: 16px; flex-shrink: 0; }
+  .photo-skip-check { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 10.5px; color: var(--text-tertiary); cursor: pointer; line-height: 1.2; user-select: none; }
+  .photo-skip-check input { width: 13px; height: 13px; flex-shrink: 0; margin: 0; }
+  .photo-slot.skipped .photo-slot-body { background: var(--bg-secondary); border: 0.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-tertiary); opacity: 0.7; }
   .rtd-min-badge { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; text-align: right; }
 
   /* Photos */
@@ -860,6 +863,7 @@ async function renderRounds() {
         feedback: r ? allFeedback.filter(f => f.round_id === r.id) : [],
         photosBySlot,           // { slot_id: photoRow } — 저장된 사진
         pendingBySlot: {},      // { slot_id: {file, previewUrl, sizeKb} } — 업로드 대기
+        skippedSlots: new Set(),// '업로드하지 않고 진행' 체크한 슬롯 id
         pendingChips: new Set() // 선택된 피드백 칩 인덱스
       };
     }
@@ -954,9 +958,8 @@ function renderDoneBody(n) {
     <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;">${rtdSummary}</div>
     <div class="section-head">사진 (${filledCount}/${slotsForThisRound.length})</div>
     ${photoSlotsHtml}
-    ${n === 0 ? renderSurveyDone() : ''}
-    <div class="section-head">주관 피드백</div>
-    ${feedbackHtml}
+    ${n === 0 ? renderSurveyDone() : `<div class="section-head">주관 피드백</div>
+    ${feedbackHtml}`}
     ${s.round.notes ? `<div class="section-head">비고</div><div style="font-size:13px;color:var(--text-secondary);background:var(--bg-secondary);padding:10px 12px;border-radius:var(--radius-sm);">${escapeHtml(s.round.notes)}</div>` : ''}`;
 }
 
@@ -981,7 +984,7 @@ function renderEditBody(n, isRound0, mileage) {
     ${isRound0
       ? `<div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">💡 타이어 사진은 <b>그루브 ${_currentVehicle?.groove_count || 3}개가 모두 보이도록</b> 촬영해주세요.</div>`
       : `<div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">💡 RTD 측정 사진은 <b>그루브 ${_currentVehicle?.groove_count || 3}개가 모두 보이도록</b> 촬영해주세요.</div>`}
-    <div class="photo-slots-progress" id="progress-${n}">0/${getSlots(n).length} 업로드됨</div>
+    <div class="photo-slots-progress" id="progress-${n}">0/${getSlots(n).length} 처리됨</div>
     <div class="photo-slot-grid" id="pslots-${n}"></div>
     <input type="file" id="fileInp-${n}" accept="image/*" capture="environment" class="hidden" onchange="onSlotFileChosen(${n}, event)">
 
@@ -996,14 +999,14 @@ function renderEditBody(n, isRound0, mileage) {
 
     ${isRound0 ? `<div class="section-head">사전 설문조사 · 필수</div>
     <div id="surveyWrap-${n}"></div>` : ''}
-    <div class="section-head">주관 피드백</div>
+    ${!isRound0 ? `<div class="section-head">주관 피드백</div>
     <div class="feedback-chips" id="chips-${n}"></div>
     <textarea id="notes-${n}" rows="2" placeholder="자유 메모 (예: 특이사항, 세부 피드백)"></textarea>
 
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 0;">
       <input type="checkbox" id="rot-${n}" style="width:16px;height:16px;">
       이번 방문 전/후 타이어 로테이션 실시
-    </label>
+    </label>` : ''}
 
     <button class="btn full" id="save-${n}" onclick="saveRound(${n})" disabled style="margin-top:12px;">${isRound0 ? '초기 데이터 저장' : n + '회차 저장'}</button>`;
 }
@@ -1085,8 +1088,14 @@ function renderPhotoSlots(n) {
   const wrap = document.getElementById(`pslots-${n}`);
   if (!wrap) return;
   const slots = getSlots(n);
+  if (!s.skippedSlots) s.skippedSlots = new Set();
   wrap.innerHTML = slots.map(slot => {
     const pending = s.pendingBySlot[slot.id];
+    const skipped = s.skippedSlots.has(slot.id);
+    const skipBox = `<label class="photo-skip-check">
+        <input type="checkbox" ${skipped ? 'checked' : ''} onchange="toggleSkipSlot(${n},'${slot.id}')">
+        업로드하지 않고 진행
+      </label>`;
     if (pending) {
       return `<div class="photo-slot filled">
         <div class="photo-slot-label">${escapeHtml(slot.label)}</div>
@@ -1095,17 +1104,43 @@ function renderPhotoSlots(n) {
           <div class="del" onclick="removeSlotPhoto(${n},'${slot.id}')">✕</div>
           <div class="pending-badge">대기</div>
         </div>
+        ${skipBox}
+      </div>`;
+    }
+    if (skipped) {
+      return `<div class="photo-slot skipped">
+        <div class="photo-slot-label">${escapeHtml(slot.label)}</div>
+        <div class="photo-slot-body">첨부 안 함</div>
+        ${skipBox}
       </div>`;
     }
     return `<div class="photo-slot empty">
       <div class="photo-slot-label">${escapeHtml(slot.label)}</div>
       <div class="photo-slot-body" onclick="triggerSlotUpload(${n},'${slot.id}')">＋</div>
+      ${skipBox}
     </div>`;
   }).join('');
-  const filled = Object.keys(s.pendingBySlot).length;
+  const uploaded = Object.keys(s.pendingBySlot).length;
   const prog = document.getElementById(`progress-${n}`);
-  if (prog) prog.textContent = `${filled}/${slots.length} 업로드됨`;
+  if (prog) prog.textContent = `${uploaded + s.skippedSlots.size}/${slots.length} 처리됨 (업로드 ${uploaded} · 미첨부 ${s.skippedSlots.size})`;
 }
+window.toggleSkipSlot = function(n, slotId) {
+  const s = _roundsState[n];
+  if (!s.skippedSlots) s.skippedSlots = new Set();
+  if (s.skippedSlots.has(slotId)) {
+    s.skippedSlots.delete(slotId);
+  } else {
+    s.skippedSlots.add(slotId);
+    // 미첨부로 바꾸면 대기 중인 사진은 제거
+    if (s.pendingBySlot[slotId]) {
+      URL.revokeObjectURL(s.pendingBySlot[slotId].previewUrl);
+      delete s.pendingBySlot[slotId];
+    }
+  }
+  renderPhotoSlots(n);
+  validateRoundSave(n);
+};
+
 window.triggerSlotUpload = function(n, slotId) {
   _fileInputTargetRound = n;
   _fileInputTargetSlot = slotId;
@@ -1123,6 +1158,7 @@ window.onSlotFileChosen = async function(n, e) {
     const newKb = Math.round(compressed.size / 1024);
     // 기존 pending 있으면 previewUrl 해제
     if (s.pendingBySlot[slotId]) URL.revokeObjectURL(s.pendingBySlot[slotId].previewUrl);
+    if (s.skippedSlots) s.skippedSlots.delete(slotId); // 사진을 넣으면 미첨부 해제
     s.pendingBySlot[slotId] = {
       file: compressed,
       previewUrl: URL.createObjectURL(compressed),
@@ -1206,12 +1242,14 @@ window.validateRoundSave = function(n) {
   const mileageOk = isRound0 || (document.getElementById(`mile-${n}`)?.value !== '');
   // 3. 사진 전 슬롯 채움 (모든 회차 동일)
   const slotsRequired = getSlots(n);
-  const photoOk = Object.keys(s.pendingBySlot).length === slotsRequired.length;
+  if (!s.skippedSlots) s.skippedSlots = new Set();
+  const photoDone = slotsRequired.filter(sl => s.pendingBySlot[sl.id] || s.skippedSlots.has(sl.id)).length;
+  const photoOk = photoDone === slotsRequired.length;
   // 4. RTD 측정 — 모든 회차 (0회차 포함) 그루브별 실측 필수
   const rtdInputs = document.querySelectorAll(`.rtdInput-${n}`);
   const rtdOk = rtdInputs.length > 0 && [...rtdInputs].every(i => i.value !== '' && !isNaN(parseFloat(i.value)));
   // 5. 피드백 최소 1개 (없음 포함)
-  const feedbackOk = s.pendingChips.size > 0;
+  const feedbackOk = isRound0 || s.pendingChips.size > 0;   // 피드백은 1~5회차만 필수
   // 6. 타이어 정보 (0회차 전용): 6포지션 × 2필드 = 12개 다 채워야 함
   let tireOk = true;
   let tireFilled = 0;
@@ -1235,7 +1273,7 @@ window.validateRoundSave = function(n) {
     const missing = [];
     if (!dateOk) missing.push('날짜');
     if (!mileageOk) missing.push('주행거리');
-    if (!photoOk) missing.push(`사진 ${Object.keys(s.pendingBySlot).length}/${slotsRequired.length}`);
+    if (!photoOk) missing.push(`사진 ${photoDone}/${slotsRequired.length}`);
     if (!rtdOk) {
       const filled = [...rtdInputs].filter(i => i.value !== '' && !isNaN(parseFloat(i.value))).length;
       missing.push(`RTD ${filled}/${rtdInputs.length || 18}`);
@@ -1280,8 +1318,8 @@ window.saveRound = async function(n) {
   btn.disabled = true; btn.textContent = '저장 중...';
   const isRound0 = n === 0;
   const mileage = isRound0 ? _currentVehicle.initial_mileage_km : parseFloat(document.getElementById(`mile-${n}`).value);
-  const rotated = document.getElementById(`rot-${n}`).checked;
-  const notes = document.getElementById(`notes-${n}`).value.trim() || null;
+  const rotated = isRound0 ? false : !!document.getElementById(`rot-${n}`)?.checked;
+  const notes = isRound0 ? null : (document.getElementById(`notes-${n}`)?.value.trim() || null);
   const dateStr = document.getElementById(`date-${n}`).value;
   // 사용자 입력 날짜 → 정오(12:00) timestamptz로 저장 (시간대 이슈 회피)
   const inspectedAt = dateStr ? new Date(dateStr + 'T12:00:00').toISOString() : new Date().toISOString();
@@ -1327,7 +1365,7 @@ window.saveRound = async function(n) {
 
     // 4. 피드백 (선택된 칩 각각 1행 + 자유 메모 1행)
     const feedbackRows = [];
-    s.pendingChips.forEach(i => {
+    if (!isRound0) s.pendingChips.forEach(i => {
       const chip = FEEDBACK_CHIPS[i];
       feedbackRows.push({ round_id: round.id, category: chip.category, note: chip.label });
     });
