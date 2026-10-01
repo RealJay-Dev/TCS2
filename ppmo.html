@@ -160,6 +160,13 @@
   .rtd-points { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
   .rtd-points label { font-size: 11px; color: var(--text-tertiary); display: block; margin-bottom: 4px; text-align: center; }
   .rtd-points input { text-align: center; padding: 10px 6px; font-size: 15px; background: var(--bg); }
+  /* Survey (0회차 사전 설문) */
+  .survey-q { margin-bottom: 18px; }
+  .survey-q-label { font-size: 14px; font-weight: 600; margin-bottom: 8px; line-height: 1.4; }
+  .survey-opts { display: flex; flex-direction: column; gap: 6px; }
+  .survey-opt { display: flex; align-items: center; gap: 10px; padding: 11px 13px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 13.5px; cursor: pointer; }
+  .survey-opt.active { background: var(--bg-info); border-color: var(--text-info); color: var(--text-info); font-weight: 600; }
+  .survey-opt input { width: 16px; height: 16px; flex-shrink: 0; }
   .rtd-min-badge { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; text-align: right; }
 
   /* Photos */
@@ -445,6 +452,25 @@ const FEEDBACK_CHIPS = [
 
 let _currentEmail = null;
 let _currentVehicle = null;      // detail view의 대상 차량
+// 사전 설문 (0회차 전용) — ppmo_survey 테이블에 저장
+const SURVEY = {
+  driving_env: {
+    label: '주로 주행하는 환경은 어떤가요?',
+    multi: false,
+    options: ['고속도로 주행 위주', '시내 주행 위주', '고속도로 위주 + 시내 복합', '시내 위주 + 고속도로 복합']
+  },
+  priorities: {
+    label: '타이어를 교환할 때 가장 신경 쓰는 부분은? (복수 선택 가능)',
+    multi: true,
+    options: ['구매 가격', '타이어 수명(마일리지)', '마른노면 성능', '젖은노면 성능', '소음 성능', '연비', '외관']
+  },
+  load_level: {
+    label: '보통 주행하는 차량의 화물 하중은 어떤 편인가요?',
+    multi: false,
+    options: ['최대 적재하중 대비 가벼운 편', '최대 적재하중에 근접하는 편', '최대 적재하중보다 무거운 편']
+  }
+};
+let _currentVehicleSurvey = null; // 저장된 사전 설문
 let _currentVehicleTires = {};   // { position: {dot_code, barcode} } - 차량 단위
 let _roundsState = {};           // { round_no: { round, measurements, photosBySlot, pendingBySlot, feedback, pendingChips, activeSlot } }
 let _fileInputTargetRound = null;
@@ -770,10 +796,12 @@ async function renderRounds() {
   wrap.innerHTML = '<div class="empty-state">회차 데이터를 불러오는 중...</div>';
   try {
     // 차량 단위 데이터 (tires) + 회차 데이터 병렬 로드
-    const [{ data: rounds }, { data: tires }] = await Promise.all([
+    const [{ data: rounds }, { data: tires }, { data: surveys }] = await Promise.all([
       _supabase.from('ppmo_rounds').select('*').eq('vehicle_id', _currentVehicle.id),
-      _supabase.from('ppmo_tires').select('*').eq('vehicle_id', _currentVehicle.id)
+      _supabase.from('ppmo_tires').select('*').eq('vehicle_id', _currentVehicle.id),
+      _supabase.from('ppmo_survey').select('*').eq('vehicle_id', _currentVehicle.id).order('created_at', { ascending: false })
     ]);
+    _currentVehicleSurvey = (surveys && surveys[0]) || null;
     // 타이어 정보를 position 키로 매핑해서 저장
     _currentVehicleTires = {};
     (tires || []).forEach(t => { _currentVehicleTires[t.position] = t; });
@@ -844,7 +872,7 @@ async function renderRounds() {
       document.querySelector(`.round-card[data-n="${n}"]`).classList.add('open');
       renderPhotoSlots(n);
       buildRtdGrid(n);
-      if (n === 0) renderTireInfoGrid();
+      if (n === 0) { renderTireInfoGrid(); renderSurvey(n); }
       renderFeedbackChips(n);
       validateRoundSave(n);
     }
@@ -926,6 +954,7 @@ function renderDoneBody(n) {
     <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;">${rtdSummary}</div>
     <div class="section-head">사진 (${filledCount}/${slotsForThisRound.length})</div>
     ${photoSlotsHtml}
+    ${n === 0 ? renderSurveyDone() : ''}
     <div class="section-head">주관 피드백</div>
     ${feedbackHtml}
     ${s.round.notes ? `<div class="section-head">비고</div><div style="font-size:13px;color:var(--text-secondary);background:var(--bg-secondary);padding:10px 12px;border-radius:var(--radius-sm);">${escapeHtml(s.round.notes)}</div>` : ''}`;
@@ -965,6 +994,8 @@ function renderEditBody(n, isRound0, mileage) {
     ${isRound0 ? `<div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">💡 신품 타이어의 그루브별 트레드 깊이를 실측해서 입력하세요.</div>` : ''}
     <div id="rtdWrap-${n}"></div>
 
+    ${isRound0 ? `<div class="section-head">사전 설문조사 · 필수</div>
+    <div id="surveyWrap-${n}"></div>` : ''}
     <div class="section-head">주관 피드백</div>
     <div class="feedback-chips" id="chips-${n}"></div>
     <textarea id="notes-${n}" rows="2" placeholder="자유 메모 (예: 특이사항, 세부 피드백)"></textarea>
@@ -985,7 +1016,7 @@ window.toggleRound = function(n) {
     // 편집 UI 초기화 — 모든 회차 동일한 RTD 그리드 사용 (그루브별 실측)
     renderPhotoSlots(n);
     buildRtdGrid(n);
-    if (n === 0) renderTireInfoGrid();     // 초기 회차만 DOT/바코드 입력 추가
+    if (n === 0) { renderTireInfoGrid(); renderSurvey(n); }   // 초기 회차만 DOT/바코드 + 사전 설문
     renderFeedbackChips(n);
     validateRoundSave(n);
   }
@@ -1005,6 +1036,47 @@ function renderTireInfoGrid() {
       <input type="text" id="barcode-${t.pos}" placeholder="바코드: 6280495159" value="${escapeHtml(cur.barcode || '')}" maxlength="15" inputmode="numeric" oninput="validateRoundSave(0)">
     </div>`;
   }).join('');
+}
+
+// ── 0회차: 사전 설문 ──
+function ensureSurveyState(n) {
+  const s = _roundsState[n];
+  if (!s.survey) s.survey = { driving_env: null, priorities: new Set(), load_level: null };
+  return s.survey;
+}
+function renderSurvey(n) {
+  const wrap = document.getElementById(`surveyWrap-${n}`);
+  if (!wrap) return;
+  const sv = ensureSurveyState(n);
+  wrap.innerHTML = Object.entries(SURVEY).map(([key, q]) => {
+    const opts = q.options.map((opt, idx) => {
+      const active = q.multi ? sv[key].has(opt) : sv[key] === opt;
+      return `<label class="survey-opt ${active ? 'active' : ''}">
+        <input type="${q.multi ? 'checkbox' : 'radio'}" name="survey-${key}-${n}" ${active ? 'checked' : ''} onchange="onSurveyChange(${n},'${key}',${idx})">
+        ${escapeHtml(opt)}
+      </label>`;
+    }).join('');
+    return `<div class="survey-q"><div class="survey-q-label">${escapeHtml(q.label)}</div><div class="survey-opts">${opts}</div></div>`;
+  }).join('');
+}
+window.onSurveyChange = function(n, key, idx) {
+  const sv = ensureSurveyState(n);
+  const q = SURVEY[key];
+  const opt = q.options[idx];
+  if (q.multi) { sv[key].has(opt) ? sv[key].delete(opt) : sv[key].add(opt); }
+  else sv[key] = opt;
+  renderSurvey(n);
+  validateRoundSave(n);
+};
+function renderSurveyDone() {
+  const sv = _currentVehicleSurvey;
+  const body = sv ? `<div style="font-size:13px;line-height:1.7;">
+      <div><b>주행 환경:</b> ${escapeHtml(sv.driving_env || '—')}</div>
+      <div><b>중시 항목:</b> ${(sv.priorities || []).map(escapeHtml).join(', ') || '—'}</div>
+      <div><b>화물 하중:</b> ${escapeHtml(sv.load_level || '—')}</div>
+    </div>` : '<div class="sub-label">설문 응답 없음</div>';
+  return `<div class="section-head">사전 설문조사</div>
+    <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;">${body}</div>`;
 }
 
 // ── Photo slots ──
@@ -1151,7 +1223,13 @@ window.validateRoundSave = function(n) {
     });
     tireOk = tireFilled === getTirePositions().length;
   }
-  btn.disabled = !(dateOk && mileageOk && photoOk && rtdOk && feedbackOk && tireOk);
+  // 7. 사전 설문 (0회차 전용): 3문항 모두 응답 (중시 항목은 1개 이상)
+  let surveyOk = true;
+  if (isRound0) {
+    const sv = ensureSurveyState(n);
+    surveyOk = !!sv.driving_env && sv.priorities.size > 0 && !!sv.load_level;
+  }
+  btn.disabled = !(dateOk && mileageOk && photoOk && rtdOk && feedbackOk && tireOk && surveyOk);
   // 진행 상태 표시
   if (btn.disabled) {
     const missing = [];
@@ -1164,6 +1242,7 @@ window.validateRoundSave = function(n) {
     }
     if (!tireOk) missing.push(`타이어 ${tireFilled}/${getTirePositions().length}`);
     if (!feedbackOk) missing.push('피드백');
+    if (!surveyOk) missing.push('설문');
     btn.textContent = `미완료: ${missing.join(', ')}`;
   } else {
     btn.textContent = isRound0 ? '초기 데이터 저장' : `${n}회차 저장`;
@@ -1207,6 +1286,8 @@ window.saveRound = async function(n) {
   // 사용자 입력 날짜 → 정오(12:00) timestamptz로 저장 (시간대 이슈 회피)
   const inspectedAt = dateStr ? new Date(dateStr + 'T12:00:00').toISOString() : new Date().toISOString();
   const s = _roundsState[n];
+  let createdRoundId = null;        // 실패 시 롤백용
+  const uploadedPaths = [];         // 실패 시 Storage 정리용
   try {
     // 1. 회차 insert
     const { data: round, error: rErr } = await _supabase.from('ppmo_rounds').insert({
@@ -1214,7 +1295,8 @@ window.saveRound = async function(n) {
       inspected_by: _currentEmail,
       inspected_at: inspectedAt
     }).select().single();
-    if (rErr) throw rErr;
+    if (rErr) throw new Error('[회차 저장] ' + rErr.message);
+    createdRoundId = round.id;
 
     // 2. RTD 측정값
     const measurements = [...document.querySelectorAll(`.rtdInput-${n}`)].map(i => ({
@@ -1236,9 +1318,11 @@ window.saveRound = async function(n) {
         cacheControl: '3600',
         upsert: false
       });
-      if (upErr) throw upErr;
+      if (upErr) throw new Error(`[사진 업로드 · Storage] ${upErr.message}`);
+      uploadedPaths.push(path);
       // url 컬럼에 path만 저장 (표시/다운로드 시 signed URL 생성)
-      await _supabase.from('ppmo_photos').insert({ round_id: round.id, photo_type: slotId, url: path });
+      const { error: phErr } = await _supabase.from('ppmo_photos').insert({ round_id: round.id, photo_type: slotId, url: path });
+      if (phErr) throw new Error(`[사진 기록 · ppmo_photos] ${phErr.message}`);
     }
 
     // 4. 피드백 (선택된 칩 각각 1행 + 자유 메모 1행)
@@ -1265,6 +1349,18 @@ window.saveRound = async function(n) {
         .from('ppmo_tires')
         .upsert(tireRows, { onConflict: 'vehicle_id,position' });
       if (tErr) throw tErr;
+
+      // 6. 사전 설문 → ppmo_survey (재저장 시 기존 삭제 후 재삽입)
+      const sv = ensureSurveyState(n);
+      await _supabase.from('ppmo_survey').delete().eq('vehicle_id', _currentVehicle.id);
+      const { error: svErr } = await _supabase.from('ppmo_survey').insert({
+        vehicle_id: _currentVehicle.id,
+        driving_env: sv.driving_env,
+        priorities: [...sv.priorities],
+        load_level: sv.load_level,
+        created_by: _currentEmail
+      });
+      if (svErr) throw new Error('[설문 저장] ' + svErr.message);
     }
 
     // pending 이미지 URL 해제
@@ -1273,6 +1369,12 @@ window.saveRound = async function(n) {
     toast(isRound0 ? '초기 데이터가 저장되었습니다' : `${n}회차 데이터가 저장되었습니다`);
     await renderRounds();
   } catch(e) {
+    console.error('saveRound 실패:', e);
+    // 롤백: 반쯤 저장된 회차/사진을 지워서 재시도 가능하게 함 (CASCADE로 측정·사진·피드백 삭제)
+    try {
+      if (uploadedPaths.length) await _supabase.storage.from('ppmo-photos').remove(uploadedPaths);
+      if (createdRoundId) await _supabase.from('ppmo_rounds').delete().eq('id', createdRoundId);
+    } catch(rbErr) { console.warn('롤백 실패:', rbErr); }
     toast('저장 실패: ' + e.message, true);
     btn.disabled = false; btn.textContent = isRound0 ? '초기 데이터 저장' : `${n}회차 저장`;
   }

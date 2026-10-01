@@ -1108,9 +1108,9 @@ const MTD_MM = 1.6;  // 법정 최저 트레드 깊이
 function calcMileagePrediction(vehicle, rounds, measurements) {
   const points = [];
   rounds.forEach(r => {
-    const rMeas = measurements.filter(m => m.round_id === r.id);
+    const rMeas = measurements.filter(m => m.round_id === r.id && isNum(m.rtd_mm));
     if (!rMeas.length) return;
-    const minRtd = Math.min(...rMeas.map(m => m.rtd_mm));
+    const minRtd = Math.min(...rMeas.map(m => Number(m.rtd_mm)));
     points.push({ km: r.mileage_km, rtd: minRtd });
   });
   if (points.length < 2) return { points, insufficient: true };
@@ -1144,6 +1144,8 @@ window.showPpmoDetail = async function(vehicleId) {
       _supabase.from('ppmo_rounds').select('*').eq('vehicle_id', vehicleId).order('round_no'),
       _supabase.from('ppmo_tires').select('*').eq('vehicle_id', vehicleId)
     ]);
+    const { data: svData } = await _supabase.from('ppmo_survey').select('*').eq('vehicle_id', vehicleId).order('created_at', { ascending: false }).limit(1);
+    const survey = (svData && svData[0]) || null;
     fullRounds = rRes.data || [];
     tires = tRes.data || [];
     if (fullRounds.length) {
@@ -1161,6 +1163,7 @@ window.showPpmoDetail = async function(vehicleId) {
     photos.forEach(p => { p.path = extractPathAdm(p.url); });
     const photoPaths = photos.map(p => p.path).filter(Boolean);
     const signedUrlMap = await getSignedUrls(photoPaths, 3600);
+    const realPhotoCount = photos.filter(p => p.path).length;
     photos.forEach(p => { p.signedUrl = signedUrlMap[p.path] || null; });
 
     // 타이어 정보를 position 키로 매핑
@@ -1186,10 +1189,16 @@ window.showPpmoDetail = async function(vehicleId) {
       }</div>
       <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
         <button onclick="downloadVehicleExcel('${v.id}')" style="padding:7px 14px;background:var(--text);color:var(--bg);border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">📊 이 차량 Excel</button>
-        <button onclick="downloadVehiclePhotosZip('${v.id}')" ${!photos.length ? 'disabled style="opacity:0.4;"' : ''} style="padding:7px 14px;background:none;color:var(--text);border:0.5px solid var(--border-strong);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">🗂 사진 전체 ZIP (${photos.length}장)</button>
+        <button onclick="downloadVehiclePhotosZip('${v.id}')" ${!realPhotoCount ? 'disabled style="opacity:0.4;"' : ''} style="padding:7px 14px;background:none;color:var(--text);border:0.5px solid var(--border-strong);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">🗂 사진 전체 ZIP (${realPhotoCount}장)</button>
       </div>`;
 
     // 예상 마일리지 분석 카드
+    const surveyHtml = `<div style="background:var(--bg-secondary);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.7;">
+        <div style="font-size:12px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">📝 사전 설문조사</div>
+        ${survey ? `<div><b>주행 환경:</b> ${escapeHtmlAdm(survey.driving_env || '—')}</div>
+        <div><b>중시 항목:</b> ${(survey.priorities || []).map(escapeHtmlAdm).join(', ') || '—'}</div>
+        <div><b>화물 하중:</b> ${escapeHtmlAdm(survey.load_level || '—')}</div>` : '<div style="color:var(--text-tertiary);">응답 없음</div>'}
+      </div>`;
     const prediction = calcMileagePrediction(v, fullRounds, measurements);
     let predHtml = '';
     if (prediction) {
@@ -1229,7 +1238,11 @@ window.showPpmoDetail = async function(vehicleId) {
       rPhotos.forEach(p => { photosBySlot[p.photo_type] = p; });
       // 포지션별 min RTD
       const minByPos = {};
-      rMeas.forEach(m => { if (minByPos[m.position] == null || m.rtd_mm < minByPos[m.position]) minByPos[m.position] = m.rtd_mm; });
+      rMeas.forEach(m => {
+        if (!isNum(m.rtd_mm)) return;   // 측정 안 함/구버전 데이터(null) 건너뜀
+        const v2 = Number(m.rtd_mm);
+        if (minByPos[m.position] == null || v2 < minByPos[m.position]) minByPos[m.position] = v2;
+      });
       const rtdSummary = Object.entries(minByPos).map(([pos, mm]) => `${pos}: <b>${mm.toFixed(1)}</b>`).join(' · ') || '—';
       const feedbackTags = rFeed.map(f => `<span style="display:inline-block;background:var(--bg-info);color:var(--text-info);padding:2px 8px;border-radius:8px;font-size:11px;margin:2px 3px 0 0;">${escapeHtmlAdm(f.note || f.category)}</span>`).join('');
 
@@ -1259,6 +1272,16 @@ window.showPpmoDetail = async function(vehicleId) {
         }).join('')
       }</div>`;
 
+      // 현재 슬롯 정의에 없는 사진(구버전 슬롯 ID 등)도 빠짐없이 표시
+      const knownIds = new Set(slotsForThisRound.map(sl => sl.id));
+      const extraPhotos = rPhotos.filter(p => p.path && p.signedUrl && !knownIds.has(p.photo_type));
+      const extraHtml = extraPhotos.length ? `<div style="margin-top:8px;font-size:10px;font-weight:700;color:var(--text-tertiary);">기타/구버전 슬롯 사진 (${extraPhotos.length})</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin-top:4px;">${
+          extraPhotos.map(p => { const dl = `${v.vehicle_no}_R${n}_${p.photo_type}.jpg`; return `<div style="text-align:center;">
+            <a href="${p.signedUrl}" target="_blank" rel="noopener"><img src="${p.signedUrl}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:5px;border:0.5px solid var(--border);"></a>
+            <div style="font-size:9px;color:var(--text-tertiary);margin-top:2px;">${escapeHtmlAdm(p.photo_type)}</div>
+            <a href="javascript:void(0)" onclick="downloadPhotoByPath('${escapeAttr(p.path)}', '${escapeAttr(dl)}')" style="font-size:9px;color:var(--text-info);text-decoration:none;">⬇ 다운</a></div>`; }).join('')
+        }</div>` : '';
       // 0회차만 타이어 DOT/바코드 표시
       const tireInfoHtml = n === 0 && tires.length ? `
         <div style="margin-top:8px;padding:8px 10px;background:var(--bg-secondary);border-radius:6px;font-size:11.5px;line-height:1.7;">
@@ -1276,14 +1299,15 @@ window.showPpmoDetail = async function(vehicleId) {
           <div style="font-size:11px;color:var(--text-tertiary);">${Number(r.mileage_km).toLocaleString('ko-KR')} km${r.rotated ? ' · 로테이션' : ''}</div>
         </div>
         <div style="color:var(--text-secondary);margin-bottom:2px;">${n === 0 ? 'NTD' : 'RTD'} (포지션별 min) — ${rtdSummary}</div>
-        <div style="margin-top:6px;">사진: ${rPhotos.length}/${slotsForThisRound.length}${feedbackTags ? ' · ' + feedbackTags : ''}</div>
+        <div style="margin-top:6px;">사진: ${rPhotos.filter(p => p.path).length}/${slotsForThisRound.length}${feedbackTags ? ' · ' + feedbackTags : ''}</div>
         ${photoGridHtml}
+        ${extraHtml}
         ${tireInfoHtml}
         ${r.notes ? `<div style="margin-top:8px;padding:6px 10px;background:var(--bg-secondary);border-radius:6px;color:var(--text-secondary);font-style:italic;">📝 ${escapeHtmlAdm(r.notes)}</div>` : ''}
       </div>`;
     }
 
-    document.getElementById('ppmoDetailContent').innerHTML = infoHtml + predHtml + roundsHtml;
+    document.getElementById('ppmoDetailContent').innerHTML = infoHtml + surveyHtml + predHtml + roundsHtml;
   } catch(e) {
     document.getElementById('ppmoDetailContent').innerHTML = `<div class="empty-state">불러오기 실패: ${e.message}</div>`;
   }
@@ -1383,8 +1407,9 @@ window.exportPpmoExcel = async function() {
       const v = ppmoVehicles.find(x => x.id === r.vehicle_id) || {};
       const meas = allMeas.filter(m => m.round_id === r.id);
       const feed = allFeed.filter(f => f.round_id === r.id);
-      const minRtd = meas.length ? Math.min(...meas.map(m => m.rtd_mm)) : null;
-      const avgRtd = meas.length ? (meas.reduce((a,m) => a+m.rtd_mm, 0) / meas.length) : null;
+      const measN = meas.filter(m => isNum(m.rtd_mm)).map(m => Number(m.rtd_mm));
+      const minRtd = measN.length ? Math.min(...measN) : null;
+      const avgRtd = measN.length ? (measN.reduce((a,x) => a+x, 0) / measN.length) : null;
       return {
         '차량번호': v.vehicle_no,
         '담당자': v.created_by || '',
@@ -1416,6 +1441,16 @@ window.exportPpmoExcel = async function() {
     });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(measRows), 'RTD 상세');
 
+    // 사전 설문 시트
+    try {
+      const { data: svAll } = await _supabase.from('ppmo_survey').select('*');
+      const svRows = (svAll || []).map(sv => {
+        const v = ppmoVehicles.find(x => x.id === sv.vehicle_id) || {};
+        return { '차량번호': v.vehicle_no || '', '담당자': v.created_by || '', '주행 환경': sv.driving_env || '',
+                 '중시 항목': (sv.priorities || []).join(', '), '화물 하중': sv.load_level || '' };
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(svRows.length ? svRows : [{ '차량번호': '응답 없음' }]), '사전 설문');
+    } catch(e) { console.warn('설문 시트 생성 실패:', e); }
     XLSX.writeFile(wb, `PPMo_전체_${new Date().toISOString().slice(0,10)}.xlsx`);
   } catch(e) {
     alert('Excel 생성 실패: ' + e.message);
@@ -1457,7 +1492,7 @@ window.downloadVehicleExcel = async function(vehicleId) {
     ]), '차량 정보');
     // 회차별 요약 시트
     const summary = rounds.map(r => {
-      const m = meas.filter(x => x.round_id === r.id);
+      const m = meas.filter(x => x.round_id === r.id && isNum(x.rtd_mm));
       const f = feed.filter(x => x.round_id === r.id);
       return {
         '회차': r.round_no === 0 ? '초기' : `${r.round_no}회차`,
@@ -1505,7 +1540,7 @@ window.downloadVehiclePhotosZip = async function(vehicleId) {
       _supabase.from('ppmo_photos').select('*').in('round_id', rIds)
     ]);
     const rounds = rRes.data || [];
-    const photos = pRes.data || [];
+    const photos = (pRes.data || []).filter(p => p.url);   // '첨부 안 함'(url null) 행 제외
     if (!photos.length) { alert('업로드된 사진 없음'); return; }
 
     // 모든 사진에 대해 signed URL 일괄 생성
@@ -1579,6 +1614,7 @@ window.exportPpmoCSV = function() {
   URL.revokeObjectURL(url);
 };
 
+function isNum(x) { return x !== null && x !== undefined && x !== '' && !isNaN(Number(x)); }
 function escapeHtmlAdm(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(s) { return String(s ?? '').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
 
