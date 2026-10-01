@@ -325,10 +325,6 @@
             <input type="text" id="fNewSpeedIndex" placeholder="—" disabled>
           </div>
         </div>
-        <div class="field locked" id="ntdField">
-          <div class="label">NTD - 신품 트레드 깊이 (mm)</div>
-          <input type="number" step="0.1" min="0" max="30" id="fNewNtd" placeholder="아티클 선택 시 자동" disabled>
-        </div>
         <input type="hidden" id="fNewProduct" value="VanContact AP2">
         <button class="btn full" id="btnCreateVehicle" onclick="createVehicle()" disabled>생성하기</button>
       </div>
@@ -400,8 +396,7 @@ const PHOTO_SLOTS = [
 ];
 const SLOT_BY_ID = Object.fromEntries(PHOTO_SLOTS.map(s => [s.id, s]));
 
-// 초기 설치 시점(0회차)은 RTD 측정 자체가 없으므로 RTD 사진 8개 제외 (8칸만)
-const PHOTO_SLOTS_ROUND0 = PHOTO_SLOTS.filter(s => !s.id.startsWith('rtd_'));
+// (삭제됨) 이전엔 0회차 RTD 사진 생략했으나, 그루브별 실측이 필요해서 되돌림
 
 // 6개 타이어 포지션 (DB 코드 + 표시 라벨 + 사진 슬롯 매핑)
 const TIRE_POSITIONS = [
@@ -420,7 +415,7 @@ const RTD_SLOTS_EXCLUDED_FRONT_ONLY = ['rtd_4','rtd_5','rtd_6','rtd_7','rtd_8'];
 // _currentVehicle.front_only 반영해서 회차별 슬롯/포지션 반환
 function getSlots(n) {
   const frontOnly = _currentVehicle?.front_only || false;
-  let slots = n === 0 ? PHOTO_SLOTS_ROUND0 : PHOTO_SLOTS;
+  let slots = PHOTO_SLOTS;   // 0회차 포함 모든 회차 동일 (그루브별 측정 사진 필요)
   if (frontOnly) {
     slots = slots.filter(s => !REAR_TIRE_SLOT_IDS.includes(s.id) && !RTD_SLOTS_EXCLUDED_FRONT_ONLY.includes(s.id));
   }
@@ -555,6 +550,7 @@ window.showNewVehicleForm = function() {
   document.querySelector('input[name="fNewGrooves"][value="3"]').checked = true;
   _selectedArticle = null;
   lockDependentFields();
+  document.getElementById('articleDropdown').classList.add('hidden');
   document.getElementById('btnCreateVehicle').disabled = true;
 };
 function showDetail(vehicle) {
@@ -579,8 +575,7 @@ function showDetail(vehicle) {
   const lines = [meta.join(' · ')];
   if (vehicle.front_only) lines.push('<span style="display:inline-block;background:var(--bg-warning);color:var(--text-warning);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">🔧 전륜만 모니터링</span>');
   if (tireSpec) lines.push(`타이어: ${tireSpec}`);
-  if (vehicle.article) lines.push(`아티클: <code style="font-family:monospace;">${escapeHtml(vehicle.article)}</code>` + (vehicle.ntd_mm != null ? ` · NTD ${vehicle.ntd_mm}mm` : ''));
-  else if (vehicle.ntd_mm != null) lines.push(`NTD ${vehicle.ntd_mm}mm`);
+  if (vehicle.article) lines.push(`아티클: <code style="font-family:monospace;">${escapeHtml(vehicle.article)}</code>`);
   if (init) lines.push(init);
   document.getElementById('detMeta').innerHTML = lines.join('<br>');
   renderRounds();
@@ -668,11 +663,14 @@ window.onArticleInput = function() {
         status.textContent = '';
         return;
       }
-      dd.innerHTML = filtered.map(a => `
-        <div class="search-dropdown-item" onclick='selectArticle(${JSON.stringify(a).replace(/'/g, "&apos;")})'>
-          <span class="art-no">${escapeHtml(a.article)}</span>
-          <span class="art-sub">${escapeHtml(a.size || '')} · ${escapeHtml(a.li_ss || '')} · NTD ${a.ntd || '?'}mm</span>
-        </div>`).join('');
+      dd.innerHTML = filtered.map(a => {
+        const parts = [a.size, a.li_ss].filter(Boolean).join(' · ');
+        return `
+          <div class="search-dropdown-item" onclick='selectArticle(${JSON.stringify(a).replace(/'/g, "&apos;")})'>
+            <span class="art-no">${escapeHtml(a.article)}</span>
+            <span class="art-sub">${escapeHtml(parts)}${a.description ? ` · ${escapeHtml(a.description)}` : ''}</span>
+          </div>`;
+      }).join('');
       dd.classList.remove('hidden');
       status.textContent = `${filtered.length}개 후보`;
     } catch(e) {
@@ -689,7 +687,6 @@ window.selectArticle = function(a) {
   document.getElementById('articleDropdown').classList.add('hidden');
   // 자동 채움
   document.getElementById('fNewTireSize').value = a.size || '';
-  document.getElementById('fNewNtd').value = a.ntd || '';
   // li_ss 예: "106/104R" → 분리
   if (a.li_ss) {
     const m = a.li_ss.match(/^(\d+(?:\/\d+)?)([A-Z]+)$/);
@@ -711,7 +708,7 @@ window.selectArticle = function(a) {
 };
 
 function lockDependentFields() {
-  ['fNewTireSize','fNewLoadIndex','fNewSpeedIndex','fNewNtd'].forEach(id => {
+  ['fNewTireSize','fNewLoadIndex','fNewSpeedIndex'].forEach(id => {
     const el = document.getElementById(id);
     el.disabled = true;
     el.value = '';
@@ -719,7 +716,7 @@ function lockDependentFields() {
   });
 }
 function unlockDependentFields() {
-  ['fNewTireSize','fNewLoadIndex','fNewSpeedIndex','fNewNtd'].forEach(id => {
+  ['fNewTireSize','fNewLoadIndex','fNewSpeedIndex'].forEach(id => {
     const el = document.getElementById(id);
     el.disabled = false;
     el.parentElement.classList.remove('locked');
@@ -734,7 +731,7 @@ document.addEventListener('click', e => {
 });
 
 window.validateNewVehicle = function() {
-  const ok = ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewTireSize','fNewNtd'].every(id => document.getElementById(id).value.trim())
+  const ok = ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewTireSize'].every(id => document.getElementById(id).value.trim())
     && _selectedArticle != null;
   document.getElementById('btnCreateVehicle').disabled = !ok;
 };
@@ -752,7 +749,6 @@ window.createVehicle = async function() {
     tire_size: document.getElementById('fNewTireSize').value.trim(),
     load_index: document.getElementById('fNewLoadIndex').value.trim(),
     speed_index: document.getElementById('fNewSpeedIndex').value.trim(),
-    ntd_mm: parseFloat(document.getElementById('fNewNtd').value),
     front_only: document.getElementById('fNewFrontOnly').checked,
     groove_count: parseInt(document.querySelector('input[name="fNewGrooves"]:checked').value),
     created_by: _currentEmail
@@ -847,7 +843,7 @@ async function renderRounds() {
       const n = parseInt(firstOpen);
       document.querySelector(`.round-card[data-n="${n}"]`).classList.add('open');
       renderPhotoSlots(n);
-      if (n !== 0) buildRtdGrid(n);
+      buildRtdGrid(n);
       if (n === 0) renderTireInfoGrid();
       renderFeedbackChips(n);
       validateRoundSave(n);
@@ -916,20 +912,18 @@ function renderDoneBody(n) {
       <div>주행거리: <b>${fmtKm(s.round.mileage_km)}</b></div>
       ${s.round.rotated ? '<div>로테이션: <b>실시</b></div>' : ''}
     </div>
-    ${n === 0
-      ? `<div class="section-head">RTD (초기)</div>
-         <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;">NTD 기준값 사용 · 별도 측정 없음</div>
-         <div class="section-head">타이어 정보 (DOT · 바코드)</div>
-         <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:10px 14px;font-size:12.5px;line-height:1.7;">${
-           getTirePositions().map(t => {
-             const cur = _currentVehicleTires[t.pos] || {};
-             const dot = cur.dot_code || '<span style="color:var(--text-tertiary)">—</span>';
-             const bc = cur.barcode || '<span style="color:var(--text-tertiary)">—</span>';
-             return `<div style="padding:4px 0;border-bottom:0.5px solid var(--border);"><b>${t.label}</b><br><span style="font-family:monospace;">DOT: ${dot} · BC: ${bc}</span></div>`;
-           }).join('')
-         }</div>`
-      : `<div class="section-head">측정값 (포지션별 최소 RTD)</div>
-         <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;">${rtdSummary}</div>`}
+    ${n === 0 ? `
+      <div class="section-head">타이어 정보 (DOT · 바코드)</div>
+      <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:10px 14px;font-size:12.5px;line-height:1.7;">${
+        getTirePositions().map(t => {
+          const cur = _currentVehicleTires[t.pos] || {};
+          const dot = cur.dot_code || '<span style="color:var(--text-tertiary)">—</span>';
+          const bc = cur.barcode || '<span style="color:var(--text-tertiary)">—</span>';
+          return `<div style="padding:4px 0;border-bottom:0.5px solid var(--border);"><b>${t.label}</b><br><span style="font-family:monospace;">DOT: ${dot} · BC: ${bc}</span></div>`;
+        }).join('')
+      }</div>` : ''}
+    <div class="section-head">${n === 0 ? '초기 트레드' : '측정값'} (포지션별 최소 RTD)</div>
+    <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;">${rtdSummary}</div>
     <div class="section-head">사진 (${filledCount}/${slotsForThisRound.length})</div>
     ${photoSlotsHtml}
     <div class="section-head">주관 피드백</div>
@@ -962,14 +956,14 @@ function renderEditBody(n, isRound0, mileage) {
     <div class="photo-slot-grid" id="pslots-${n}"></div>
     <input type="file" id="fileInp-${n}" accept="image/*" capture="environment" class="hidden" onchange="onSlotFileChosen(${n}, event)">
 
-    ${isRound0
-      ? `<div class="section-head">타이어 정보 (DOT · 바코드) · 6포지션 필수</div>
-         <div class="sub-label" style="margin-bottom:6px;">DOT 예: <b>16Y032TF3 1024</b> (9자 공장/제품 + 4자 주차/년도) · 바코드 예: <b>6280495159</b> (10자)</div>
-         <div class="tire-info-grid" id="tireInfoGrid"></div>
+    ${isRound0 ? `
+      <div class="section-head">타이어 정보 (DOT · 바코드) · ${getTirePositions().length}포지션 필수</div>
+      <div class="sub-label" style="margin-bottom:6px;">DOT 예: <b>16Y032TF3 1024</b> (9자 공장/제품 + 4자 주차/년도) · 바코드 예: <b>6280495159</b> (10자)</div>
+      <div class="tire-info-grid" id="tireInfoGrid"></div>` : ''}
 
-         <div class="sub-label" style="margin:14px 0 6px;padding:10px 12px;background:var(--bg-secondary);border-radius:var(--radius-sm);">💡 초기 설치 시점은 <b>NTD(신품 트레드 깊이)</b>를 그대로 사용하므로 RTD 측정을 생략합니다.</div>`
-      : `<div class="section-head">RTD 측정 (mm) · ${getPositions().length}본 × 그루브 ${_currentVehicle?.groove_count || 3}개 (G1 → G${_currentVehicle?.groove_count || 3})</div>
-         <div id="rtdWrap-${n}"></div>`}
+    <div class="section-head">${isRound0 ? '초기 트레드 측정 (mm)' : 'RTD 측정 (mm)'} · ${getPositions().length}본 × 그루브 ${_currentVehicle?.groove_count || 3}개 (G1 → G${_currentVehicle?.groove_count || 3})</div>
+    ${isRound0 ? `<div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">💡 신품 타이어의 그루브별 트레드 깊이를 실측해서 입력하세요.</div>` : ''}
+    <div id="rtdWrap-${n}"></div>
 
     <div class="section-head">주관 피드백</div>
     <div class="feedback-chips" id="chips-${n}"></div>
@@ -988,10 +982,10 @@ window.toggleRound = function(n) {
   const wasOpen = card.classList.contains('open');
   card.classList.toggle('open');
   if (!wasOpen && !_roundsState[n].round) {
-    // 편집 UI 초기화
+    // 편집 UI 초기화 — 모든 회차 동일한 RTD 그리드 사용 (그루브별 실측)
     renderPhotoSlots(n);
-    if (n !== 0) buildRtdGrid(n);          // 초기 회차는 RTD 생략
-    if (n === 0) renderTireInfoGrid();     // 초기 회차만 DOT/바코드 입력
+    buildRtdGrid(n);
+    if (n === 0) renderTireInfoGrid();     // 초기 회차만 DOT/바코드 입력 추가
     renderFeedbackChips(n);
     validateRoundSave(n);
   }
@@ -1138,16 +1132,12 @@ window.validateRoundSave = function(n) {
   const dateOk = dateEl && !!dateEl.value;
   // 2. 주행거리 (0회차는 자동 적용이라 무조건 OK)
   const mileageOk = isRound0 || (document.getElementById(`mile-${n}`)?.value !== '');
-  // 3. 사진 전 슬롯 채움 (회차별로 개수 다름 - 0회차 8칸 / 1~5회차 16칸)
+  // 3. 사진 전 슬롯 채움 (모든 회차 동일)
   const slotsRequired = getSlots(n);
   const photoOk = Object.keys(s.pendingBySlot).length === slotsRequired.length;
-  // 4. RTD 18개 (초기 회차는 스킵 — NTD가 대체)
-  let rtdOk = true;
-  let rtdInputs = [];
-  if (!isRound0) {
-    rtdInputs = document.querySelectorAll(`.rtdInput-${n}`);
-    rtdOk = rtdInputs.length > 0 && [...rtdInputs].every(i => i.value !== '' && !isNaN(parseFloat(i.value)));
-  }
+  // 4. RTD 측정 — 모든 회차 (0회차 포함) 그루브별 실측 필수
+  const rtdInputs = document.querySelectorAll(`.rtdInput-${n}`);
+  const rtdOk = rtdInputs.length > 0 && [...rtdInputs].every(i => i.value !== '' && !isNaN(parseFloat(i.value)));
   // 5. 피드백 최소 1개 (없음 포함)
   const feedbackOk = s.pendingChips.size > 0;
   // 6. 타이어 정보 (0회차 전용): 6포지션 × 2필드 = 12개 다 채워야 함

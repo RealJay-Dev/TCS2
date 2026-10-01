@@ -1102,19 +1102,12 @@ function getPpmoTirePositions(frontOnly) {
 }
 const MTD_MM = 1.6;  // 법정 최저 트레드 깊이
 
-// 예상 마일리지 계산: (mileage_km, min RTD)로 선형 회귀
-// - 초기 회차(0)는 측정값 없이 (initial_mileage_km, ntd_mm)를 시드포인트로 사용
+// 예상 마일리지 계산: 모든 회차의 (mileage_km, min RTD)로 선형 회귀
+// - 0회차 NTD 측정값이 시작점, 1~5회차 RTD가 추세 데이터
 // 반환: { points, slope, intercept, kmAtMtd, remainingKm, totalLifeKm, currentMinRtd }
 function calcMileagePrediction(vehicle, rounds, measurements) {
-  if (!vehicle.ntd_mm) return null;
   const points = [];
-  // 초기 시드포인트: 장착 시점 = NTD
-  const round0 = rounds.find(r => r.round_no === 0);
-  if (round0 && vehicle.initial_mileage_km != null) {
-    points.push({ km: vehicle.initial_mileage_km, rtd: vehicle.ntd_mm });
-  }
-  // 실측 회차(1~5)
-  rounds.filter(r => r.round_no > 0).forEach(r => {
+  rounds.forEach(r => {
     const rMeas = measurements.filter(m => m.round_id === r.id);
     if (!rMeas.length) return;
     const minRtd = Math.min(...rMeas.map(m => m.rtd_mm));
@@ -1183,7 +1176,6 @@ window.showPpmoDetail = async function(vehicleId) {
       ['제품', v.product || '—'],
       ['아티클', v.article || '—'],
       ['타이어 사이즈', v.tire_size ? `${v.tire_size} ${v.load_index || ''}${v.speed_index || ''}` : '—'],
-      ['NTD (신품)', v.ntd_mm != null ? `${v.ntd_mm} mm` : '—'],
       ['딜러', v.dealer_name || '—'],
       ['장착 시점 주행거리', v.initial_mileage_km != null ? Number(v.initial_mileage_km).toLocaleString('ko-KR') + ' km' : '—'],
       ['등록일', v.created_at ? new Date(v.created_at).toLocaleString('ko-KR') : '—']
@@ -1283,7 +1275,7 @@ window.showPpmoDetail = async function(vehicleId) {
           <div style="font-weight:700;font-size:14px;">${title} · ${new Date(r.inspected_at).toLocaleDateString('ko-KR')}</div>
           <div style="font-size:11px;color:var(--text-tertiary);">${Number(r.mileage_km).toLocaleString('ko-KR')} km${r.rotated ? ' · 로테이션' : ''}</div>
         </div>
-        <div style="color:var(--text-secondary);margin-bottom:2px;">RTD (포지션별 min) — ${n === 0 ? 'NTD 기준 (측정 생략)' : rtdSummary}</div>
+        <div style="color:var(--text-secondary);margin-bottom:2px;">${n === 0 ? 'NTD' : 'RTD'} (포지션별 min) — ${rtdSummary}</div>
         <div style="margin-top:6px;">사진: ${rPhotos.length}/${slotsForThisRound.length}${feedbackTags ? ' · ' + feedbackTags : ''}</div>
         ${photoGridHtml}
         ${tireInfoHtml}
@@ -1366,7 +1358,6 @@ window.exportPpmoExcel = async function() {
       '사이즈': v.tire_size || '',
       '하중지수': v.load_index || '',
       '속도지수': v.speed_index || '',
-      'NTD (mm)': v.ntd_mm ?? '',
       '장착 주행거리 (km)': v.initial_mileage_km ?? '',
       '딜러': v.dealer_name || '',
       '진행 회차': (progressMap[v.id] || 0) + '/' + TOTAL_PPMO_ROUNDS,
@@ -1460,7 +1451,6 @@ window.downloadVehicleExcel = async function(vehicleId) {
       ['사이즈', v.tire_size || ''],
       ['하중지수', v.load_index || ''],
       ['속도지수', v.speed_index || ''],
-      ['NTD (mm)', v.ntd_mm ?? ''],
       ['장착 주행거리 (km)', v.initial_mileage_km ?? ''],
       ['딜러', v.dealer_name || ''],
       ['등록일', v.created_at ? new Date(v.created_at).toLocaleString('ko-KR') : '']
