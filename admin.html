@@ -33,7 +33,6 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: var(--bg-secondary); color: var(--text); min-height: 100vh; }
-
   /* Auth */
   #authScreen { position: fixed; inset: 0; background: var(--bg-secondary); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; }
   .auth-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 32px 24px; width: 100%; max-width: 360px; }
@@ -47,7 +46,6 @@
   .auth-status.err { background: var(--bg-danger); color: var(--text-danger); }
   .auth-status.ok { background: var(--bg-success); color: var(--text-success); }
   .hidden { display: none; }
-
   /* Admin UI */
   .header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
   .header-left { }
@@ -55,21 +53,18 @@
   .header-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
   .logout-btn { background: none; border: 0.5px solid var(--border-strong); border-radius: 20px; color: var(--text-secondary); font-size: 12px; padding: 5px 12px; cursor: pointer; }
   .wrap { max-width: 900px; margin: 0 auto; padding: 20px; }
-
   /* Stats */
   .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
   .stat-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
   .stat-label { font-size: 12px; color: var(--text-tertiary); margin-bottom: 6px; }
   .stat-val { font-size: 28px; font-weight: 700; color: var(--text); }
   .stat-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
-
   /* Filter */
   .filter-row { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
   .filter-input { padding: 9px 12px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 14px; background: var(--bg); color: var(--text); outline: none; }
   .filter-input:focus { border-color: var(--text); }
   .filter-select { padding: 9px 12px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); font-size: 14px; background: var(--bg); color: var(--text); outline: none; cursor: pointer; }
   .refresh-btn { padding: 9px 16px; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; }
-
   /* Table */
   .table-wrap { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; }
   .table-header { display: grid; grid-template-columns: 2fr 1.2fr 1fr 1.2fr; padding: 10px 16px; background: var(--bg-secondary); border-bottom: 0.5px solid var(--border); font-size: 12px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
@@ -82,27 +77,22 @@
   .empty-state { text-align: center; padding: 48px; color: var(--text-tertiary); font-size: 14px; }
   .loading-state { text-align: center; padding: 48px; color: var(--text-secondary); font-size: 14px; }
   .count-info { font-size: 13px; color: var(--text-tertiary); margin-bottom: 10px; }
-
   /* Tabs */
   .search-tab { padding: 8px 16px; background: none; border: 0.5px solid var(--border-strong); border-radius: 20px; font-size: 13px; font-weight: 500; color: var(--text-secondary); cursor: pointer; }
   .search-tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
   .search-tab:hover { border-color: var(--text); }
-
   /* Mobile hamburger button (숨김 by default) */
   .admin-hamburger { display: none; width: 34px; height: 34px; border-radius: 8px; border: 0.5px solid var(--border-strong); background: var(--bg); flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; flex-shrink: 0; margin-right: 10px; }
   .admin-hamburger span { width: 16px; height: 1.5px; background: var(--text); border-radius: 1px; }
   .admin-sidebar-overlay { display: none; position: fixed; inset: 53px 0 0 0; background: rgba(0,0,0,0.4); z-index: 199; }
   .admin-sidebar-overlay.open { display: block; }
-
   /* ═════════════ MOBILE (≤ 720px) ═════════════ */
   @media (max-width: 720px) {
     .header { padding: 10px 14px !important; }
     .header-title { font-size: 15px !important; }
     .header-sub { font-size: 11px !important; }
-
     /* 햄버거 노출 */
     .admin-hamburger { display: flex; }
-
     /* 사이드바를 드로어로 */
     .admin-body { flex-direction: column !important; height: auto !important; overflow: visible !important; }
     .admin-sidebar {
@@ -117,20 +107,17 @@
     }
     .admin-sidebar.open { transform: translateX(0); }
     .admin-main { padding: 14px !important; }
-
     /* Stats 2열 */
     .stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
     .stat-card { padding: 12px 14px !important; }
     .stat-val { font-size: 22px !important; }
     .stat-label { font-size: 11px !important; }
     .stat-sub { font-size: 11px !important; }
-
     /* 탭 가로 스크롤 + refresh 별도 줄 */
     .tabs-row { flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch; padding-bottom: 4px; scrollbar-width: none; }
     .tabs-row::-webkit-scrollbar { display: none; }
     .tabs-row .refresh-btn { display: none !important; }
     .mobile-refresh-row { display: flex !important; justify-content: flex-end; margin-bottom: 10px; }
-
     /* ─── 테이블: 헤더 숨김, 각 행을 카드로 ─── */
     .table-wrap { background: transparent !important; border: none !important; border-radius: 0 !important; }
     .table-header { display: none !important; }
@@ -160,15 +147,12 @@
     }
     /* 마지막 셀(주로 액션 버튼)은 상단 우측이나 하단에 */
     .table-row > div:last-child { margin-top: 6px; }
-
     /* PPMo stats 그리드 */
     #ppmoStats { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
     #ppmoStats .stat-card { padding: 10px 12px !important; }
-
     /* 필터/카운트 줄 세로 배치 */
     .filter-row { flex-direction: column !important; align-items: stretch !important; }
     .filter-row > select, .filter-row > input { width: 100%; }
-
     /* PPMo 상세 모달 전체화면 */
     #ppmoDetailModal { padding: 0 !important; align-items: flex-start !important; }
     #ppmoDetailModal > div { max-width: 100% !important; border-radius: 0 !important; min-height: 100vh; margin: 0 !important; padding: 16px !important; }
@@ -176,7 +160,6 @@
 </style>
 </head>
 <body>
-
 <!-- Auth -->
 <div id="authScreen">
   <div class="auth-card">
@@ -203,7 +186,6 @@
     <div id="authStatus" class="hidden auth-status"></div>
   </div>
 </div>
-
 <!-- Admin UI -->
 <div id="adminApp" class="hidden">
   <div class="header">
@@ -214,16 +196,13 @@
     </div>
     <button class="logout-btn" onclick="logout()">로그아웃</button>
   </div>
-
   <div class="admin-sidebar-overlay" id="adminSidebarOverlay" onclick="toggleAdminSidebar()"></div>
-
   <div class="admin-body" style="display:flex; height:calc(100vh - 53px);">
     <!-- 왼쪽 유저 슬라이서 -->
     <div class="admin-sidebar" id="adminSidebar" style="width:220px; flex-shrink:0; background:var(--bg); border-right:0.5px solid var(--border); overflow-y:auto; padding:16px 0;">
       <div style="padding:0 16px 10px; font-size:12px; font-weight:600; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.05em;">사용자</div>
       <div id="userList"></div>
     </div>
-
     <!-- 오른쪽 메인 -->
     <div class="admin-main" style="flex:1; overflow-y:auto; padding:20px;">
       <!-- Stats -->
@@ -244,7 +223,6 @@
           <div class="stat-sub">고유 이메일 수</div>
         </div>
       </div>
-
       <!-- 탭 -->
       <div class="tabs-row" style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
         <button class="search-tab active" id="tab-access" onclick="switchTab('access')" style="flex:none;padding:8px 20px;">접속 로그</button>
@@ -258,7 +236,6 @@
       <div class="mobile-refresh-row" style="display:none;">
         <button class="refresh-btn" onclick="loadAll()">↻ 새로고침</button>
       </div>
-
       <!-- 접속 로그 -->
       <div id="panel-access">
         <div style="display:flex;align-items:center;margin-bottom:8px;">
@@ -272,7 +249,6 @@
           <div id="logTable"><div class="loading-state">로딩 중...</div></div>
         </div>
       </div>
-
       <!-- 액션 로그 -->
       <div id="panel-action" class="hidden">
         <div style="display:flex;align-items:center;margin-bottom:8px;">
@@ -286,12 +262,10 @@
           <div id="actionTable"><div class="loading-state">로딩 중...</div></div>
         </div>
       </div>
-
       <!-- 통계 / KPI -->
       <div id="panel-stats" class="hidden">
         <div id="statsPanel"><div class="loading-state">로딩 중...</div></div>
       </div>
-
       <!-- PPMo -->
       <div id="panel-ppmo" class="hidden">
         <div id="ppmoStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;"></div>
@@ -317,7 +291,6 @@
           <div id="ppmoTable"><div class="loading-state">로딩 중...</div></div>
         </div>
       </div>
-
       <!-- 동의 현황 -->
       <div id="panel-consent" class="hidden">
         <div style="display:flex;align-items:center;margin-bottom:8px;">
@@ -334,7 +307,6 @@
     </div>
   </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -342,7 +314,6 @@
 const SUPABASE_URL = 'https://thosddtgtffapakvmrhn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_HmrBU9WFhkCTM_TquLM31g_IPovXtXm';
 const ADMIN_EMAILS = ['jaehong.park@continental.com', 'sangyong.2.jung@continental.com'];
-
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     storage: window.sessionStorage,   // 탭 닫으면 세션 소멸 (딜러 기기 오용 방지)
@@ -351,12 +322,10 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     detectSessionInUrl: false
   }
 });
-
 let allLogs = [], allActions = [], allSessions = [], allConsents = [], selectedUser = null, currentTab = 'access';
 let ppmoVehicles = [], ppmoRounds = [], ppmoLoaded = false;
 const bannedUsers = new Set();
 const excludedFromKPI = new Set();
-
 // ── Secret mode (logo 5번 클릭, 관리자 이메일 입력 후) ───────
 let _secretClicks = 0, _secretTimer = null, _pwMode = false;
 window.secretClick = function() {
@@ -398,7 +367,6 @@ window.loginWithPassword = async function() {
     btn.disabled = false; btn.textContent = '로그인';
   }
 };
-
 // 페이지 로드 시 세션 확인
 (async () => {
   const { data: { session } } = await _supabase.auth.getSession();
@@ -408,21 +376,18 @@ window.loginWithPassword = async function() {
     document.getElementById('authScreen').style.display = 'flex';
   }
 })();
-
 function showAdmin(email) {
   document.getElementById('authScreen').style.display = 'none';
   document.getElementById('adminApp').classList.remove('hidden');
   document.getElementById('adminEmail').textContent = email;
   loadAll();
 }
-
 function showAuthError(msg) {
   const el = document.getElementById('authStatus');
   el.className = 'auth-status err';
   el.textContent = msg;
   el.classList.remove('hidden');
 }
-
 function resetAuth() {
   document.getElementById('emailStep').classList.remove('hidden');
   document.getElementById('otpStep').classList.add('hidden');
@@ -431,7 +396,6 @@ function resetAuth() {
   document.getElementById('otpInput').value = '';
   document.getElementById('authBtn').disabled = true;
 }
-
 window.onEmailInput = function() {
   document.getElementById('authBtn').disabled = !document.getElementById('emailInput').value.trim().includes('@');
 };
@@ -476,14 +440,12 @@ window.verifyOTP = async function() {
   }
 };
 window.logout = async function() { await _supabase.auth.signOut(); location.reload(); };
-
 // 모바일 사이드바 토글
 window.toggleAdminSidebar = function() {
   document.getElementById('adminSidebar').classList.toggle('open');
   document.getElementById('adminSidebarOverlay').classList.toggle('open');
 };
 window.resetAuth = resetAuth;
-
 // ── Tab ───────────────────────────────────────────────────────
 window.switchTab = function(tab) {
   currentTab = tab;
@@ -497,7 +459,6 @@ window.switchTab = function(tab) {
   else if (tab === 'consent') renderConsentLogs();
   else renderStats();
 };
-
 // ── Load all ──────────────────────────────────────────────────
 window.loadAll = async function() {
   document.getElementById('logTable').innerHTML = '<div class="loading-state">로딩 중...</div>';
@@ -515,7 +476,6 @@ window.loadAll = async function() {
     allLogs = accessRes.data.filter(l => l.email !== 'system@ping.internal');
     allActions = actionRes.data;
     allSessions = (sessionRes.error ? [] : sessionRes.data).filter(s => s.email !== 'system@ping.internal');
-
     // banned users 로드
     const bannedRes = await _supabase.from('banned_users').select('email');
     if (!bannedRes.error) {
@@ -531,18 +491,15 @@ window.loadAll = async function() {
     document.getElementById('logTable').innerHTML = `<div class="empty-state">오류: ${e.message}</div>`;
   }
 };
-
 // ── User list (slicer) with Ban ───────────────────────────────
 function renderUserList() {
   const users = [...new Set(allLogs.map(l => l.email).filter(Boolean))].sort();
   const activeUsers = users.filter(u => !bannedUsers.has(u));
   const banned = users.filter(u => bannedUsers.has(u));
   const ul = document.getElementById('userList');
-
   let html = `
     <div style="padding:8px 16px 4px;font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;">KPI 포함 여부</div>
     <div onclick="selectUser(null)" style="padding:8px 16px;font-size:13px;cursor:pointer;color:${!selectedUser?'var(--text)':'var(--text-secondary)'};font-weight:${!selectedUser?'600':'400'};border-left:3px solid ${!selectedUser?'var(--text)':'transparent'};">전체 (${activeUsers.length}명)</div>`;
-
   activeUsers.forEach(u => {
     const cnt = allLogs.filter(l => l.email === u).length;
     const isSelected = selectedUser === u;
@@ -561,7 +518,6 @@ function renderUserList() {
         </div>
       </div>`;
   });
-
   if (banned.length > 0) {
     html += `<div style="margin:12px 16px 6px;font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;border-top:0.5px solid var(--border);padding-top:12px;">🚫 Banned (${banned.length})</div>`;
     banned.forEach(u => {
@@ -579,14 +535,12 @@ function renderUserList() {
   }
   ul.innerHTML = html;
 }
-
 window.toggleKPI = function(email, included) {
   if (included) excludedFromKPI.delete(email);
   else excludedFromKPI.add(email);
   renderUserList();
   if (currentTab === 'stats') renderStats();
 };
-
 window.toggleBan = async function(email, isBanned) {
   if (!confirm(`${email} 을 ${isBanned?'Ban 해제':'Ban'} 하시겠습니까?`)) return;
   if (isBanned) {
@@ -604,7 +558,6 @@ window.toggleBan = async function(email, isBanned) {
   } catch(e) { console.warn('Ban 처리 실패 (테이블 없을 수 있음):', e); }
   renderUserList();
 };
-
 window.selectUser = function(user) {
   selectedUser = user;
   renderUserList();
@@ -617,7 +570,6 @@ window.selectUser = function(user) {
     document.getElementById('adminSidebarOverlay').classList.remove('open');
   }
 };
-
 // ── Stats ─────────────────────────────────────────────────────
 function updateStats() {
   document.getElementById('statTotal').textContent = allLogs.length.toLocaleString();
@@ -627,7 +579,6 @@ function updateStats() {
   document.getElementById('statTodayDate').textContent = today;
   document.getElementById('statUsers').textContent = new Set(allLogs.map(l => l.email)).size;
 }
-
 // ── Access logs ───────────────────────────────────────────────
 function renderAccessLogs() {
   const base = allLogs.filter(l => !excludedFromKPI.has(l.email));
@@ -648,7 +599,6 @@ function renderAccessLogs() {
     </div>`;
   }).join('');
 }
-
 // ── Action logs ───────────────────────────────────────────────
 function renderActionLogs() {
   const base = allActions.filter(l => !excludedFromKPI.has(l.email));
@@ -670,7 +620,6 @@ function renderActionLogs() {
     </div>`;
   }).join('');
 }
-
 window.exportAccessCSV = function() {
   const base = allLogs.filter(l => !excludedFromKPI.has(l.email));
   const data = selectedUser ? base.filter(l => l.email === selectedUser) : base;
@@ -683,7 +632,6 @@ window.exportAccessCSV = function() {
   });
   downloadCSV(rows, `TCS_Access_Log_${new Date().toISOString().slice(0,10)}.csv`);
 };
-
 window.exportActionCSV = function() {
   const base = allActions.filter(l => !excludedFromKPI.has(l.email));
   const data = selectedUser ? base.filter(l => l.email === selectedUser) : base;
@@ -695,7 +643,6 @@ window.exportActionCSV = function() {
   });
   downloadCSV(rows, `TCS_Action_Log_${new Date().toISOString().slice(0,10)}.csv`);
 };
-
 function downloadCSV(rows, filename) {
   const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -704,10 +651,8 @@ function downloadCSV(rows, filename) {
   a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
-
 // ── Stats / KPI ───────────────────────────────────────────────
 let MINS_SAVED_PER_CALC = 2;
-
 // 설정값 로드
 async function loadSettings() {
   try {
@@ -719,15 +664,12 @@ async function loadSettings() {
     }
   } catch(e) { console.warn('설정 로드 실패:', e); }
 }
-
 function renderStats() {
   const kpiActions = allActions.filter(a => !excludedFromKPI.has(a.email));
   const kpiSessions = allSessions.filter(s => !excludedFromKPI.has(s.email));
-
   const sessions = selectedUser ? kpiSessions.filter(s => s.email === selectedUser) : kpiSessions;
   const actions = selectedUser ? kpiActions.filter(a => a.email === selectedUser) : kpiActions;
   const users = [...new Set(allLogs.map(l => l.email).filter(Boolean))].filter(u => !excludedFromKPI.has(u));
-
   const totalCalcs = actions.filter(a => a.action_type === '보상계산').length;
   const totalPriceOnly = actions.filter(a => a.action_type === '가격조회').length;
   const totalTimeSaved = totalCalcs * MINS_SAVED_PER_CALC;
@@ -736,7 +678,6 @@ function renderStats() {
     if (!s.session_start || !s.last_seen) return sum;
     return sum + (new Date(s.last_seen) - new Date(s.session_start)) / 60000;
   }, 0) / sessions.length : 0;
-
   const userStats = users.map(u => {
     const uSessions = kpiSessions.filter(s => s.email === u);
     const uActions = kpiActions.filter(a => a.email === u);
@@ -751,7 +692,6 @@ function renderStats() {
     const dailyAvg = (uSessions.length / days).toFixed(1);
     return { email: u, sessions: uSessions.length, calcs: uCalcs, priceOnly: uPriceOnly, timeSaved: uTimeSaved, avgDur: uAvgDur, dailyAvg };
   }).filter(u => !selectedUser || u.email === selectedUser);
-
   const el = document.getElementById('statsPanel');
   el.innerHTML = `
     <!-- 절약 시간 설정 -->
@@ -791,7 +731,6 @@ function renderStats() {
         </div>`).join('')}
     </div>`;
 }
-
 window.updateMins = async function() {
   const val = parseInt(document.getElementById('minsInput').value);
   if (isNaN(val) || val < 1) return;
@@ -801,13 +740,11 @@ window.updateMins = async function() {
   } catch(e) { console.warn('설정 저장 실패:', e); }
   renderStats();
 };
-
 // ── Export ────────────────────────────────────────────────────
 window.exportCSV = function() {
   const kpiActions = allActions.filter(a => !excludedFromKPI.has(a.email));
   const kpiSessions = allSessions.filter(s => !excludedFromKPI.has(s.email));
   const users = [...new Set(allLogs.map(l => l.email).filter(Boolean))].filter(u => !excludedFromKPI.has(u));
-
   const rows = [['이메일', '총 접속', '일평균 접속', '평균 세션(분)', '보상계산 횟수', '가격조회만', '절약 시간(분)']];
   users.forEach(u => {
     const uSessions = kpiSessions.filter(s => s.email === u);
@@ -823,11 +760,8 @@ window.exportCSV = function() {
     const dailyAvg = (uSessions.length / days).toFixed(1);
     rows.push([u, uSessions.length, dailyAvg, uAvgDur, uCalcs, uPriceOnly, uTimeSaved]);
   });
-
   downloadCSV(rows, `TCS_KPI_${new Date().toISOString().slice(0,10)}.csv`);
 };
-
-
 // ── Consent Records ───────────────────────────────────────────
 async function renderConsentLogs() {
   const activeCount = allConsents.filter(c => !c.revoked_at).length;
@@ -854,7 +788,6 @@ async function renderConsentLogs() {
     </div>`;
   }).join('');
 }
-
 window.revokeConsent = async function(id, email) {
   if (!confirm(`${email} 의 해당 동의를 철회하시겠습니까?\n다음 로그인 시 동의서를 다시 작성해야 합니다.`)) return;
   try {
@@ -869,7 +802,6 @@ window.revokeConsent = async function(id, email) {
     alert('오류가 발생했습니다: ' + e.message);
   }
 };
-
 window.printConsentPDF = function(c) {
   const ts = c.consented_at ? new Date(c.consented_at).toLocaleString('ko-KR') : '—';
   const win = window.open('', '_blank');
@@ -917,7 +849,6 @@ window.printConsentPDF = function(c) {
     </body></html>`);
   win.document.close();
 };
-
 window.exportConsentCSV = function() {
   const rows = [['이메일', '성명', '사번', '동의 시각']];
   allConsents.forEach(c => {
@@ -926,8 +857,6 @@ window.exportConsentCSV = function() {
   });
   downloadCSV(rows, `TCS_Consent_Records_${new Date().toISOString().slice(0,10)}.csv`);
 };
-
-
 window.exportPDF = function() {
   const printWin = window.open('', '_blank');
   const kpiActions = allActions.filter(a => !excludedFromKPI.has(a.email));
@@ -935,7 +864,6 @@ window.exportPDF = function() {
   const users = [...new Set(allLogs.map(l => l.email).filter(Boolean))].filter(u => !excludedFromKPI.has(u));
   const totalCalcs = kpiActions.filter(a => a.action_type === '보상계산').length;
   const totalTimeSaved = totalCalcs * MINS_SAVED_PER_CALC;
-
   let rows = users.map(u => {
     const uSessions = kpiSessions.filter(s => s.email === u);
     const uActions = kpiActions.filter(a => a.email === u);
@@ -948,7 +876,6 @@ window.exportPDF = function() {
     const days = new Set(uSessions.map(s => s.session_start?.slice(0,10))).size || 1;
     return `<tr><td>${u}</td><td>${uSessions.length}</td><td>${(uSessions.length/days).toFixed(1)}</td><td>${uAvgDur}</td><td>${uCalcs}</td><td>${uPriceOnly}</td><td>${uCalcs * MINS_SAVED_PER_CALC}</td></tr>`;
   }).join('');
-
   printWin.document.write(`
     <html><head><title>TCS KPI Report</title>
     <style>body{font-family:sans-serif;padding:20px;}h2{margin-bottom:4px;}table{width:100%;border-collapse:collapse;margin-top:16px;}th,td{border:1px solid #ddd;padding:8px 10px;font-size:12px;text-align:left;}th{background:#f5f5f4;font-weight:600;}.summary{display:flex;gap:24px;margin:12px 0;}.kpi{background:#f5f5f4;padding:10px 16px;border-radius:6px;}</style>
@@ -966,12 +893,10 @@ window.exportPDF = function() {
   printWin.document.close();
   printWin.print();
 };
-
 // ═══════════════════════════════════════════════════════════════
 // PPMo 관리 (담당자별 현황, 차량 삭제, 상세 조회)
 // ═══════════════════════════════════════════════════════════════
 const TOTAL_PPMO_ROUNDS = 6; // 0(초기) + 1~5
-
 async function loadPpmoData() {
   document.getElementById('ppmoTable').innerHTML = '<div class="loading-state">로딩 중...</div>';
   try {
@@ -996,7 +921,6 @@ async function loadPpmoData() {
     document.getElementById('ppmoTable').innerHTML = `<div class="empty-state">로드 실패: ${e.message}</div>`;
   }
 }
-
 function renderPpmoStats() {
   const totalVehicles = ppmoVehicles.length;
   const uniqueSales = new Set(ppmoVehicles.map(v => ppmoOwner(v)).filter(Boolean)).size;
@@ -1006,7 +930,6 @@ function renderPpmoStats() {
   ppmoRounds.forEach(r => { progressPerVehicle[r.vehicle_id] = (progressPerVehicle[r.vehicle_id] || 0) + 1; });
   const avgProgress = totalVehicles ? (Object.values(progressPerVehicle).reduce((a,b) => a+b, 0) / totalVehicles) : 0;
   const completeCount = Object.values(progressPerVehicle).filter(n => n >= TOTAL_PPMO_ROUNDS).length;
-
   document.getElementById('ppmoStats').innerHTML = `
     <div class="stat-card"><div class="stat-num">${totalVehicles}</div><div class="stat-sub">총 차량 수</div></div>
     <div class="stat-card"><div class="stat-num">${uniqueSales}</div><div class="stat-sub">담당자 수</div></div>
@@ -1014,7 +937,6 @@ function renderPpmoStats() {
     <div class="stat-card"><div class="stat-num">${avgProgress.toFixed(1)}/${TOTAL_PPMO_ROUNDS}</div><div class="stat-sub">평균 진행률</div></div>
     <div class="stat-card"><div class="stat-num">${completeCount}</div><div class="stat-sub">완료 차량 (6/6)</div></div>`;
 }
-
 function renderPpmoTable() {
   const salesFilter = document.getElementById('ppmoFilterSales').value;
   const statusFilter = document.getElementById('ppmoFilterStatus').value;
@@ -1028,14 +950,11 @@ function renderPpmoTable() {
   let filtered = ppmoVehicles.filter(v => !salesFilter || ppmoOwner(v) === salesFilter);
   if (statusFilter === 'in_progress') filtered = filtered.filter(v => (progressMap[v.id] || 0) < TOTAL_PPMO_ROUNDS);
   else if (statusFilter === 'complete') filtered = filtered.filter(v => (progressMap[v.id] || 0) >= TOTAL_PPMO_ROUNDS);
-
   document.getElementById('ppmoCountInfo').textContent = `${filtered.length}대 표시`;
-
   if (!filtered.length) {
     document.getElementById('ppmoTable').innerHTML = '<div class="empty-state">해당 조건의 차량이 없습니다.</div>';
     return;
   }
-
   document.getElementById('ppmoTable').innerHTML = filtered.map(v => {
     const done = progressMap[v.id] || 0;
     const pct = Math.round((done / TOTAL_PPMO_ROUNDS) * 100);
@@ -1056,7 +975,6 @@ function renderPpmoTable() {
     </div>`;
   }).join('');
 }
-
 // PPMo 사진 슬롯 (ppmo.html과 동기화 - 순서 그대로)
 const PPMO_PHOTO_SLOTS = [
   { id: 'front', label: '차량전면(번호판)' },
@@ -1078,11 +996,8 @@ const PPMO_PHOTO_SLOTS = [
 ];
 const PPMO_ALIGN_PHOTO_SLOT = { id: 'alignment', label: '얼라인먼트 결과' };
 const SLOT_LABEL_BY_ID = Object.fromEntries([...PPMO_PHOTO_SLOTS, PPMO_ALIGN_PHOTO_SLOT].map(s => [s.id, s.label]));
-// 0회차는 RTD 측정 사진 8개 없음 → 8칸만 사용
-const PPMO_PHOTO_SLOTS_ROUND0 = PPMO_PHOTO_SLOTS.filter(s => !s.id.startsWith('rtd_'));
 const REAR_TIRE_SLOT_IDS = ['tire_rl_outer','tire_rl_inner','tire_rr_outer','tire_rr_inner'];
 const RTD_SLOTS_EXCLUDED_FRONT_ONLY = ['rtd_4','rtd_5','rtd_6','rtd_7','rtd_8'];
-
 function getPpmoSlots(n, frontOnly, alignDone) {
   let slots = PPMO_PHOTO_SLOTS;   // ppmo.html과 동일: 0회차도 RTD 사진 포함
   if (frontOnly) {
@@ -1091,7 +1006,6 @@ function getPpmoSlots(n, frontOnly, alignDone) {
   if (n === 0 || alignDone) slots = [...slots, PPMO_ALIGN_PHOTO_SLOT];
   return slots;
 }
-
 // 6개 타이어 포지션 (DB 코드 + 표시 라벨)
 const PPMO_TIRE_POSITIONS = [
   { pos: '1축-좌',   label: '전륜좌측' },
@@ -1105,7 +1019,6 @@ function getPpmoTirePositions(frontOnly) {
   return frontOnly ? PPMO_TIRE_POSITIONS.filter(t => t.pos.startsWith('1축')) : PPMO_TIRE_POSITIONS;
 }
 const MTD_MM = 1.6;  // 법정 최저 트레드 깊이
-
 // 예상 마일리지 계산: 모든 회차의 (mileage_km, min RTD)로 선형 회귀
 // - 0회차 NTD 측정값이 시작점, 1~5회차 RTD가 추세 데이터
 // 반환: { points, slope, intercept, kmAtMtd, remainingKm, totalLifeKm, currentMinRtd }
@@ -1132,7 +1045,6 @@ function calcMileagePrediction(vehicle, rounds, measurements) {
   const remainingKm = kmAtMtd - latest.km;
   return { points, slope, intercept, kmAtMtd, remainingKm, totalLifeKm, currentMinRtd: latest.rtd };
 }
-
 window.showPpmoDetail = async function(vehicleId) {
   const v = ppmoVehicles.find(x => x.id === vehicleId);
   if (!v) return;
@@ -1142,7 +1054,6 @@ window.showPpmoDetail = async function(vehicleId) {
   document.getElementById('ppmoDetailTitle').textContent = `${v.vehicle_no} · ${v.vehicle_type || ''}`;
   document.getElementById('ppmoDetailContent').innerHTML = '<div class="loading-state">회차 데이터 로딩 중...</div>';
   try {
-    const roundIds = ppmoRounds.filter(r => r.vehicle_id === vehicleId).map(r => r.id);
     let measurements = [], photos = [], feedback = [], tires = [], fullRounds = [];
     const [rRes, tRes] = await Promise.all([
       _supabase.from('ppmo_rounds').select('*').eq('vehicle_id', vehicleId).order('round_no'),
@@ -1177,7 +1088,6 @@ window.showPpmoDetail = async function(vehicleId) {
     const signedUrlMap = await getSignedUrls(photoPaths, 3600);
     const realPhotoCount = photos.filter(p => p.path).length;
     photos.forEach(p => { p.signedUrl = signedUrlMap[p.path] || null; });
-
     // 타이어 정보를 position 키로 매핑
     const tireByPos = {};
     tires.forEach(t => { tireByPos[t.position] = t; });
@@ -1205,14 +1115,13 @@ window.showPpmoDetail = async function(vehicleId) {
         <button onclick="downloadVehicleExcel('${v.id}')" style="padding:7px 14px;background:var(--text);color:var(--bg);border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">📊 이 차량 Excel</button>
         <button onclick="downloadVehiclePhotosZip('${v.id}')" ${!realPhotoCount ? 'disabled style="opacity:0.4;"' : ''} style="padding:7px 14px;background:none;color:var(--text);border:0.5px solid var(--border-strong);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">🗂 사진 전체 ZIP (${realPhotoCount}장)</button>
       </div>`;
-
-    // 예상 마일리지 분석 카드
     const surveyHtml = `<div style="background:var(--bg-secondary);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.7;">
         <div style="font-size:12px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">📝 사전 설문조사</div>
         ${survey ? `<div><b>주행 환경:</b> ${escapeHtmlAdm(survey.driving_env || '—')}</div>
         <div><b>중시 항목:</b> ${(survey.priorities || []).map(escapeHtmlAdm).join(', ') || '—'}</div>
         <div><b>화물 하중:</b> ${escapeHtmlAdm(survey.load_level || '—')}</div>` : '<div style="color:var(--text-tertiary);">응답 없음</div>'}
       </div>`;
+    // 예상 마일리지 분석 카드
     const prediction = calcMileagePrediction(v, fullRounds, measurements);
     let predHtml = '';
     if (prediction) {
@@ -1235,7 +1144,6 @@ window.showPpmoDetail = async function(vehicleId) {
           </div>`;
       }
     }
-
     // 회차별 요약 + 사진 그리드
     let roundsHtml = '<div style="font-size:12px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">회차별 기록</div>';
     for (let n = 0; n < TOTAL_PPMO_ROUNDS; n++) {
@@ -1245,22 +1153,14 @@ window.showPpmoDetail = async function(vehicleId) {
         roundsHtml += `<div style="padding:10px 12px;margin-bottom:6px;border:0.5px dashed var(--border-strong);border-radius:8px;font-size:13px;color:var(--text-tertiary);">${title} · 미입력</div>`;
         continue;
       }
-      const rMeas = measurements.filter(m => m.round_id === r.id);
       const rPhotos = photos.filter(p => p.round_id === r.id);
       const rFeed = feedback.filter(f => f.round_id === r.id);
       const photosBySlot = {};
       rPhotos.forEach(p => { photosBySlot[p.photo_type] = p; });
-      // 포지션별 min RTD
-      const minByPos = {};
-      rMeas.forEach(m => {
-        if (!isNum(m.rtd_mm)) return;   // 측정 안 함/구버전 데이터(null) 건너뜀
-        const v2 = Number(m.rtd_mm);
-        if (minByPos[m.position] == null || v2 < minByPos[m.position]) minByPos[m.position] = v2;
-      });
-      const rtdSummary = Object.entries(minByPos).map(([pos, mm]) => `${pos}: <b>${mm.toFixed(1)}</b>`).join(' · ') || '—';
+      // 그루브별 RTD 표 (포지션 × G1~Gn + 최소, 1~5회차는 초기 대비 마모량/마모율)
+      const grooveHtml = admGrooveTable(v, r, measurements, fullRounds, rotRows);
       const feedbackTags = rFeed.map(f => `<span style="display:inline-block;background:var(--bg-info);color:var(--text-info);padding:2px 8px;border-radius:8px;font-size:11px;margin:2px 3px 0 0;">${escapeHtmlAdm(f.note || f.category)}</span>`).join('');
-
-      // 사진 그리드 (회차별 슬롯 개수 다름 - 0회차 8칸 / 1~5회차 16칸)
+      // 사진 그리드
       const slotsForThisRound = getPpmoSlots(n, v.front_only, r.alignment_done);
       const photoGridHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin-top:8px;">${
         slotsForThisRound.map(slot => {
@@ -1285,7 +1185,6 @@ window.showPpmoDetail = async function(vehicleId) {
           </div>`;
         }).join('')
       }</div>`;
-
       // 현재 슬롯 정의에 없는 사진(구버전 슬롯 ID 등)도 빠짐없이 표시
       const knownIds = new Set(slotsForThisRound.map(sl => sl.id));
       const extraPhotos = rPhotos.filter(p => p.path && p.signedUrl && !knownIds.has(p.photo_type));
@@ -1296,16 +1195,16 @@ window.showPpmoDetail = async function(vehicleId) {
             <div style="font-size:9px;color:var(--text-tertiary);margin-top:2px;">${escapeHtmlAdm(p.photo_type)}</div>
             <a href="javascript:void(0)" onclick="downloadPhotoByPath('${escapeAttr(p.path)}', '${escapeAttr(dl)}')" style="font-size:9px;color:var(--text-info);text-decoration:none;">⬇ 다운</a></div>`; }).join('')
         }</div>` : '';
-      // 0회차만 타이어 DOT/바코드 표시
       const rAl = alignRows.filter(a => a.round_id === r.id);
       const alignHtml = n === 0
-        ? (rAl.length ? admAlignBlock('휠 얼라인먼트 (초기, °)', rAl.filter(a => a.phase === 'initial'), null, v.front_only) : '')
-        : (r.alignment_done ? admAlignBlock('휠 얼라인먼트 (°) · 조정 전 → 후', rAl.filter(a => a.phase === 'before'), rAl.filter(a => a.phase === 'after'), v.front_only) : '');
+        ? (rAl.length ? admAlignBlock('휠 얼라인먼트 (초기)', rAl.filter(a => a.phase === 'initial'), null, v.front_only) : '')
+        : (r.alignment_done ? admAlignBlock('휠 얼라인먼트 · 조정 전 → 후', rAl.filter(a => a.phase === 'before'), rAl.filter(a => a.phase === 'after'), v.front_only) : '');
       const rRot = rotRows.filter(x => x.round_id === r.id);
       const rotHtml = rRot.length ? `<div style="margin-top:8px;padding:8px 10px;background:var(--bg-secondary);border-radius:6px;font-size:11.5px;line-height:1.7;">
           <div style="font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;font-size:10px;">타이어 위치교환</div>
           ${rRot.map(m => `<div>${admTireName(m.tire_key, tireByPos, v.front_only)} : <b>${admPosLabel(m.from_position)}</b> → <b>${admPosLabel(m.to_position)}</b></div>`).join('')}
         </div>` : '';
+      // 0회차만 타이어 DOT/바코드 표시
       const tireInfoHtml = n === 0 && tires.length ? `
         <div style="margin-top:8px;padding:8px 10px;background:var(--bg-secondary);border-radius:6px;font-size:11.5px;line-height:1.7;">
           <div style="font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;font-size:10px;">타이어 정보 (DOT · 바코드)</div>
@@ -1315,13 +1214,12 @@ window.showPpmoDetail = async function(vehicleId) {
             return `<div><b>${t.label}</b> · <span style="font-family:monospace;">DOT ${escapeHtmlAdm(tire.dot_code || '—')} · BC ${escapeHtmlAdm(tire.barcode || '—')}</span></div>`;
           }).join('')}
         </div>` : '';
-
       roundsHtml += `<div style="padding:12px 14px;margin-bottom:8px;background:var(--bg);border:0.5px solid var(--border);border-radius:8px;font-size:12.5px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <div style="font-weight:700;font-size:14px;">${title} · ${new Date(r.inspected_at).toLocaleDateString('ko-KR')}</div>
           <div style="font-size:11px;color:var(--text-tertiary);">${Number(r.mileage_km).toLocaleString('ko-KR')} km${r.rotated ? ' · 로테이션' : ''}${n > 0 && r.alignment_done ? ' · 얼라인먼트' : ''}</div>
         </div>
-        <div style="color:var(--text-secondary);margin-bottom:2px;">${n === 0 ? 'NTD' : 'RTD'} (포지션별 min) — ${rtdSummary}</div>
+        ${grooveHtml || `<div style="color:var(--text-tertiary);">${n === 0 ? 'NTD' : 'RTD'} 측정값 없음</div>`}
         <div style="margin-top:6px;">사진: ${rPhotos.filter(p => p.path).length}/${slotsForThisRound.length}${feedbackTags ? ' · ' + feedbackTags : ''}</div>
         ${photoGridHtml}
         ${extraHtml}
@@ -1331,7 +1229,6 @@ window.showPpmoDetail = async function(vehicleId) {
         ${r.notes ? `<div style="margin-top:8px;padding:6px 10px;background:var(--bg-secondary);border-radius:6px;color:var(--text-secondary);font-style:italic;">📝 ${escapeHtmlAdm(r.notes)}</div>` : ''}
       </div>`;
     }
-
     const rnoById = Object.fromEntries(fullRounds.map(x => [x.id, x.round_no]));
     const tpos = getPpmoTirePositions(v.front_only);
     const posNow = Object.fromEntries(tpos.map(t => [t.pos, t.pos]));
@@ -1356,14 +1253,8 @@ window.closePpmoDetail = function() {
   modal.style.display = 'none';
   modal.classList.add('hidden');
 };
-
 window.deletePpmoVehicle = async function(vehicleId, vehicleNo) {
   const roundIds = ppmoRounds.filter(r => r.vehicle_id === vehicleId).map(r => r.id);
-  let photoCount = 0;
-  if (roundIds.length) {
-    const { data: cnt } = await _supabase.from('ppmo_photos').select('id', { count: 'exact', head: true }).in('round_id', roundIds);
-    photoCount = cnt || 0;
-  }
   const msg = `정말 삭제할까요?\n\n차량: ${vehicleNo}\n회차: ${roundIds.length}건\n사진 등: 함께 삭제됨\n\n※ 이 작업은 되돌릴 수 없습니다.`;
   if (!confirm(msg)) return;
   try {
@@ -1388,7 +1279,7 @@ window.deletePpmoVehicle = async function(vehicleId, vehicleNo) {
       .select();
     if (error) throw error;
     if (!deleted || deleted.length === 0) {
-      throw new Error('삭제된 행이 없습니다.\n\n원인: v5/v6 마이그레이션(관리자 삭제 정책)이 아직 실행되지 않았거나, 현재 계정이 관리자 이메일 목록에 없습니다.\n\nSupabase SQL Editor에서 ppmo_migration_v5.sql 및 v6를 실행하세요.');
+      throw new Error('삭제된 행이 없습니다.\n\n원인: 관리자 삭제 정책(v10)이 아직 실행되지 않았거나, 현재 계정이 관리자 이메일 목록에 없습니다.');
     }
     alert(`차량 ${vehicleNo} 삭제 완료`);
     await loadPpmoData();
@@ -1396,7 +1287,6 @@ window.deletePpmoVehicle = async function(vehicleId, vehicleNo) {
     alert('삭제 실패: ' + e.message + '\n\n※ RLS 정책 확인 필요 시 관리자에게 문의');
   }
 };
-
 // ═══ Excel: 전체 차량 (관리자용 리포트) ═══
 window.exportPpmoExcel = async function() {
   if (!window.XLSX) return alert('Excel 라이브러리 로드 실패');
@@ -1428,7 +1318,6 @@ window.exportPpmoExcel = async function() {
       '등록일': v.created_at ? new Date(v.created_at).toLocaleDateString('ko-KR') : ''
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(vehicleRows), '차량 목록');
-
     // 회차별 상세 데이터 로드
     const roundIds = ppmoRounds.map(r => r.id);
     let allMeas = [], allFeed = [], fullRounds = [];
@@ -1463,9 +1352,8 @@ window.exportPpmoExcel = async function() {
         '비고': r.notes || '',
         '기록자': r.inspected_by
       };
-    }).sort((a,b) => a['차량번호'].localeCompare(b['차량번호']));
+    }).sort((a,b) => String(a['차량번호']).localeCompare(String(b['차량번호'])));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(roundRows), '회차 요약');
-
     // 측정값 상세 시트 (포지션×점별)
     const measRows = allMeas.map(m => {
       const r = fullRounds.find(x => x.id === m.round_id) || {};
@@ -1475,31 +1363,38 @@ window.exportPpmoExcel = async function() {
         '회차': r.round_no === 0 ? '초기' : `${r.round_no}회차`,
         '주행거리': r.mileage_km,
         '포지션': m.position,
-        '측정점': ({outer:'외',center:'중',inner:'내',groove_1:'G1',groove_2:'G2',groove_3:'G3',groove_4:'G4',groove_5:'G5'}[m.point]) || m.point,
+        '측정점': ADM_POINT_LABEL[m.point] || m.point,
         'RTD (mm)': m.rtd_mm
       };
     });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(measRows), 'RTD 상세');
-
+    let rotAll = [];
     try {
       const [alAll, roAll] = await Promise.all([
         _supabase.from('ppmo_alignment').select('*'),
         _supabase.from('ppmo_rotations').select('*')
       ]);
+      rotAll = roAll.data || [];
       const rById = Object.fromEntries(fullRounds.map(x => [x.id, x]));
       const alSheet = (alAll.data || []).map(a => {
         const r = rById[a.round_id] || {}; const v = ppmoVehicles.find(x => x.id === a.vehicle_id) || {};
         return { '차량번호': v.vehicle_no || '', '회차': r.round_no === 0 ? '초기' : `${r.round_no}회차`, '주행거리 (km)': r.mileage_km ?? '',
-                 '단계': ADM_PHASE_LABEL[a.phase] || a.phase, '휠': a.wheel, '캠버(°)': a.camber_deg ?? '', '캐스터(°)': a.caster_deg ?? '', '토(°)': a.toe_deg ?? '' };
+                 '단계': ADM_PHASE_LABEL[a.phase] || a.phase, '휠': a.wheel, '캠버(°)': a.camber_deg ?? '', '캐스터(°)': a.caster_deg ?? '',
+                 '토': a.toe_deg ?? '', '토 단위': a.toe_unit === 'mm' ? 'mm' : '°' };
       }).sort((x, y) => (x['차량번호'] + x['회차']).localeCompare(y['차량번호'] + y['회차']));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(alSheet.length ? alSheet : [{ '차량번호': '데이터 없음' }]), '얼라인먼트');
-      const roSheet = (roAll.data || []).map(m => {
+      const roSheet = rotAll.map(m => {
         const r = rById[m.round_id] || {}; const v = ppmoVehicles.find(x => x.id === m.vehicle_id) || {};
         return { '차량번호': v.vehicle_no || '', '회차': `${r.round_no}회차`, '주행거리 (km)': r.mileage_km ?? '',
                  '타이어(최초 위치)': admPosLabel(m.tire_key), '교환 전': admPosLabel(m.from_position), '교환 후': admPosLabel(m.to_position) };
       });
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(roSheet.length ? roSheet : [{ '차량번호': '데이터 없음' }]), '위치교환');
     } catch(e) { console.warn('얼라인먼트/위치교환 시트 생성 실패:', e); }
+    // 그루브별 RTD 시트 (회차 × 포지션 × 그루브 + 초기 대비 마모량/마모율)
+    try {
+      const gRows = admGrooveSheet(ppmoVehicles, fullRounds, allMeas, rotAll);
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(gRows.length ? gRows : [{ '차량번호': '데이터 없음' }]), '그루브별 RTD');
+    } catch(e) { console.warn('그루브별 RTD 시트 생성 실패:', e); }
     // 사전 설문 시트
     try {
       const { data: svAll } = await _supabase.from('ppmo_survey').select('*');
@@ -1518,7 +1413,6 @@ window.exportPpmoExcel = async function() {
     btn.disabled = false;
   }
 };
-
 // ═══ Excel: 단일 차량 상세 ═══
 window.downloadVehicleExcel = async function(vehicleId) {
   const v = ppmoVehicles.find(x => x.id === vehicleId);
@@ -1552,14 +1446,14 @@ window.downloadVehicleExcel = async function(vehicleId) {
     ]), '차량 정보');
     // 회차별 요약 시트
     const summary = rounds.map(r => {
-      const m = meas.filter(x => x.round_id === r.id && isNum(x.rtd_mm));
+      const m = meas.filter(x => x.round_id === r.id && isNum(x.rtd_mm)).map(x => Number(x.rtd_mm));
       const f = feed.filter(x => x.round_id === r.id);
       return {
         '회차': r.round_no === 0 ? '초기' : `${r.round_no}회차`,
         '검사일': new Date(r.inspected_at).toLocaleDateString('ko-KR'),
         '주행거리 (km)': r.mileage_km,
-        '최소 RTD': m.length ? Number(Math.min(...m.map(x => x.rtd_mm)).toFixed(2)) : '',
-        '평균 RTD': m.length ? Number((m.reduce((a,x) => a+x.rtd_mm, 0)/m.length).toFixed(2)) : '',
+        '최소 RTD': m.length ? Number(Math.min(...m).toFixed(2)) : '',
+        '평균 RTD': m.length ? Number((m.reduce((a,x) => a+x, 0)/m.length).toFixed(2)) : '',
         '로테이션': r.rotated ? 'O' : '',
         '피드백': f.map(x => x.note || x.category).join(' | '),
         '비고': r.notes || ''
@@ -1573,7 +1467,7 @@ window.downloadVehicleExcel = async function(vehicleId) {
         '회차': r.round_no === 0 ? '초기' : `${r.round_no}회차`,
         '주행거리': r.mileage_km,
         '포지션': m.position,
-        '측정점': m.point,
+        '측정점': ADM_POINT_LABEL[m.point] || m.point,
         'RTD (mm)': m.rtd_mm
       };
     });
@@ -1584,20 +1478,22 @@ window.downloadVehicleExcel = async function(vehicleId) {
         _supabase.from('ppmo_rotations').select('*').eq('vehicle_id', vehicleId)
       ]);
       const rb = Object.fromEntries(rounds.map(x => [x.id, x]));
+      // 그루브별 RTD 시트
+      const gRows = admGrooveSheet([v], rounds, meas, roR.data || []);
+      if (gRows.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(gRows), '그루브별 RTD');
       const al = (alR.data || []).map(a => ({ '회차': rb[a.round_id]?.round_no === 0 ? '초기' : `${rb[a.round_id]?.round_no}회차`,
         '주행거리 (km)': rb[a.round_id]?.mileage_km ?? '', '단계': ADM_PHASE_LABEL[a.phase] || a.phase, '휠': a.wheel,
-        '캠버(°)': a.camber_deg ?? '', '캐스터(°)': a.caster_deg ?? '', '토(°)': a.toe_deg ?? '' }));
+        '캠버(°)': a.camber_deg ?? '', '캐스터(°)': a.caster_deg ?? '', '토': a.toe_deg ?? '', '토 단위': a.toe_unit === 'mm' ? 'mm' : '°' }));
       if (al.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(al), '얼라인먼트');
       const ro = (roR.data || []).map(m => ({ '회차': `${rb[m.round_id]?.round_no}회차`, '주행거리 (km)': rb[m.round_id]?.mileage_km ?? '',
         '타이어(최초 위치)': admPosLabel(m.tire_key), '교환 전': admPosLabel(m.from_position), '교환 후': admPosLabel(m.to_position) }));
       if (ro.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ro), '위치교환');
-    } catch(e) { console.warn('얼라인먼트/위치교환 시트 실패:', e); }
+    } catch(e) { console.warn('그루브별 RTD/얼라인먼트/위치교환 시트 실패:', e); }
     XLSX.writeFile(wb, `${v.vehicle_no}_${new Date().toISOString().slice(0,10)}.xlsx`);
   } catch(e) {
     alert('Excel 생성 실패: ' + e.message);
   }
 };
-
 // ═══ ZIP: 차량 전체 사진 (signed URL로 다운로드 후 압축) ═══
 window.downloadVehiclePhotosZip = async function(vehicleId) {
   const v = ppmoVehicles.find(x => x.id === vehicleId);
@@ -1616,12 +1512,10 @@ window.downloadVehiclePhotosZip = async function(vehicleId) {
     const rounds = rRes.data || [];
     const photos = (pRes.data || []).filter(p => p.url);   // '첨부 안 함'(url null) 행 제외
     if (!photos.length) { alert('업로드된 사진 없음'); return; }
-
     // 모든 사진에 대해 signed URL 일괄 생성
     photos.forEach(p => { p.path = extractPathAdm(p.url); });
     const paths = photos.map(p => p.path).filter(Boolean);
     const signedUrlMap = await getSignedUrls(paths, 3600);
-
     const zip = new JSZip();
     let downloaded = 0, failed = 0;
     for (const p of photos) {
@@ -1634,7 +1528,7 @@ window.downloadVehiclePhotosZip = async function(vehicleId) {
         const res = await fetch(signedUrl);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const blob = await res.blob();
-        // 유효성: JPEG 최소 크기 및 컨텐트 타입 확인
+        // 유효성: JPEG 최소 크기 확인
         if (blob.size < 500) { console.warn(`파일 크기 이상 (${blob.size}B): ${p.path}`); failed++; continue; }
         zip.file(`${roundLabel}/${slotLabel}.jpg`, blob);
         downloaded++;
@@ -1662,7 +1556,6 @@ window.downloadVehiclePhotosZip = async function(vehicleId) {
     btn.disabled = false;
   }
 };
-
 window.exportPpmoCSV = function() {
   const progressMap = {};
   const lastDateMap = {};
@@ -1687,17 +1580,21 @@ window.exportPpmoCSV = function() {
   a.click();
   URL.revokeObjectURL(url);
 };
-
 const ADM_PHASE_LABEL = { initial: '초기', before: '조정 전', after: '조정 후' };
 const ADM_WHEELS = [
   { w: 'FL', label: '전륜 좌', front: true }, { w: 'FR', label: '전륜 우', front: true },
   { w: 'RL', label: '후륜 좌', front: false }, { w: 'RR', label: '후륜 우', front: false }
 ];
+const ADM_POINT_LABEL = { outer: '외', center: '중', inner: '내', groove_1: 'G1', groove_2: 'G2', groove_3: 'G3', groove_4: 'G4', groove_5: 'G5' };
 function admPosLabel(pos) { return (PPMO_TIRE_POSITIONS.find(t => t.pos === pos) || {}).label || pos || '—'; }
 function admTireName(key, tireByPos, frontOnly) {
   const idx = getPpmoTirePositions(frontOnly).findIndex(t => t.pos === key);
   const dot = tireByPos[key]?.dot_code;
   return `<b>T${idx + 1}</b> <span style="color:var(--text-tertiary);">(최초 ${escapeHtmlAdm(admPosLabel(key))}${dot ? ' · ' + escapeHtmlAdm(dot) : ''})</span>`;
+}
+function admToeUnit(...lists) {
+  const r = lists.flat().find(x => x && x.toe_unit);
+  return r && r.toe_unit === 'mm' ? 'mm' : '°';
 }
 function admAlignBlock(title, before, after, frontOnly) {
   const wheels = frontOnly ? ADM_WHEELS.filter(w => w.front) : ADM_WHEELS;
@@ -1716,12 +1613,92 @@ function admAlignBlock(title, before, after, frontOnly) {
   const td = 'style="padding:3px 6px;"';
   return `<div style="margin-top:8px;padding:8px 10px;background:var(--bg-secondary);border-radius:6px;font-size:11.5px;overflow-x:auto;">
     <div style="font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;font-size:10px;">${title}</div>
-    <table style="border-collapse:collapse;width:100%;"><tr><th ${th}></th><th ${th}>캠버</th><th ${th}>캐스터</th><th ${th}>토</th></tr>
+    <table style="border-collapse:collapse;width:100%;"><tr><th ${th}></th><th ${th}>캠버 (°)</th><th ${th}>캐스터 (°)</th><th ${th}>토 (${admToeUnit(before, after)})</th></tr>
     ${wheels.map(w => `<tr><td ${td}><b>${w.label}</b></td><td ${td}>${cell(w, 'camber_deg')}</td><td ${td}>${cell(w, 'caster_deg')}</td><td ${td}>${cell(w, 'toe_deg')}</td></tr>`).join('')}
     </table></div>`;
 }
+// ── 그루브별 RTD (admin) ──
+function admNum(x) { return (x !== null && x !== undefined && x !== '' && !isNaN(Number(x))) ? Number(x) : null; }
+function admPointKeys(v, meas) {
+  const keys = Array.from({ length: v.groove_count || 3 }, (_, i) => `groove_${i + 1}`);
+  (meas || []).forEach(m => { if (!keys.includes(m.point)) keys.push(m.point); });
+  return keys;
+}
+// 회차 roundNo 측정 시점의 { 포지션: 타이어(최초 위치) } — RTD는 위치교환 전 측정 기준
+function admTireAtPos(v, vRounds, rots, roundNo) {
+  const rno = Object.fromEntries(vRounds.map(r => [r.id, r.round_no]));
+  const cur = Object.fromEntries(getPpmoTirePositions(v.front_only).map(t => [t.pos, t.pos]));
+  (rots || []).filter(x => rno[x.round_id] != null && rno[x.round_id] < roundNo)
+    .sort((a, b) => rno[a.round_id] - rno[b.round_id])
+    .forEach(x => { cur[x.tire_key] = x.to_position; });
+  const at = {};
+  Object.entries(cur).forEach(([k, p]) => { at[p] = k; });
+  return at;
+}
+// 차량 1대의 회차 × 포지션 × 그루브 데이터
+function admGrooveRows(v, vRounds, meas, rots) {
+  const rIds = new Set(vRounds.map(r => r.id));
+  const vMeas = meas.filter(m => rIds.has(m.round_id));
+  const keys = admPointKeys(v, vMeas);
+  const r0 = vRounds.find(r => r.round_no === 0);
+  const get = (rid, pos, pt) => admNum((vMeas.find(m => m.round_id === rid && m.position === pos && m.point === pt) || {}).rtd_mm);
+  const out = [];
+  [...vRounds].sort((a, b) => a.round_no - b.round_no).forEach(r => {
+    const at = admTireAtPos(v, vRounds, rots, r.round_no);
+    getPpmoTirePositions(v.front_only).forEach(t => {
+      const tk = at[t.pos] || t.pos;
+      const vals = keys.map(k => get(r.id, t.pos, k));
+      const inits = keys.map(k => (r0 && r.round_no > 0) ? get(r0.id, tk, k) : null);
+      const nums = vals.filter(x => x != null);
+      out.push({ round: r, pos: t.pos, tireKey: tk, keys, vals, inits, min: nums.length ? Math.min(...nums) : null });
+    });
+  });
+  return out;
+}
+function admGrooveTable(v, r, measurements, fullRounds, rotRows) {
+  const rows = admGrooveRows(v, fullRounds, measurements, rotRows).filter(x => x.round.id === r.id);
+  if (!rows.length || !rows.some(x => x.vals.some(y => y != null))) return '';
+  const keys = rows[0].keys;
+  const th = 'style="padding:3px 6px;text-align:center;color:var(--text-tertiary);font-weight:600;"';
+  const td = 'style="padding:3px 6px;text-align:center;"';
+  const body = rows.map(x => `<tr><td style="padding:3px 6px;white-space:nowrap;"><b>${admPosLabel(x.pos)}</b>${x.tireKey !== x.pos ? `<div style="font-size:10px;color:var(--text-tertiary);">최초 ${admPosLabel(x.tireKey)}</div>` : ''}</td>${
+    x.vals.map((val, i) => {
+      if (val == null) return `<td ${td}>—</td>`;
+      const iv = x.inits[i];
+      const w = iv != null ? `<div style="font-size:10px;color:var(--text-tertiary);">▼${(iv - val).toFixed(1)} (${iv > 0 ? Math.round((iv - val) / iv * 100) : 0}%)</div>` : '';
+      return `<td ${td}>${val.toFixed(1)}${w}</td>`;
+    }).join('')
+  }<td ${td}><b>${x.min != null ? x.min.toFixed(1) : '—'}</b></td></tr>`).join('');
+  return `<div style="margin-top:4px;padding:8px 10px;background:var(--bg-secondary);border-radius:6px;font-size:11.5px;overflow-x:auto;">
+    <div style="font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;font-size:10px;">그루브별 ${r.round_no === 0 ? 'NTD' : 'RTD'} (mm)${r.round_no > 0 ? ' · ▼ 초기 대비 마모량 (마모율)' : ''}</div>
+    <table style="border-collapse:collapse;width:100%;"><tr><th ${th}></th>${keys.map(k => `<th ${th}>${ADM_POINT_LABEL[k] || k}</th>`).join('')}<th ${th}>최소</th></tr>${body}</table></div>`;
+}
+// Excel '그루브별 RTD' 시트 행 (여러 차량)
+function admGrooveSheet(vehicles, rounds, meas, rots) {
+  const out = [];
+  vehicles.forEach(v => {
+    const vr = rounds.filter(r => r.vehicle_id === v.id);
+    if (!vr.length) return;
+    const vrots = (rots || []).filter(x => x.vehicle_id === v.id);
+    admGrooveRows(v, vr, meas, vrots).forEach(x => {
+      const row = {
+        '차량번호': v.vehicle_no, '회차': x.round.round_no === 0 ? '초기' : `${x.round.round_no}회차`,
+        '주행거리 (km)': x.round.mileage_km ?? '', '포지션': admPosLabel(x.pos), '타이어(최초 위치)': admPosLabel(x.tireKey)
+      };
+      x.keys.forEach((k, i) => { row[`${ADM_POINT_LABEL[k] || k} (mm)`] = x.vals[i] ?? ''; });
+      row['최소 (mm)'] = x.min ?? '';
+      x.keys.forEach((k, i) => {
+        const iv = x.inits[i], val = x.vals[i];
+        const lb = ADM_POINT_LABEL[k] || k;
+        row[`${lb} 마모 (mm)`] = (iv != null && val != null) ? Number((iv - val).toFixed(2)) : '';
+        row[`${lb} 마모율 (%)`] = (iv != null && val != null && iv > 0) ? Number(((iv - val) / iv * 100).toFixed(1)) : '';
+      });
+      out.push(row);
+    });
+  });
+  return out;
+}
 function ppmoOwner(v) { return (v && (v.assigned_to || v.created_by)) || ''; }
-
 // ── 담당자 변경 (관리자) ──
 window.openReassign = function(vehicleId) {
   const v = ppmoVehicles.find(x => x.id === vehicleId);
@@ -1778,8 +1755,7 @@ window.submitReassign = async function() {
 function isNum(x) { return x !== null && x !== undefined && x !== '' && !isNaN(Number(x)); }
 function escapeHtmlAdm(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(s) { return String(s ?? '').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
-
-// 저장된 값이 전체 URL이든 path든 항상 path만 반환 (v10 마이그레이션 이전 데이터 호환)
+// 저장된 값이 전체 URL이든 path든 항상 path만 반환
 function extractPathAdm(urlOrPath) {
   if (!urlOrPath) return null;
   if (urlOrPath.startsWith('http')) {
@@ -1788,7 +1764,6 @@ function extractPathAdm(urlOrPath) {
   }
   return urlOrPath;
 }
-
 // 다수 path에 대해 signed URL을 한 번에 생성 (1시간 만료)
 async function getSignedUrls(paths, expiresIn = 3600) {
   if (!paths || !paths.length) return {};
@@ -1802,7 +1777,6 @@ async function getSignedUrls(paths, expiresIn = 3600) {
   }
   return map;
 }
-
 // 단일 파일 다운로드 (강제 attachment로 지정된 파일명 사용)
 async function downloadPhotoByPath(path, filename) {
   try {
@@ -1822,7 +1796,6 @@ async function downloadPhotoByPath(path, filename) {
 }
 window.downloadPhotoByPath = downloadPhotoByPath;
 </script>
-
 <!-- PPMo 차량 상세 모달 -->
 <div id="ppmoDetailModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:400;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;">
   <div style="background:var(--bg);border-radius:var(--radius);max-width:680px;width:100%;margin:auto;padding:20px 22px;border:0.5px solid var(--border);">
@@ -1833,7 +1806,6 @@ window.downloadPhotoByPath = downloadPhotoByPath;
     <div id="ppmoDetailContent"></div>
   </div>
 </div>
-
 <!-- 담당자 변경 모달 -->
 <div id="reassignModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;align-items:center;justify-content:center;padding:20px;">
   <div style="background:var(--bg);border-radius:var(--radius);max-width:420px;width:100%;padding:20px 22px;border:0.5px solid var(--border);">

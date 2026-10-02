@@ -34,7 +34,6 @@
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: var(--bg-secondary); color: var(--text); min-height: 100vh; }
   .hidden { display: none !important; }
-
   /* Auth */
   #authScreen { position: fixed; inset: 0; background: var(--bg-secondary); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; }
   .auth-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 32px 24px; width: 100%; max-width: 360px; }
@@ -50,14 +49,12 @@
     font-size: 16px; background: var(--bg); color: var(--text); outline: none; -webkit-appearance: none; font-family: inherit;
   }
   input:focus, select:focus, textarea:focus { border-color: var(--text); }
-
   /* Bars */
   .user-bar { background: var(--bg-info); border-bottom: 0.5px solid var(--border); padding: 8px 20px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--text-info); }
   .logout-btn { background: none; border: 0.5px solid var(--text-info); border-radius: 20px; color: var(--text-info); font-size: 11px; padding: 3px 10px; cursor: pointer; }
   .header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 14px 20px; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; gap: 12px; }
   .header-title { font-size: 17px; font-weight: 700; }
   .header-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
-
   /* Nav drawer */
   .hamburger-btn { width: 34px; height: 34px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-strong); background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; flex-shrink: 0; }
   .hamburger-btn span { width: 16px; height: 1.5px; background: var(--text); border-radius: 1px; }
@@ -74,7 +71,6 @@
   .nav-item:active { background: var(--bg-secondary); }
   .nav-item.active { background: var(--bg-info); color: var(--text-info); font-weight: 600; }
   .nav-footer { padding: 14px 20px; border-top: 0.5px solid var(--border); font-size: 11px; color: var(--text-tertiary); }
-
   /* Content */
   .wrap { max-width: 640px; margin: 0 auto; padding: 16px; padding-bottom: 120px; }
   .btn { padding: 12px 16px; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; }
@@ -89,7 +85,6 @@
   .row { display: flex; gap: 10px; }
   .row > div { flex: 1; }
   .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
-
   /* Vehicle list */
   .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
   .list-title { font-size: 15px; font-weight: 700; }
@@ -102,15 +97,12 @@
   .vehicle-item-arrow { font-size: 18px; color: var(--text-tertiary); margin-left: 12px; }
   .vehicle-progress { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: var(--bg-info); color: var(--text-info); margin-left: 6px; }
   .empty-state { text-align: center; color: var(--text-tertiary); padding: 40px 16px; font-size: 14px; }
-
   /* Back link */
   .back-link { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-info); text-decoration: none; margin-bottom: 8px; cursor: pointer; }
-
   /* Vehicle detail summary */
   .vehicle-summary { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
   .vehicle-summary-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
   .vehicle-summary-meta { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
-
   /* Round accordion */
   .round-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
   .round-head { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: var(--bg); }
@@ -126,10 +118,8 @@
   .round-card.open .round-arrow { transform: rotate(90deg); }
   .round-body { padding: 0 16px 16px; border-top: 0.5px solid var(--border); display: none; }
   .round-card.open .round-body { display: block; }
-
   /* RTD grid inside round */
   .rtd-block { border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 10px; background: var(--bg-secondary); }
-
   /* 아티클 자동완성 검색 */
   .search-wrap { position: relative; }
   .search-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg); border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); z-index: 60; max-height: 320px; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
@@ -139,7 +129,6 @@
   .search-dropdown-item .art-no { font-family: 'Menlo', 'Consolas', monospace; font-weight: 700; color: var(--text); letter-spacing: 0.03em; }
   .search-dropdown-item .art-sub { display: block; font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
   .search-dropdown-empty { padding: 14px; text-align: center; color: var(--text-tertiary); font-size: 13px; }
-
   /* 비활성 필드 (아티클 선택 전) */
   input:disabled, textarea:disabled {
     background: var(--bg-secondary) !important;
@@ -149,7 +138,6 @@
   }
   .field.locked .label { color: var(--text-tertiary); }
   .field.locked .label::after { content: ' 🔒'; font-size: 10px; }
-
   /* 타이어 DOT/바코드 입력 블록 (초기 회차 전용) */
   .tire-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-top: 8px; }
   .tire-info-block { border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px; background: var(--bg-secondary); }
@@ -173,7 +161,7 @@
   .align-table td { padding: 3px; text-align: center; }
   .align-table td.wl { text-align: left; font-weight: 700; white-space: nowrap; padding-right: 6px; }
   .align-table input { padding: 9px 4px; font-size: 14px; text-align: center; background: var(--bg); }
-  .align-phase { border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 10px; background: var(--bg-secondary); margin-bottom: 10px; }
+  .align-phase { border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 10px; background: var(--bg-secondary); margin-bottom: 10px; overflow-x: auto; }
   .align-phase-title { font-size: 12.5px; font-weight: 700; margin-bottom: 6px; }
   .align-meta { font-size: 11.5px; color: var(--text-secondary); margin-top: 6px; }
   .delta-pos { color: var(--text-warning); font-weight: 700; }
@@ -187,6 +175,8 @@
   .rot-warn { margin-top: 8px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--bg-danger); color: var(--text-danger); font-size: 12px; }
   .opt-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 10px 12px; margin-top: 4px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer; }
   .opt-toggle input { width: 16px; height: 16px; flex-shrink: 0; }
+  .toe-unit { display: flex; gap: 12px; align-items: center; font-size: 11.5px; color: var(--text-secondary); margin-bottom: 6px; }
+  .toe-unit label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
   /* Edit mode (관리자 전용) */
   .edit-banner { margin: 12px 0; padding: 10px 12px; background: var(--bg-warning); color: var(--text-warning); border-radius: var(--radius-sm); font-size: 12.5px; line-height: 1.5; display: flex; align-items: center; gap: 10px; }
   .edit-banner b { font-weight: 700; }
@@ -199,7 +189,6 @@
   .photo-skip-check input { width: 13px; height: 13px; flex-shrink: 0; margin: 0; }
   .photo-slot.skipped .photo-slot-body { background: var(--bg-secondary); border: 0.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-tertiary); opacity: 0.7; }
   .rtd-min-badge { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; text-align: right; }
-
   /* Photos */
   /* Photo slot grid */
   .photo-slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; margin-top: 8px; }
@@ -213,29 +202,23 @@
   .photo-slot .del { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,0.65); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; }
   .photo-slot .pending-badge { position: absolute; bottom: 4px; left: 4px; background: var(--text-warning); color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 8px; font-weight: 600; }
   .photo-slots-progress { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
-
   /* Feedback chips */
   .feedback-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
   .feedback-chip { padding: 8px 12px; border-radius: 20px; border: 0.5px solid var(--border-strong); background: none; color: var(--text-secondary); font-size: 13px; cursor: pointer; user-select: none; }
   .feedback-chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
   .feedback-chip .chip-cat { font-size: 9px; opacity: 0.6; margin-right: 4px; text-transform: uppercase; }
-
   /* Feedback view (done) */
   .feedback-tag { display: inline-block; padding: 4px 10px; margin: 3px 4px 3px 0; font-size: 12px; border-radius: 12px; background: var(--bg-info); color: var(--text-info); font-weight: 500; }
-
   /* Section header inside round */
   .section-head { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 16px 0 10px; }
-
   /* Toast */
   .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 20px; font-size: 13px; z-index: 300; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
   .toast.err { background: var(--text-danger); color: #fff; }
-
   /* Uploading indicator */
   .uploading { display: inline-block; padding: 4px 10px; font-size: 11px; background: var(--bg-warning); color: var(--text-warning); border-radius: 10px; margin-left: 8px; }
 </style>
 </head>
 <body>
-
 <!-- Auth -->
 <div id="authScreen">
   <div class="auth-card">
@@ -257,7 +240,6 @@
     <div id="authStatus" class="hidden auth-status err"></div>
   </div>
 </div>
-
 <!-- Nav drawer -->
 <div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
 <div class="nav-drawer" id="navDrawer">
@@ -273,7 +255,6 @@
   </div>
   <div class="nav-footer">v2 · CTK TCS Team</div>
 </div>
-
 <!-- Main -->
 <div id="mainApp" class="hidden">
   <div class="user-bar" id="userBar">
@@ -287,9 +268,7 @@
       <div class="header-sub" id="pageSub">VanContact AP2 · 마일리지 체크업</div>
     </div>
   </div>
-
   <div class="wrap">
-
     <!-- VIEW 1: Vehicle List -->
     <div id="view-list">
       <button class="btn full" onclick="showNewVehicleForm()" style="margin-bottom:16px;">+ 새 차량 생성하기</button>
@@ -301,7 +280,6 @@
       </div>
       <div id="vehicleList"><div class="empty-state">불러오는 중...</div></div>
     </div>
-
     <!-- VIEW 2: New Vehicle Form -->
     <div id="view-new" class="hidden">
       <a class="back-link" onclick="showList()">← 목록으로</a>
@@ -367,7 +345,6 @@
         <button class="btn full" id="btnCreateVehicle" onclick="createVehicle()" disabled>생성하기</button>
       </div>
     </div>
-
     <!-- VIEW 3: Vehicle Detail -->
     <div id="view-detail" class="hidden">
       <a class="back-link" onclick="showList()">← 목록으로</a>
@@ -377,12 +354,9 @@
       </div>
       <div id="roundsWrap"></div>
     </div>
-
   </div>
 </div>
-
 <div id="toast" class="toast hidden"></div>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ── Config ──
@@ -399,7 +373,6 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     detectSessionInUrl: false
   }
 });
-
 const POSITIONS = ['1축-좌','1축-우','2축-좌외','2축-좌내','2축-우외','2축-우내'];
 // 레거시(outer/center/inner) + 신규(groove_N) 호환 측정점 라벨 매핑
 const POINT_LABEL_MAP = {
@@ -414,7 +387,6 @@ function getPoints() {
 // 레거시 호환: 저장된 데이터의 point 키를 라벨로 변환
 function pointLabel(key) { return POINT_LABEL_MAP[key] || key; }
 const TOTAL_ROUNDS = 6; // 0(초기) + 1~5
-
 // 사진 슬롯 16개 (사용자 정의)
 const PHOTO_SLOTS = [
   { id: 'front', label: '차량전면(번호판)' },
@@ -443,9 +415,6 @@ function needsAlignPhoto(n) {
   if (st && st.round && !st.editing) return !!st.round.alignment_done;   // 저장된 회차 (조회)
   return !!document.getElementById(`alchk-${n}`)?.checked;          // 입력 중인 회차
 }
-
-// (삭제됨) 이전엔 0회차 RTD 사진 생략했으나, 그루브별 실측이 필요해서 되돌림
-
 // 6개 타이어 포지션 (DB 코드 + 표시 라벨 + 사진 슬롯 매핑)
 const TIRE_POSITIONS = [
   { pos: '1축-좌',   label: '전륜좌측',   slotId: 'tire_fl' },
@@ -455,11 +424,9 @@ const TIRE_POSITIONS = [
   { pos: '2축-우외', label: '후륜우측1',  slotId: 'tire_rr_outer' },
   { pos: '2축-우내', label: '후륜우측2',  slotId: 'tire_rr_inner' },
 ];
-
 // 전륜만 모드에서 제외할 사진 슬롯 ID (뒷타이어 4장 + RTD 사진 8→3 축소)
 const REAR_TIRE_SLOT_IDS = ['tire_rl_outer','tire_rl_inner','tire_rr_outer','tire_rr_inner'];
 const RTD_SLOTS_EXCLUDED_FRONT_ONLY = ['rtd_4','rtd_5','rtd_6','rtd_7','rtd_8'];
-
 // _currentVehicle.front_only 반영해서 회차별 슬롯/포지션 반환
 function getSlots(n) {
   const frontOnly = _currentVehicle?.front_only || false;
@@ -478,7 +445,6 @@ function getTirePositions() {
   const frontOnly = _currentVehicle?.front_only || false;
   return frontOnly ? TIRE_POSITIONS.filter(t => t.pos.startsWith('1축')) : TIRE_POSITIONS;
 }
-
 // 피드백 퀵픽 칩 (다중 선택 가능, "특이사항 없음"은 배타적)
 const FEEDBACK_CHIPS = [
   { category: '없음', label: '특이사항 없음', exclusive: true },
@@ -491,7 +457,6 @@ const FEEDBACK_CHIPS = [
   { category: '기타', label: '진동/이물감' },
   { category: '손상', label: '외관 손상 있음' },
 ];
-
 let _currentEmail = null;
 let _currentVehicle = null;      // detail view의 대상 차량
 // 사전 설문 (0회차 전용) — ppmo_survey 테이블에 저장
@@ -514,7 +479,7 @@ const SURVEY = {
 };
 let _currentVehicleSurvey = null; // 저장된 사전 설문
 // ── 휠 얼라인먼트 ──
-// 단위: degree(°). 토는 개별 토 (+ toe-in / − toe-out)
+// 캠버·캐스터: degree(°) / 토: 장비 표시 단위(mm 또는 °) 그대로 + toe_unit 저장. 토는 개별 토 (+ toe-in / − toe-out)
 const ALIGN_WHEELS = [
   { w: 'FL', label: '전륜 좌', front: true },
   { w: 'FR', label: '전륜 우', front: true },
@@ -527,6 +492,8 @@ const ALIGN_FIELDS = [
   { f: 'toe_deg',    label: '토', frontOnly: false },
 ];
 const ALIGN_PHASE_LABEL = { initial: '초기', before: '조정 전', after: '조정 후' };
+// 입력 허용 범위 (오타·자리수 실수 방지)
+const ALIGN_LIMITS = { camber_deg: [-5, 5], caster_deg: [-2, 12], toe_mm: [-10, 10], toe_deg: [-2, 2] };
 function getAlignWheels() {
   return _currentVehicle?.front_only ? ALIGN_WHEELS.filter(x => x.front) : ALIGN_WHEELS;
 }
@@ -538,7 +505,6 @@ let _currentVehicleTires = {};   // { position: {dot_code, barcode} } - 차량 �
 let _roundsState = {};           // { round_no: { round, measurements, photosBySlot, pendingBySlot, feedback, pendingChips, activeSlot } }
 let _fileInputTargetRound = null;
 let _fileInputTargetSlot = null;
-
 // ── Auth ──
 document.addEventListener('DOMContentLoaded', async () => {
   const { data: { session } } = await _supabase.auth.getSession();
@@ -603,7 +569,6 @@ async function launchApp(email) {
 }
 window.openNav = () => { document.getElementById('navDrawer').classList.add('open'); document.getElementById('navOverlay').classList.add('open'); };
 window.closeNav = () => { document.getElementById('navDrawer').classList.remove('open'); document.getElementById('navOverlay').classList.remove('open'); };
-
 // ── Access logging ──
 async function logAccess(email, type) {
   try {
@@ -617,7 +582,6 @@ async function logAccess(email, type) {
 window.logNav = function(type) {
   if (_currentEmail) logAccess(_currentEmail, type);
 };
-
 // ── View switching ──
 function showList() {
   document.getElementById('view-list').classList.remove('hidden');
@@ -675,7 +639,6 @@ function setPageHeader(title, sub) {
   if (sub) { document.getElementById('pageSub').textContent = sub; document.getElementById('pageSub').style.display = ''; }
   else document.getElementById('pageSub').style.display = 'none';
 }
-
 // ── Vehicle list ──
 async function loadVehicles() {
   const wrap = document.getElementById('vehicleList');
@@ -714,7 +677,6 @@ async function loadVehicles() {
   }
 }
 window.openVehicle = function(v) { showDetail(v); };
-
 // ── New vehicle ──
 // 아티클 자동완성 검색 (VanContact AP2 아티클만 표시)
 let _articleSearchTimer = null;
@@ -771,7 +733,6 @@ window.onArticleInput = function() {
     }
   }, 300);
 };
-
 window.selectArticle = function(a) {
   _selectedArticle = a;
   document.getElementById('fNewArticle').value = `${a.article} · ${a.size || ''}`;
@@ -797,7 +758,6 @@ window.selectArticle = function(a) {
   status.textContent = `✓ ${a.pattern || 'VanContact AP2'} 선택됨`;
   validateNewVehicle();
 };
-
 function lockDependentFields() {
   ['fNewTireSize','fNewLoadIndex','fNewSpeedIndex'].forEach(id => {
     const el = document.getElementById(id);
@@ -813,14 +773,12 @@ function unlockDependentFields() {
     el.parentElement.classList.remove('locked');
   });
 }
-
 // 드롭다운 외부 클릭 시 닫기
 document.addEventListener('click', e => {
   if (!e.target.closest('.search-wrap')) {
     document.querySelectorAll('.search-dropdown').forEach(d => d.classList.add('hidden'));
   }
 });
-
 window.validateNewVehicle = function() {
   const ok = ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewTireSize'].every(id => document.getElementById(id).value.trim())
     && _selectedArticle != null;
@@ -855,7 +813,6 @@ window.createVehicle = async function() {
     btn.disabled = false; btn.textContent = '생성하기';
   }
 };
-
 // ── Rounds ──
 async function renderRounds() {
   const wrap = document.getElementById('roundsWrap');
@@ -881,7 +838,6 @@ async function renderRounds() {
     // 타이어 정보를 position 키로 매핑해서 저장
     _currentVehicleTires = {};
     (tires || []).forEach(t => { _currentVehicleTires[t.position] = t; });
-
     const roundIds = (rounds || []).map(r => r.id);
     let allMeasurements = [], allPhotos = [], allFeedback = [];
     if (roundIds.length) {
@@ -894,7 +850,6 @@ async function renderRounds() {
       allPhotos = p.data || [];
       allFeedback = f.data || [];
     }
-
     // 모든 사진의 path에 대해 signed URL 일괄 생성 (1시간 만료)
     // 기존 저장 데이터가 전체 URL 형식일 경우 대비: path만 추출
     const paths = allPhotos.map(p => extractPath(p.url)).filter(Boolean);
@@ -918,7 +873,6 @@ async function renderRounds() {
       p.path = path;
       p.signedUrl = signedUrlMap[path] || null;
     });
-
     // state 초기화
     _roundsState = {};
     for (let n = 0; n < TOTAL_ROUNDS; n++) {
@@ -937,7 +891,8 @@ async function renderRounds() {
         photosBySlot,           // { slot_id: photoRow } — 저장된 사진
         pendingBySlot: {},      // { slot_id: {file, previewUrl, sizeKb} } — 업로드 대기
         skippedSlots: new Set(),// '업로드하지 않고 진행' 체크한 슬롯 id
-        pendingChips: new Set() // 선택된 피드백 칩 인덱스
+        pendingChips: new Set(),// 선택된 피드백 칩 인덱스
+        toeUnit: 'mm'           // 토 입력 단위 (장비 표시 단위)
       };
     }
     wrap.innerHTML = '';
@@ -964,9 +919,8 @@ function buildRoundCard(n) {
   const isDone = !!s.round;
   const title = isRound0 ? '초기 설치 시점' : `${n}회차 측정`;
   const mileage = isRound0 ? (_currentVehicle.initial_mileage_km || 0) : (s.round ? s.round.mileage_km : '');
-
   const card = document.createElement('div');
-  card.className = 'round-card' + (isDone ? '' : '');
+  card.className = 'round-card';
   card.dataset.n = n;
   card.innerHTML = `
     <div class="round-head" onclick="toggleRound(${n})">
@@ -986,12 +940,8 @@ function buildRoundCard(n) {
 }
 function renderDoneBody(n) {
   const s = _roundsState[n];
-  const minRtdByPos = {};
-  s.measurements.forEach(m => {
-    if (minRtdByPos[m.position] == null || m.rtd_mm < minRtdByPos[m.position]) minRtdByPos[m.position] = m.rtd_mm;
-  });
-  const rtdSummary = getPositions().map(p => `<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:0.5px solid var(--border);"><span>${p}</span><span style="font-weight:600;">${minRtdByPos[p] != null ? minRtdByPos[p].toFixed(1) + ' mm' : '—'}</span></div>`).join('');
-
+  // 그루브별 RTD 표 (포지션 × G1~Gn + 최소, 1~5회차는 초기 대비 마모량/마모율)
+  const rtdSummary = renderRtdGrooveTable(n);
   // 사진 슬롯 (읽기 전용) — 회차별 슬롯 개수 다름
   const slotsForThisRound = getSlots(n);
   const photoSlotsHtml = `<div class="photo-slot-grid">${slotsForThisRound.map(slot => {
@@ -1002,7 +952,6 @@ function renderDoneBody(n) {
     </div>`;
   }).join('')}</div>`;
   const filledCount = slotsForThisRound.filter(slot => s.photosBySlot[slot.id]).length;
-
   // 피드백 (칩 + 자유 메모 분리)
   const chipFeedbacks = s.feedback.filter(f => !f.note || FEEDBACK_CHIPS.some(c => c.label === f.note));
   const freeFeedbacks = s.feedback.filter(f => f.note && !FEEDBACK_CHIPS.some(c => c.label === f.note));
@@ -1010,7 +959,6 @@ function renderDoneBody(n) {
     ? `<div>${chipFeedbacks.map(f => `<span class="feedback-tag">${escapeHtml(f.note || f.category)}</span>`).join('')}</div>
        ${freeFeedbacks.map(f => `<div style="font-size:13px;color:var(--text-secondary);background:var(--bg-secondary);padding:10px 12px;border-radius:var(--radius-sm);margin-top:6px;">${escapeHtml(f.note)}</div>`).join('')}`
     : '<div class="sub-label">입력된 피드백 없음</div>';
-
   return `
     ${renderDoneActions(n)}
     <div class="section-head">기본 정보</div>
@@ -1029,8 +977,8 @@ function renderDoneBody(n) {
           return `<div style="padding:4px 0;border-bottom:0.5px solid var(--border);"><b>${t.label}</b><br><span style="font-family:monospace;">DOT: ${dot} · BC: ${bc}</span></div>`;
         }).join('')
       }</div>` : ''}
-    <div class="section-head">${n === 0 ? '초기 트레드' : '측정값'} (포지션별 최소 RTD)</div>
-    <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;">${rtdSummary}</div>
+    <div class="section-head">${n === 0 ? '초기 트레드' : '측정값'} (그루브별 RTD · mm)</div>
+    <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;overflow-x:auto;">${rtdSummary}</div>
     <div class="section-head">사진 (${filledCount}/${slotsForThisRound.length})</div>
     ${photoSlotsHtml}
     ${renderAlignDone(n)}
@@ -1039,7 +987,6 @@ function renderDoneBody(n) {
     ${feedbackHtml}`}
     ${s.round.notes ? `<div class="section-head">비고</div><div style="font-size:13px;color:var(--text-secondary);background:var(--bg-secondary);padding:10px 12px;border-radius:var(--radius-sm);">${escapeHtml(s.round.notes)}</div>` : ''}`;
 }
-
 function renderEditBody(n, isRound0, mileage) {
   const today = new Date().toISOString().slice(0, 10);
   const editing = !!_roundsState[n]?.editing;
@@ -1058,7 +1005,6 @@ function renderEditBody(n, isRound0, mileage) {
         <input type="number" id="mile-${n}" placeholder="누적 주행거리" value="${mileage || ''}" oninput="validateRoundSave(${n})">
       </div>` : ''}
     </div>
-
     <div class="section-head" id="photoHead-${n}">사진 업로드 (총 ${getSlots(n).length}칸)</div>
     ${isRound0
       ? `<div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">💡 타이어 사진은 <b>그루브 ${_currentVehicle?.groove_count || 3}개가 모두 보이도록</b> 촬영해주세요.</div>`
@@ -1066,25 +1012,22 @@ function renderEditBody(n, isRound0, mileage) {
     <div class="photo-slots-progress" id="progress-${n}">0/${getSlots(n).length} 처리됨</div>
     <div class="photo-slot-grid" id="pslots-${n}"></div>
     <input type="file" id="fileInp-${n}" accept="image/*" class="hidden" onchange="onSlotFileChosen(${n}, event)">
-
     ${isRound0 ? `
       <div class="section-head">타이어 정보 (DOT · 바코드) · ${getTirePositions().length}포지션 필수</div>
       <div class="sub-label" style="margin-bottom:6px;">DOT 예: <b>16Y032TF3 1024</b> (9자 공장/제품 + 4자 주차/년도) · 바코드 예: <b>6280495159</b> (10자)</div>
       <div class="tire-info-grid" id="tireInfoGrid"></div>` : ''}
-
     <div class="section-head">${isRound0 ? '초기 트레드 측정 (mm)' : 'RTD 측정 (mm)'} · ${getPositions().length}본 × 그루브 ${_currentVehicle?.groove_count || 3}개 (G1 → G${_currentVehicle?.groove_count || 3})</div>
     ${isRound0 ? `<div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">💡 신품 타이어의 그루브별 트레드 깊이를 실측해서 입력하세요.</div>` : ''}
     <div id="rtdWrap-${n}"></div>
-
-    ${isRound0 ? `<div class="section-head">휠 얼라인먼트 측정 (°) · 필수</div>
-    <div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">💡 테스트 시작 전 차륜 정렬을 완료한 상태의 <b>최종 측정값</b>을 입력하세요. 토: + toe-in / − toe-out. 증빙용 얼라인먼트 결과 사진은 위 사진 업로드의 <b>'얼라인먼트 결과'</b> 칸에 첨부하세요.</div>
+    ${isRound0 ? `<div class="section-head">휠 얼라인먼트 측정 · 필수</div>
+    <div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);line-height:1.6;">💡 정렬을 마친 <b>최종 측정값</b>을 입력하세요. 장비 화면의 <b>큰 숫자</b>만 입력합니다 (왼쪽 칸 = 좌측 바퀴, 오른쪽 칸 = 우측 바퀴). 막대 양 끝의 작은 숫자(기준 범위)와 가운데 회색 숫자(좌우 차이)는 입력하지 않습니다. 후륜 값은 장비의 [다음 축 보기]에서 확인하세요. 토: + toe-in / − toe-out. 증빙 사진은 위 사진 업로드의 <b>'얼라인먼트 결과'</b> 칸에 첨부하세요.</div>
     ${renderAlignPhase(n, 'initial')}
     <div class="section-head">사전 설문조사 · 필수</div>
     <div id="surveyWrap-${n}"></div>` : `
     <div class="section-head">휠 얼라인먼트</div>
     <label class="opt-toggle"><input type="checkbox" id="alchk-${n}" onchange="onAlignToggle(${n})"> 이번 방문에서 얼라인먼트 측정/조정 실시</label>
     <div id="alWrap-${n}" class="hidden" style="margin-top:10px;">
-      <div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);">단위 °, 토: + toe-in / − toe-out. 조정하지 않았으면 조정 후 = 조정 전과 동일하게 입력. 체크하면 사진 업로드에 <b>'얼라인먼트 결과'</b> 칸이 추가됩니다.</div>
+      <div class="sub-label" style="margin-bottom:6px;color:var(--text-secondary);line-height:1.6;">장비 화면의 큰 숫자만 입력 (왼쪽 = 좌, 오른쪽 = 우). 조정 전 = 처음 측정값, 조정 후 = 조정을 마친 최종값. 조정하지 않았으면 조정 후 = 조정 전과 동일하게 입력. 토: + toe-in / − toe-out. 체크하면 사진 업로드에 <b>'얼라인먼트 결과'</b> 칸이 추가됩니다.</div>
       ${renderAlignPhase(n, 'before')}
       <button type="button" class="btn outline sm" style="margin:-2px 0 10px;" onclick="copyAlignBeforeToAfter(${n})">↓ 조정 전 값을 조정 후에 복사</button>
       ${renderAlignPhase(n, 'after')}
@@ -1093,15 +1036,12 @@ function renderEditBody(n, isRound0, mileage) {
     ${!isRound0 ? `<div class="section-head">주관 피드백</div>
     <div class="feedback-chips" id="chips-${n}"></div>
     <textarea id="notes-${n}" rows="2" placeholder="자유 메모 (예: 특이사항, 세부 피드백)"></textarea>
-
     <div class="section-head">타이어 위치교환</div>
     <label class="opt-toggle"><input type="checkbox" id="rot-${n}" onchange="onRotToggle(${n})"> 이번 방문에서 타이어 위치교환(로테이션) 실시</label>
     <div id="rotWrap-${n}" class="hidden" style="margin-top:10px;"></div>` : ''}
-
     <button class="btn full" id="save-${n}" onclick="saveRound(${n})" disabled style="margin-top:12px;">${saveLabel(n)}</button>
     ${_roundsState[n]?.editing ? `<button class="btn full outline" onclick="cancelEditRound(${n})" style="margin-top:8px;">수정 취소</button>` : ''}`;
 }
-
 window.toggleRound = function(n) {
   const card = document.querySelector(`.round-card[data-n="${n}"]`);
   const wasOpen = card.classList.contains('open');
@@ -1116,7 +1056,6 @@ window.toggleRound = function(n) {
     validateRoundSave(n);
   }
 };
-
 // 타이어 정보(DOT/바코드) 그리드 렌더 - 0회차 전용
 function renderTireInfoGrid() {
   const wrap = document.getElementById('tireInfoGrid');
@@ -1132,7 +1071,6 @@ function renderTireInfoGrid() {
     </div>`;
   }).join('');
 }
-
 // ── 0회차: 사전 설문 ──
 function ensureSurveyState(n) {
   const s = _roundsState[n];
@@ -1173,8 +1111,74 @@ function renderSurveyDone() {
   return `<div class="section-head">사전 설문조사</div>
     <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;">${body}</div>`;
 }
-
+// ── 그루브별 RTD 표 (조회 화면) ──
+// RTD는 위치교환 전에 측정 → 회차 n 측정 시점의 타이어 = 회차 n 이전 교환 이력 기준
+function renderRtdGrooveTable(n) {
+  const s = _roundsState[n];
+  const meas = s.measurements || [];
+  const keys = getPoints().map(p => p[0]);
+  meas.forEach(m => { if (!keys.includes(m.point)) keys.push(m.point); });   // 구버전 측정점(외/중/내)도 표시
+  const val = (list, pos, pt) => {
+    const m = list.find(x => x.position === pos && x.point === pt);
+    return (m && m.rtd_mm != null && m.rtd_mm !== '' && !isNaN(Number(m.rtd_mm))) ? Number(m.rtd_mm) : null;
+  };
+  const init = (n > 0 && _roundsState[0]?.round) ? (_roundsState[0].measurements || []) : [];
+  const tireAt = {};   // { 현재 포지션: 타이어(최초 포지션) }
+  if (n > 0) Object.entries(currentTirePositions(n)).forEach(([k, p]) => { tireAt[p] = k; });
+  const head = keys.map(k => `<th>${escapeHtml(pointLabel(k))}</th>`).join('');
+  const body = getPositions().map(pos => {
+    const tk = n > 0 ? (tireAt[pos] || pos) : pos;
+    const vals = keys.map(k => val(meas, pos, k));
+    const nums = vals.filter(v => v != null);
+    const cells = vals.map((v, i) => {
+      if (v == null) return '<td style="color:var(--text-tertiary);">—</td>';
+      const iv = n > 0 ? val(init, tk, keys[i]) : null;
+      const wear = iv != null
+        ? `<div style="font-size:10px;color:var(--text-tertiary);">▼${(iv - v).toFixed(1)} (${iv > 0 ? Math.round((iv - v) / iv * 100) : 0}%)</div>` : '';
+      return `<td><b>${v.toFixed(1)}</b>${wear}</td>`;
+    }).join('');
+    const moved = (n > 0 && tk !== pos) ? `<div style="font-size:10px;color:var(--text-tertiary);font-weight:400;">최초 ${escapeHtml(POS_LABEL[tk] || tk)}</div>` : '';
+    return `<tr><td class="wl">${escapeHtml(POS_LABEL[pos] || pos)}${moved}</td>${cells}<td style="color:var(--text-info);font-weight:700;">${nums.length ? Math.min(...nums).toFixed(1) : '—'}</td></tr>`;
+  }).join('');
+  return `<table class="align-table"><thead><tr><th></th>${head}<th>최소</th></tr></thead><tbody>${body}</tbody></table>
+    ${n > 0 ? '<div class="align-meta">▼ 초기 대비 마모량 mm (마모율 %) · 위치교환한 타이어는 해당 타이어의 초기값 기준</div>' : ''}`;
+}
 // ── 휠 얼라인먼트 ──
+function getToeUnit(n) { return (_roundsState[n] && _roundsState[n].toeUnit) || 'mm'; }
+function toeUnitText(u) { return u === 'mm' ? ' mm' : '°'; }
+function toeUnitOf(rows) { return toeUnitText(((rows || []).find(r => r && r.toe_unit) || {}).toe_unit || 'deg'); }
+function toeUnitSelector(n) {
+  const u = getToeUnit(n);
+  return `<div class="toe-unit">토 단위
+    <label><input type="radio" name="toeUnit-${n}" value="mm" ${u === 'mm' ? 'checked' : ''} onchange="setToeUnit(${n},'mm')"> mm</label>
+    <label><input type="radio" name="toeUnit-${n}" value="deg" ${u === 'deg' ? 'checked' : ''} onchange="setToeUnit(${n},'deg')"> °</label>
+    <span style="color:var(--text-tertiary);">장비 화면 표시 단위 그대로</span></div>`;
+}
+window.setToeUnit = function(n, u) {
+  _roundsState[n].toeUnit = u;
+  document.querySelectorAll(`input[name="toeUnit-${n}"]`).forEach(r => { r.checked = r.value === u; });
+  document.querySelectorAll(`input[id^="al-${n}-"][data-field="toe_deg"]`).forEach(el => {
+    if (!el.placeholder.startsWith('직전')) el.placeholder = u === 'mm' ? 'mm' : '°';
+  });
+  onAlignInput(n);
+};
+// 범위 밖 칸을 빨간 테두리로 표시하고 개수 반환
+function alignRangeErrors(n) {
+  if (n > 0 && !document.getElementById(`alchk-${n}`)?.checked) return 0;
+  const u = getToeUnit(n);
+  let bad = 0;
+  document.querySelectorAll(`input[id^="al-${n}-"]`).forEach(el => {
+    if (el.value === '') { el.style.borderColor = ''; el.title = ''; return; }
+    const v = parseFloat(el.value);
+    const f = el.dataset.field;
+    const lim = f === 'toe_deg' ? (u === 'mm' ? ALIGN_LIMITS.toe_mm : ALIGN_LIMITS.toe_deg) : ALIGN_LIMITS[f];
+    const out = !lim || isNaN(v) || v < lim[0] || v > lim[1];
+    el.style.borderColor = out ? 'var(--text-danger)' : '';
+    el.title = (out && lim) ? `허용 범위 ${lim[0]} ~ ${lim[1]}` : '';
+    if (out) bad++;
+  });
+  return bad;
+}
 function lastAlignValues(beforeRound) {
   const rnoById = {};
   Object.values(_roundsState).forEach(st => { if (st.round) rnoById[st.round.id] = st.round.round_no; });
@@ -1189,18 +1193,19 @@ function renderAlignPhase(n, phase) {
   const wheels = getAlignWheels();
   const hint = phase === 'before' ? lastAlignValues(n) : {};
   const head = ALIGN_FIELDS.filter(f => !f.frontOnly || wheels.some(w => w.front))
-    .map(f => `<th>${f.label}</th>`).join('');
+    .map(f => `<th>${f.label}${f.f === 'toe_deg' ? '' : ' (°)'}</th>`).join('');
   const rows = wheels.map(w => {
     const cells = ALIGN_FIELDS.map(f => {
       if (f.frontOnly && !w.front) return '<td style="color:var(--text-tertiary);font-size:11px;">—</td>';
       const prev = hint[w.w]?.[f.f];
-      const ph = prev != null ? `직전 ${Number(prev).toFixed(2)}` : '°';
+      const ph = prev != null ? `직전 ${Number(prev).toFixed(2)}` : (f.f === 'toe_deg' ? (getToeUnit(n) === 'mm' ? 'mm' : '°') : '°');
       return `<td><input type="number" step="0.01" inputmode="decimal" class="alIn-${n}-${phase}" id="al-${n}-${phase}-${w.w}-${f.f}" data-wheel="${w.w}" data-field="${f.f}" placeholder="${ph}" oninput="onAlignInput(${n})"></td>`;
     }).join('');
     return `<tr><td class="wl">${w.label}</td>${cells}</tr>`;
   }).join('');
   return `<div class="align-phase">
     <div class="align-phase-title">${ALIGN_PHASE_LABEL[phase]}</div>
+    ${phase !== 'after' ? toeUnitSelector(n) : ''}
     <table class="align-table"><thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody></table>
     <div class="align-meta" id="alMeta-${n}-${phase}"></div>
   </div>`;
@@ -1208,7 +1213,7 @@ function renderAlignPhase(n, phase) {
 function collectAlign(n, phase) {
   const rows = [];
   for (const w of getAlignWheels()) {
-    const row = { wheel: w.w, phase, camber_deg: null, caster_deg: null, toe_deg: null };
+    const row = { wheel: w.w, phase, camber_deg: null, caster_deg: null, toe_deg: null, toe_unit: getToeUnit(n) };
     for (const f of alignFieldsFor(w)) {
       const el = document.getElementById(`al-${n}-${phase}-${w.w}-${f.f}`);
       if (!el || el.value === '' || isNaN(parseFloat(el.value))) return null;
@@ -1223,9 +1228,10 @@ function alignFilledCount(n, phase) {
 }
 function totalToeText(rows) {
   const by = Object.fromEntries((rows || []).map(r => [r.wheel, r]));
+  const u = toeUnitOf(rows);
   const parts = [];
-  if (by.FL?.toe_deg != null && by.FR?.toe_deg != null) parts.push(`전륜 토탈 토 ${(Number(by.FL.toe_deg) + Number(by.FR.toe_deg)).toFixed(2)}°`);
-  if (by.RL?.toe_deg != null && by.RR?.toe_deg != null) parts.push(`후륜 토탈 토 ${(Number(by.RL.toe_deg) + Number(by.RR.toe_deg)).toFixed(2)}°`);
+  if (by.FL?.toe_deg != null && by.FR?.toe_deg != null) parts.push(`전륜 토탈 토 ${(Number(by.FL.toe_deg) + Number(by.FR.toe_deg)).toFixed(2)}${u}`);
+  if (by.RL?.toe_deg != null && by.RR?.toe_deg != null) parts.push(`후륜 토탈 토 ${(Number(by.RL.toe_deg) + Number(by.RR.toe_deg)).toFixed(2)}${u}`);
   return parts.join(' · ');
 }
 window.onAlignInput = function(n) {
@@ -1274,20 +1280,23 @@ function fmtDelta(d) {
 function alignCompareTable(rowsBefore, rowsAfter) {
   const b = Object.fromEntries((rowsBefore || []).map(r => [r.wheel, r]));
   const a = Object.fromEntries((rowsAfter || []).map(r => [r.wheel, r]));
+  const tu = toeUnitOf([...(rowsBefore || []), ...(rowsAfter || [])]);
   const wheels = getAlignWheels();
   const body = wheels.map(w => alignFieldsFor(w).map((f, i) => {
     const bv = b[w.w]?.[f.f], av = a[w.w]?.[f.f];
     const d = (bv != null && av != null) ? Number(av) - Number(bv) : null;
     return `<tr>${i === 0 ? `<td class="wl" rowspan="${alignFieldsFor(w).length}">${w.label}</td>` : ''}
-      <td style="text-align:left;">${f.label}</td>
+      <td style="text-align:left;">${f.label} (${f.f === 'toe_deg' ? tu.trim() : '°'})</td>
       <td>${bv != null ? Number(bv).toFixed(2) : '—'}</td><td>${av != null ? Number(av).toFixed(2) : '—'}</td><td>${fmtDelta(d)}</td></tr>`;
   }).join('')).join('');
   return `<table class="align-table"><thead><tr><th></th><th></th><th>조정 전</th><th>조정 후</th><th>Δ</th></tr></thead><tbody>${body}</tbody></table>`;
 }
 function alignSingleTable(rows) {
   const by = Object.fromEntries((rows || []).map(r => [r.wheel, r]));
+  const tu = toeUnitOf(rows);
   const wheels = getAlignWheels();
-  const head = ALIGN_FIELDS.filter(f => !f.frontOnly || wheels.some(w => w.front)).map(f => `<th>${f.label}</th>`).join('');
+  const head = ALIGN_FIELDS.filter(f => !f.frontOnly || wheels.some(w => w.front))
+    .map(f => `<th>${f.label} (${f.f === 'toe_deg' ? tu.trim() : '°'})</th>`).join('');
   const body = wheels.map(w => `<tr><td class="wl">${w.label}</td>${ALIGN_FIELDS.map(f => {
     if (f.frontOnly && !w.front) return '<td style="color:var(--text-tertiary);">—</td>';
     const v = by[w.w]?.[f.f];
@@ -1308,16 +1317,15 @@ function renderAlignDone(n) {
   if (n === 0) {
     const init = rows.filter(a => a.phase === 'initial');
     if (!init.length) return `<div class="section-head">휠 얼라인먼트 (초기)</div><div class="sub-label">입력된 얼라인먼트 없음</div>`;
-    return `<div class="section-head">휠 얼라인먼트 (초기, °)</div>
+    return `<div class="section-head">휠 얼라인먼트 (초기)</div>
       <div class="align-phase">${alignSingleTable(init)}<div class="align-meta">${totalToeText(init)}</div></div>`;
   }
   if (!s.round.alignment_done) return `<div class="section-head">휠 얼라인먼트</div><div class="sub-label">이번 회차 미실시</div>`;
   const before = rows.filter(a => a.phase === 'before'), after = rows.filter(a => a.phase === 'after');
-  return `<div class="section-head">휠 얼라인먼트 (°)</div>
+  return `<div class="section-head">휠 얼라인먼트</div>
     <div class="align-phase">${alignCompareTable(before, after)}
     <div class="align-meta">조정 전: ${totalToeText(before) || '—'}<br>조정 후: ${totalToeText(after) || '—'}</div></div>`;
 }
-
 // ── 타이어 위치교환 ──
 function roundNoById() {
   const m = {};
@@ -1388,11 +1396,9 @@ function renderRotationDone(n) {
   return `<div class="section-head">타이어 위치교환</div>
     <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:8px 14px;font-size:12.5px;line-height:1.6;">${body}</div>`;
 }
-
 // ── 권한 / 담당자 ──
 function isAdminUser() { return ADMIN_EMAILS.includes((_currentEmail || '').toLowerCase()); }
 function vehicleOwner(v) { return v?.assigned_to || v?.created_by || '—'; }
-
 // ── 저장된 회차 수정 (관리자 전용) ──
 // 담당자는 수정 불가 → 수정할 내용을 관리자에게 전달해서 관리자가 반영
 function canEditRound(n) { return !!_roundsState[n]?.round && isAdminUser(); }
@@ -1441,6 +1447,9 @@ window.startEditRound = function(n) {
   s.pendingBySlot = {};
   s.skippedSlots = new Set();
   s.removedSlots = new Set();
+  // 저장된 토 단위 복원 (v11 이전 데이터는 °)
+  s.toeUnit = (_vehicleAlignment.find(a => a.round_id === s.round.id && a.toe_unit) || {}).toe_unit
+    || (_vehicleAlignment.some(a => a.round_id === s.round.id) ? 'deg' : 'mm');
   s.pendingChips = new Set();
   s.feedback.forEach(f => {
     const idx = FEEDBACK_CHIPS.findIndex(c => c.label === f.note);
@@ -1454,21 +1463,17 @@ window.startEditRound = function(n) {
   card.classList.add('open');
   const mileage = isRound0 ? (_currentVehicle.initial_mileage_km || 0) : s.round.mileage_km;
   card.querySelector('.round-body').innerHTML = renderEditBody(n, isRound0, mileage);
-
   buildRtdGrid(n);
   if (isRound0) { renderTireInfoGrid(); renderSurvey(n); }
   renderFeedbackChips(n);
-
   document.getElementById(`date-${n}`).value = toLocalDateStr(s.round.inspected_at);
   const notesEl = document.getElementById(`notes-${n}`);
   if (notesEl) notesEl.value = s.round.notes || '';
-
   s.measurements.forEach(m => {
     const el = document.querySelector(`.rtdInput-${n}[data-pos="${CSS.escape(m.position)}"][data-point="${CSS.escape(m.point)}"]`);
     if (el && m.rtd_mm != null) el.value = m.rtd_mm;
   });
   getPositions().forEach(pos => onRtdInput(n, pos));
-
   if (!isRound0 && s.round.alignment_done) {
     document.getElementById(`alchk-${n}`).checked = true;
     document.getElementById(`alWrap-${n}`).classList.remove('hidden');
@@ -1478,7 +1483,6 @@ window.startEditRound = function(n) {
     if (el && a[f] != null) el.value = a[f];
   }));
   onAlignInput(n);
-
   if (!isRound0) {
     const rotChk = document.getElementById(`rot-${n}`);
     const rotWrap = document.getElementById(`rotWrap-${n}`);
@@ -1509,7 +1513,7 @@ window.cancelEditRound = function(n) {
   Object.values(s.pendingBySlot || {}).forEach(p => URL.revokeObjectURL(p.previewUrl));
   s.editing = false; s.retry = false;
   s.pendingBySlot = {}; s.skippedSlots = new Set(); s.removedSlots = new Set();
-  s.pendingChips = new Set(); s.survey = null;
+  s.pendingChips = new Set(); s.survey = null; s.toeUnit = 'mm';
   document.querySelector(`.round-card[data-n="${n}"] .round-body`).innerHTML = renderDoneBody(n);
 };
 // 삭제 후 행 수 확인 (RLS로 막히면 에러 없이 0행 삭제되므로)
@@ -1542,7 +1546,6 @@ async function updateRound(n) {
     const { data: ur, error: uErr } = await _supabase.from('ppmo_rounds').update(upd).eq('id', roundId).select('id');
     if (uErr) throw new Error('[회차 수정] ' + uErr.message);
     if (!ur || !ur.length) throw new Error('[회차 수정] 수정 권한이 없습니다 (관리자 계정 / v10 SQL 확인)');
-
     // 2. RTD 전체 교체
     await deleteRows('ppmo_measurements', 'round_id', roundId, strict && s.measurements.length > 0, 'RTD');
     const measurements = [...document.querySelectorAll(`.rtdInput-${n}`)].map(i => ({
@@ -1552,7 +1555,6 @@ async function updateRound(n) {
       const { error } = await _supabase.from('ppmo_measurements').insert(measurements);
       if (error) throw new Error('[RTD] ' + error.message);
     }
-
     // 3. 사진: 새 사진 업로드 → 기존(교체/삭제/미첨부) 정리 → 새 기록
     const newPaths = [];
     const slotEntries = Object.entries(s.pendingBySlot);
@@ -1583,7 +1585,6 @@ async function updateRound(n) {
       const { error } = await _supabase.from('ppmo_photos').insert({ round_id: roundId, photo_type: np.slotId, url: np.path });
       if (error) throw new Error('[사진 기록] ' + error.message);
     }
-
     // 4. 피드백 (1~5회차)
     if (!isRound0) {
       await deleteRows('ppmo_feedback', 'round_id', roundId, strict && s.feedback.length > 0, '피드백');
@@ -1593,7 +1594,6 @@ async function updateRound(n) {
         if (error) throw new Error('[피드백] ' + error.message);
       }
     }
-
     // 5. 초기 회차: DOT/바코드 + 설문
     if (isRound0) {
       const tireRows = getTirePositions().map(t => ({
@@ -1611,7 +1611,6 @@ async function updateRound(n) {
       });
       if (svErr) throw new Error('[설문] ' + svErr.message);
     }
-
     // 6. 얼라인먼트 전체 교체
     const hadAlign = _vehicleAlignment.some(a => a.round_id === roundId);
     await deleteRows('ppmo_alignment', 'round_id', roundId, strict && hadAlign, '얼라인먼트');
@@ -1620,7 +1619,6 @@ async function updateRound(n) {
         .insert(alignRows.map(r => ({ ...r, vehicle_id: _currentVehicle.id, round_id: roundId })));
       if (error) throw new Error('[얼라인먼트] ' + error.message);
     }
-
     // 7. 위치교환 (최신 회차만)
     if (!rotLocked) {
       const hadRot = _vehicleRotations.some(r => r.round_id === roundId);
@@ -1631,7 +1629,6 @@ async function updateRound(n) {
         if (error) throw new Error('[위치교환] ' + error.message);
       }
     }
-
     Object.values(s.pendingBySlot).forEach(p => URL.revokeObjectURL(p.previewUrl));
     logAccess(_currentEmail, `PPMo 수정 · ${_currentVehicle.vehicle_no} · ${isRound0 ? '초기' : n + '회차'}`);
     toast(`${isRound0 ? '초기 데이터' : n + '회차'}가 수정되었습니다`);
@@ -1644,7 +1641,6 @@ async function updateRound(n) {
     btn.disabled = false; btn.textContent = saveLabel(n);
   }
 }
-
 // ── Photo slots ──
 function updatePhotoHead(n) {
   const h = document.getElementById(`photoHead-${n}`);
@@ -1723,7 +1719,6 @@ window.toggleSkipSlot = function(n, slotId) {
   renderPhotoSlots(n);
   validateRoundSave(n);
 };
-
 window.triggerSlotUpload = function(n, slotId) {
   _fileInputTargetRound = n;
   _fileInputTargetSlot = slotId;
@@ -1764,7 +1759,6 @@ window.removeSlotPhoto = function(n, slotId) {
     validateRoundSave(n);
   }
 };
-
 // ── Feedback chips ──
 function renderFeedbackChips(n) {
   const s = _roundsState[n];
@@ -1793,7 +1787,6 @@ window.toggleChip = function(n, i) {
   renderFeedbackChips(n);
   validateRoundSave(n);
 };
-
 function buildRtdGrid(n) {
   const wrap = document.getElementById(`rtdWrap-${n}`);
   if (!wrap) return;
@@ -1850,6 +1843,7 @@ window.validateRoundSave = function(n) {
     const sv = ensureSurveyState(n);
     surveyOk = !!sv.driving_env && sv.priorities.size > 0 && !!sv.load_level;
   }
+  // 8. 얼라인먼트: 0회차 필수 / 1~5회차는 체크 시 전·후 모두 필수 + 입력 범위 검사
   let alignOk = true, alignMsg = '';
   if (isRound0) {
     alignOk = !!collectAlign(n, 'initial');
@@ -1861,6 +1855,9 @@ window.validateRoundSave = function(n) {
       alignMsg = `얼라인먼트 ${alignFilledCount(n, 'before') + alignFilledCount(n, 'after')}/${tot}`;
     }
   }
+  const alBad = alignRangeErrors(n);
+  if (alBad) { alignOk = false; alignMsg = `얼라인먼트 범위 확인 ${alBad}칸`; }
+  // 9. 위치교환: 체크 시 유효한 교환 내역 필수
   let rotOk = true;
   if (!isRound0 && document.getElementById(`rot-${n}`)?.checked && !(s.editing && isRotationLocked(n))) {
     const chk = checkRotation(n);
@@ -1889,7 +1886,6 @@ window.validateRoundSave = function(n) {
     btn.textContent = saveLabel(n);
   }
 };
-
 // ── Photo handling with client-side compression ──
 async function compressImage(file, maxDim = 1600, quality = 0.78) {
   // Skip compression for already-small files
@@ -1914,7 +1910,6 @@ async function compressImage(file, maxDim = 1600, quality = 0.78) {
   });
 }
 window.onFileChosen = null; // (deprecated - slot 방식으로 대체)
-
 // ── Save round ──
 window.saveRound = async function(n) {
   if (_roundsState[n]?.editing) return updateRound(n);
@@ -1944,7 +1939,6 @@ window.saveRound = async function(n) {
     }).select().single();
     if (rErr) throw new Error('[회차 저장] ' + rErr.message);
     createdRoundId = round.id;
-
     // 2. RTD 측정값
     const measurements = [...document.querySelectorAll(`.rtdInput-${n}`)].map(i => ({
       round_id: round.id, position: i.dataset.pos, point: i.dataset.point, rtd_mm: parseFloat(i.value)
@@ -1953,7 +1947,6 @@ window.saveRound = async function(n) {
       const { error: mErr } = await _supabase.from('ppmo_measurements').insert(measurements);
       if (mErr) throw mErr;
     }
-
     // 3. 사진 업로드 (슬롯별) — photo_type에 slot.id 저장
     const slotEntries = Object.entries(s.pendingBySlot);
     for (let i = 0; i < slotEntries.length; i++) {
@@ -1971,8 +1964,7 @@ window.saveRound = async function(n) {
       const { error: phErr } = await _supabase.from('ppmo_photos').insert({ round_id: round.id, photo_type: slotId, url: path });
       if (phErr) throw new Error(`[사진 기록 · ppmo_photos] ${phErr.message}`);
     }
-
-    // 4. 피드백 (선택된 칩 각각 1행 + 자유 메모 1행)
+    // 4. 피드백 (선택된 칩 각각 1행)
     const feedbackRows = [];
     if (!isRound0) s.pendingChips.forEach(i => {
       const chip = FEEDBACK_CHIPS[i];
@@ -1983,7 +1975,6 @@ window.saveRound = async function(n) {
       const { error: fErr } = await _supabase.from('ppmo_feedback').insert(feedbackRows);
       if (fErr) throw fErr;
     }
-
     // 5. 타이어 정보 (0회차 전용): 6포지션 DOT/바코드 upsert
     if (isRound0) {
       const tireRows = getTirePositions().map(t => ({
@@ -1996,7 +1987,6 @@ window.saveRound = async function(n) {
         .from('ppmo_tires')
         .upsert(tireRows, { onConflict: 'vehicle_id,position' });
       if (tErr) throw tErr;
-
       // 6. 사전 설문 → ppmo_survey (재저장 시 기존 삭제 후 재삽입)
       const sv = ensureSurveyState(n);
       await _supabase.from('ppmo_survey').delete().eq('vehicle_id', _currentVehicle.id);
@@ -2009,7 +1999,6 @@ window.saveRound = async function(n) {
       });
       if (svErr) throw new Error('[설문 저장] ' + svErr.message);
     }
-
     // 7. 휠 얼라인먼트
     if (alignRows.length) {
       const { error: alErr } = await _supabase.from('ppmo_alignment')
@@ -2022,10 +2011,8 @@ window.saveRound = async function(n) {
         .insert(rotMoves.map(m => ({ ...m, vehicle_id: _currentVehicle.id, round_id: round.id })));
       if (roErr) throw new Error('[위치교환 저장] ' + roErr.message);
     }
-
     // pending 이미지 URL 해제
     Object.values(s.pendingBySlot).forEach(p => URL.revokeObjectURL(p.previewUrl));
-
     toast(isRound0 ? '초기 데이터가 저장되었습니다' : `${n}회차 데이터가 저장되었습니다`);
     await renderRounds();
   } catch(e) {
@@ -2039,11 +2026,9 @@ window.saveRound = async function(n) {
     btn.disabled = false; btn.textContent = saveLabel(n);
   }
 };
-
 // ── Utils ──
 function fmtKm(km) { return (km == null || isNaN(km)) ? '—' : Number(km).toLocaleString('ko-KR') + ' km'; }
 function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
 // DB에 저장된 값이 전체 URL이든 path든 항상 path만 반환
 function extractPath(urlOrPath) {
   if (!urlOrPath) return null;
