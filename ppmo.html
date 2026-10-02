@@ -120,16 +120,10 @@
   .round-card.open .round-body { display: block; }
   /* RTD grid inside round */
   .rtd-block { border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 10px; background: var(--bg-secondary); }
-  /* 아티클 자동완성 검색 */
-  .search-wrap { position: relative; }
-  .search-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg); border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); z-index: 60; max-height: 320px; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
-  .search-dropdown-item { padding: 12px 14px; font-size: 14px; cursor: pointer; border-bottom: 0.5px solid var(--border); }
-  .search-dropdown-item:last-child { border-bottom: none; }
-  .search-dropdown-item:active { background: var(--bg-secondary); }
-  .search-dropdown-item .art-no { font-family: 'Menlo', 'Consolas', monospace; font-weight: 700; color: var(--text); letter-spacing: 0.03em; }
-  .search-dropdown-item .art-sub { display: block; font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
-  .search-dropdown-empty { padding: 14px; text-align: center; color: var(--text-tertiary); font-size: 13px; }
-  /* 비활성 필드 (아티클 선택 전) */
+  /* 제품 선택 */
+  .product-group-label { font-size: 11px; color: var(--text-tertiary); }
+  .product-info { margin-top: 6px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--bg-secondary); font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+  /* 비활성 필드 */
   input:disabled, textarea:disabled {
     background: var(--bg-secondary) !important;
     color: var(--text-tertiary) !important;
@@ -189,7 +183,6 @@
   .photo-skip-check input { width: 13px; height: 13px; flex-shrink: 0; margin: 0; }
   .photo-slot.skipped .photo-slot-body { background: var(--bg-secondary); border: 0.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-tertiary); opacity: 0.7; }
   .rtd-min-badge { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; text-align: right; }
-  /* Photos */
   /* Photo slot grid */
   .photo-slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; margin-top: 8px; }
   .photo-slot { display: flex; flex-direction: column; gap: 4px; }
@@ -265,7 +258,7 @@
     <button class="hamburger-btn" onclick="openNav()" aria-label="메뉴"><span></span><span></span><span></span></button>
     <div>
       <div class="header-title" id="pageTitle">PPMo 현장 기록</div>
-      <div class="header-sub" id="pageSub">VanContact AP2 · 마일리지 체크업</div>
+      <div class="header-sub" id="pageSub">LT 타이어 · 마일리지 체크업</div>
     </div>
   </div>
   <div class="wrap">
@@ -303,11 +296,10 @@
             <input type="number" id="fNewInitMileage" placeholder="예: 45000" min="0" oninput="validateNewVehicle()">
           </div>
         </div>
-        <div class="field search-wrap">
-          <div class="label">아티클 <span style="color:var(--text-tertiary);font-weight:400;">(VanContact AP2만 표시 · 번호/사이즈로 검색)</span></div>
-          <input type="text" id="fNewArticle" placeholder="예: 195/70 또는 아티클 앞자리" oninput="onArticleInput()" autocomplete="off">
-          <div class="search-dropdown hidden" id="articleDropdown"></div>
-          <div id="articleLookupStatus" style="font-size:11px;margin-top:6px;min-height:14px;"></div>
+        <div class="field">
+          <div class="label">제품 *</div>
+          <select id="fNewProductSel" onchange="onProductSelect()"></select>
+          <div id="productInfo" class="product-info hidden"></div>
         </div>
         <div class="field">
           <div class="label">딜러/점포명</div>
@@ -330,7 +322,7 @@
         <div class="row field" id="tireSpecRow">
           <div class="field locked" style="margin:0;">
             <div class="label">사이즈</div>
-            <input type="text" id="fNewTireSize" placeholder="아티클 선택 시 자동" disabled>
+            <input type="text" id="fNewTireSize" placeholder="제품 선택 시 자동" disabled>
           </div>
           <div class="field locked" style="margin:0;">
             <div class="label">하중지수</div>
@@ -341,7 +333,7 @@
             <input type="text" id="fNewSpeedIndex" placeholder="—" disabled>
           </div>
         </div>
-        <input type="hidden" id="fNewProduct" value="VanContact AP2">
+        <input type="hidden" id="fNewProduct" value="">
         <button class="btn full" id="btnCreateVehicle" onclick="createVehicle()" disabled>생성하기</button>
       </div>
     </div>
@@ -373,6 +365,17 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     detectSessionInUrl: false
   }
 });
+// ── 테스트 대상 제품 (고정 목록) ──
+// Continental: 품번·하중지수·속도지수 확정 / 경쟁사: 품번 없음, 하중·속도지수는 사이드월 보고 선택 입력
+const PRODUCT_OPTIONS = [
+  { id: 'conti_ap2_195_70', brand: 'Continental', product: 'VanContact AP2', size: '195/70R15C', ply: '8PR', li: '104/102', si: 'R', article: '04512120000' },
+  { id: 'conti_ap2_195',    brand: 'Continental', product: 'VanContact AP2', size: '195R15C',    ply: '8PR', li: '106/104', si: 'S', article: '04512270000' },
+  { id: 'conti_ap_195_70',  brand: 'Continental', product: 'VanContact AP',  size: '195/70R15C', ply: '8PR', li: '104/102', si: 'R', article: '04512160000' },
+  { id: 'kumho_kc53_195_70', brand: 'Kumho',      product: 'Kumho KC53',     size: '195/70R15',  ply: '8PR', li: '', si: '', article: null },
+  { id: 'kumho_kc53_195',   brand: 'Kumho',       product: 'Kumho KC53',     size: '195R15',     ply: '8PR', li: '', si: '', article: null },
+  { id: 'hankook_ra58c_195', brand: 'Hankook',    product: 'Hankook RA58C',  size: '195R15',     ply: '8PR', li: '', si: '', article: null },
+];
+let _selectedProduct = null;
 const POSITIONS = ['1축-좌','1축-우','2축-좌외','2축-좌내','2축-우외','2축-우내'];
 // 레거시(outer/center/inner) + 신규(groove_N) 호환 측정점 라벨 매핑
 const POINT_LABEL_MAP = {
@@ -587,7 +590,7 @@ function showList() {
   document.getElementById('view-list').classList.remove('hidden');
   document.getElementById('view-new').classList.add('hidden');
   document.getElementById('view-detail').classList.add('hidden');
-  setPageHeader('PPMo 현장 기록', 'VanContact AP2 · 마일리지 체크업');
+  setPageHeader('PPMo 현장 기록', 'LT 타이어 · 마일리지 체크업');
   loadVehicles();
 }
 window.showNewVehicleForm = function() {
@@ -596,14 +599,14 @@ window.showNewVehicleForm = function() {
   document.getElementById('view-detail').classList.add('hidden');
   setPageHeader('새 차량 생성', '차량 정보 입력');
   // reset form
-  ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewDealer','fNewArticle'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('fNewProduct').value = 'VanContact AP2';
-  document.getElementById('articleLookupStatus').textContent = '';
+  ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewDealer'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fNewProduct').value = '';
   document.getElementById('fNewFrontOnly').checked = false;
   document.querySelector('input[name="fNewGrooves"][value="3"]').checked = true;
-  _selectedArticle = null;
+  renderProductOptions();
+  _selectedProduct = null;
   lockDependentFields();
-  document.getElementById('articleDropdown').classList.add('hidden');
+  document.getElementById('productInfo').classList.add('hidden');
   document.getElementById('btnCreateVehicle').disabled = true;
 };
 function showDetail(vehicle) {
@@ -620,7 +623,7 @@ function showDetail(vehicle) {
   meta.push(vehicle.product);
   if (vehicle.dealer_name) meta.push(vehicle.dealer_name);
   if (isAdminUser()) meta.push(`담당 ${vehicleOwner(vehicle)}`);
-  // 타이어 스펙 조립: "195/70R15 106/104R"
+  // 타이어 스펙 조립: "195/70R15C 104/102R"
   const tireSpec = [
     vehicle.tire_size,
     [vehicle.load_index, vehicle.speed_index].filter(Boolean).join('')
@@ -628,7 +631,7 @@ function showDetail(vehicle) {
   const init = vehicle.initial_mileage_km != null ? `장착 시점 ${fmtKm(vehicle.initial_mileage_km)}` : '';
   const lines = [meta.join(' · ')];
   if (vehicle.front_only) lines.push('<span style="display:inline-block;background:var(--bg-warning);color:var(--text-warning);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">🔧 전륜만 모니터링</span>');
-  if (tireSpec) lines.push(`타이어: ${tireSpec}`);
+  if (tireSpec) lines.push(`타이어: ${escapeHtml(tireSpec)}`);
   if (vehicle.article) lines.push(`아티클: <code style="font-family:monospace;">${escapeHtml(vehicle.article)}</code>`);
   if (init) lines.push(init);
   document.getElementById('detMeta').innerHTML = lines.join('<br>');
@@ -663,10 +666,11 @@ async function loadVehicles() {
       const done = progressMap[v.id] ? progressMap[v.id].size : 0;
       const modelStr = [v.vehicle_type, v.model_year && `'${String(v.model_year).slice(-2)}`].filter(Boolean).join(' ');
       const initStr = v.initial_mileage_km != null ? `장착 ${fmtKm(v.initial_mileage_km)}` : '';
+      const prodStr = [v.product, v.tire_size].filter(Boolean).join(' ');
       return `<div class="vehicle-item" onclick='openVehicle(${JSON.stringify(v).replace(/'/g, "&apos;")})'>
         <div class="vehicle-item-main">
           <div class="vehicle-item-title">${escapeHtml(v.vehicle_no)}<span class="vehicle-progress">${done}/${TOTAL_ROUNDS}</span></div>
-          <div class="vehicle-item-meta">${escapeHtml(modelStr || '모델 정보 없음')} · ${escapeHtml(v.product)}${initStr ? ' · ' + initStr : ''}</div>
+          <div class="vehicle-item-meta">${escapeHtml(modelStr || '모델 정보 없음')} · ${escapeHtml(prodStr)}${initStr ? ' · ' + initStr : ''}</div>
           ${isAdminUser() ? `<div class="vehicle-item-meta">담당: ${escapeHtml(vehicleOwner(v))}</div>` : ''}
         </div>
         <div class="vehicle-item-arrow">›</div>
@@ -677,127 +681,81 @@ async function loadVehicles() {
   }
 }
 window.openVehicle = function(v) { showDetail(v); };
-// ── New vehicle ──
-// 아티클 자동완성 검색 (VanContact AP2 아티클만 표시)
-let _articleSearchTimer = null;
-let _selectedArticle = null;   // 선택 완료된 아티클 객체
-window.onArticleInput = function() {
-  clearTimeout(_articleSearchTimer);
-  const q = document.getElementById('fNewArticle').value.trim();
-  const dd = document.getElementById('articleDropdown');
-  const status = document.getElementById('articleLookupStatus');
-  // 사용자가 입력을 다시 시작하면 선택 상태 초기화
-  if (_selectedArticle && q !== `${_selectedArticle.article} · ${_selectedArticle.size}`) {
-    _selectedArticle = null;
+// ── New vehicle: 제품 선택 (고정 목록) ──
+function productLabel(p) { return `${p.product} ${p.size}${p.li ? ' ' + p.li + p.si : ''} ${p.ply}`; }
+function renderProductOptions() {
+  const sel = document.getElementById('fNewProductSel');
+  const groups = [...new Set(PRODUCT_OPTIONS.map(p => p.brand))];
+  sel.innerHTML = '<option value="">제품을 선택하세요</option>' + groups.map(b =>
+    `<optgroup label="${escapeHtml(b)}">${PRODUCT_OPTIONS.filter(p => p.brand === b)
+      .map(p => `<option value="${p.id}">${escapeHtml(productLabel(p))}</option>`).join('')}</optgroup>`
+  ).join('');
+  sel.value = '';
+}
+window.onProductSelect = function() {
+  const id = document.getElementById('fNewProductSel').value;
+  const p = PRODUCT_OPTIONS.find(x => x.id === id) || null;
+  _selectedProduct = p;
+  const info = document.getElementById('productInfo');
+  if (!p) {
     lockDependentFields();
+    info.classList.add('hidden');
+    document.getElementById('fNewProduct').value = '';
     validateNewVehicle();
+    return;
   }
-  if (q.length < 2) { dd.classList.add('hidden'); status.textContent = ''; return; }
-  status.style.color = 'var(--text-tertiary)';
-  status.textContent = '⋯ 검색 중';
-  _articleSearchTimer = setTimeout(async () => {
-    try {
-      // VanContact AP2 아티클만: pattern 또는 description 컨테인
-      const { data, error } = await _supabase
-        .from('articles')
-        .select('article, ntd, size, pattern, description, li_ss')
-        .or('pattern.ilike.%VanContact AP2%,description.ilike.%VanContact AP2%')
-        .or(`article.ilike.%${q}%,size.ilike.%${q}%,description.ilike.%${q}%`)
-        .limit(20);
-      if (error) throw error;
-      // 클라이언트 사이드 이중 필터: VanContact AP2에 해당하는지 재확인
-      const filtered = (data || []).filter(a =>
-        (a.pattern || '').toLowerCase().includes('vancontact ap2') ||
-        (a.description || '').toLowerCase().includes('vancontact ap2')
-      );
-      if (!filtered.length) {
-        dd.innerHTML = `<div class="search-dropdown-empty">일치하는 VanContact AP2 아티클이 없습니다</div>`;
-        dd.classList.remove('hidden');
-        status.textContent = '';
-        return;
-      }
-      dd.innerHTML = filtered.map(a => {
-        const parts = [a.size, a.li_ss].filter(Boolean).join(' · ');
-        return `
-          <div class="search-dropdown-item" onclick='selectArticle(${JSON.stringify(a).replace(/'/g, "&apos;")})'>
-            <span class="art-no">${escapeHtml(a.article)}</span>
-            <span class="art-sub">${escapeHtml(parts)}${a.description ? ` · ${escapeHtml(a.description)}` : ''}</span>
-          </div>`;
-      }).join('');
-      dd.classList.remove('hidden');
-      status.textContent = `${filtered.length}개 후보`;
-    } catch(e) {
-      status.style.color = 'var(--text-danger)';
-      status.textContent = '검색 실패: ' + e.message;
-      dd.classList.add('hidden');
-    }
-  }, 300);
-};
-window.selectArticle = function(a) {
-  _selectedArticle = a;
-  document.getElementById('fNewArticle').value = `${a.article} · ${a.size || ''}`;
-  document.getElementById('articleDropdown').classList.add('hidden');
-  // 자동 채움
-  document.getElementById('fNewTireSize').value = a.size || '';
-  // li_ss 예: "106/104R" → 분리
-  if (a.li_ss) {
-    const m = a.li_ss.match(/^(\d+(?:\/\d+)?)([A-Z]+)$/);
-    if (m) {
-      document.getElementById('fNewLoadIndex').value = m[1];
-      document.getElementById('fNewSpeedIndex').value = m[2];
-    } else {
-      document.getElementById('fNewLoadIndex').value = a.li_ss;
-      document.getElementById('fNewSpeedIndex').value = '';
-    }
-  }
-  document.getElementById('fNewProduct').value = a.pattern || 'VanContact AP2';
-  // 잠금 해제
-  unlockDependentFields();
-  const status = document.getElementById('articleLookupStatus');
-  status.style.color = 'var(--text-success)';
-  status.textContent = `✓ ${a.pattern || 'VanContact AP2'} 선택됨`;
+  document.getElementById('fNewProduct').value = p.product;
+  document.getElementById('fNewTireSize').value = `${p.size} ${p.ply}`;
+  document.getElementById('fNewLoadIndex').value = p.li;
+  document.getElementById('fNewSpeedIndex').value = p.si;
+  // 사이즈는 고정. 경쟁사는 하중·속도지수를 사이드월 보고 직접 입력할 수 있게 열어둠 (선택)
+  const isConti = p.brand === 'Continental';
+  setFieldLock('fNewTireSize', true);
+  setFieldLock('fNewLoadIndex', isConti);
+  setFieldLock('fNewSpeedIndex', isConti);
+  document.getElementById('fNewLoadIndex').placeholder = isConti ? '—' : '선택 입력';
+  document.getElementById('fNewSpeedIndex').placeholder = isConti ? '—' : '선택 입력';
+  info.innerHTML = isConti
+    ? `✓ ${escapeHtml(p.brand)} · 품번 <code style="font-family:monospace;">${escapeHtml(p.article)}</code>`
+    : `✓ ${escapeHtml(p.brand)} (경쟁사) · 품번 없음 · 하중/속도지수는 사이드월 확인 후 입력 (선택)`;
+  info.classList.remove('hidden');
   validateNewVehicle();
 };
+function setFieldLock(id, locked) {
+  const el = document.getElementById(id);
+  el.disabled = locked;
+  el.parentElement.classList.toggle('locked', locked);
+}
 function lockDependentFields() {
   ['fNewTireSize','fNewLoadIndex','fNewSpeedIndex'].forEach(id => {
     const el = document.getElementById(id);
-    el.disabled = true;
     el.value = '';
-    el.parentElement.classList.add('locked');
+    setFieldLock(id, true);
   });
+  document.getElementById('fNewLoadIndex').placeholder = '—';
+  document.getElementById('fNewSpeedIndex').placeholder = '—';
 }
-function unlockDependentFields() {
-  ['fNewTireSize','fNewLoadIndex','fNewSpeedIndex'].forEach(id => {
-    const el = document.getElementById(id);
-    el.disabled = false;
-    el.parentElement.classList.remove('locked');
-  });
-}
-// 드롭다운 외부 클릭 시 닫기
-document.addEventListener('click', e => {
-  if (!e.target.closest('.search-wrap')) {
-    document.querySelectorAll('.search-dropdown').forEach(d => d.classList.add('hidden'));
-  }
-});
 window.validateNewVehicle = function() {
-  const ok = ['fNewNo','fNewModel','fNewYear','fNewInitMileage','fNewTireSize'].every(id => document.getElementById(id).value.trim())
-    && _selectedArticle != null;
+  const ok = ['fNewNo','fNewModel','fNewYear','fNewInitMileage'].every(id => document.getElementById(id).value.trim())
+    && _selectedProduct != null;
   document.getElementById('btnCreateVehicle').disabled = !ok;
 };
 window.createVehicle = async function() {
   const btn = document.getElementById('btnCreateVehicle');
+  if (!_selectedProduct) return;
   btn.disabled = true; btn.textContent = '생성 중...';
+  const p = _selectedProduct;
   const payload = {
     vehicle_no: document.getElementById('fNewNo').value.trim(),
     vehicle_type: document.getElementById('fNewModel').value.trim(),
     model_year: parseInt(document.getElementById('fNewYear').value),
     initial_mileage_km: parseFloat(document.getElementById('fNewInitMileage').value),
     dealer_name: document.getElementById('fNewDealer').value.trim() || null,
-    product: document.getElementById('fNewProduct').value.trim() || 'VanContact AP2',
-    article: _selectedArticle ? _selectedArticle.article : null,
-    tire_size: document.getElementById('fNewTireSize').value.trim(),
-    load_index: document.getElementById('fNewLoadIndex').value.trim(),
-    speed_index: document.getElementById('fNewSpeedIndex').value.trim(),
+    product: p.product,
+    article: p.article,
+    tire_size: `${p.size} ${p.ply}`,
+    load_index: document.getElementById('fNewLoadIndex').value.trim() || null,
+    speed_index: document.getElementById('fNewSpeedIndex').value.trim() || null,
     front_only: document.getElementById('fNewFrontOnly').checked,
     groove_count: parseInt(document.querySelector('input[name="fNewGrooves"]:checked').value),
     created_by: _currentEmail,
@@ -810,6 +768,7 @@ window.createVehicle = async function() {
     showDetail(data);
   } catch(e) {
     toast('생성 실패: ' + e.message, true);
+  } finally {
     btn.disabled = false; btn.textContent = '생성하기';
   }
 };
@@ -972,8 +931,8 @@ function renderDoneBody(n) {
       <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:10px 14px;font-size:12.5px;line-height:1.7;">${
         getTirePositions().map(t => {
           const cur = _currentVehicleTires[t.pos] || {};
-          const dot = cur.dot_code || '<span style="color:var(--text-tertiary)">—</span>';
-          const bc = cur.barcode || '<span style="color:var(--text-tertiary)">—</span>';
+          const dot = cur.dot_code ? escapeHtml(cur.dot_code) : '<span style="color:var(--text-tertiary)">—</span>';
+          const bc = cur.barcode ? escapeHtml(cur.barcode) : '<span style="color:var(--text-tertiary)">—</span>';
           return `<div style="padding:4px 0;border-bottom:0.5px solid var(--border);"><b>${t.label}</b><br><span style="font-family:monospace;">DOT: ${dot} · BC: ${bc}</span></div>`;
         }).join('')
       }</div>` : ''}
