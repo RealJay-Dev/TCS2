@@ -321,6 +321,15 @@
           <div id="productInfo" class="product-info hidden"></div>
         </div>
         <div class="field">
+          <div class="label">구동 방식 *</div>
+          <div style="display:flex;gap:8px;">
+            <label style="flex:1;padding:10px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:13.5px;"><input type="radio" name="fNewDrive" value="FWD" onchange="validateNewVehicle()"> 전륜구동</label>
+            <label style="flex:1;padding:10px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:13.5px;"><input type="radio" name="fNewDrive" value="RWD" onchange="validateNewVehicle()"> 후륜구동</label>
+            <label style="flex:1;padding:10px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:13.5px;"><input type="radio" name="fNewDrive" value="AWD" onchange="validateNewVehicle()"> 4륜구동</label>
+          </div>
+          <div class="sub-label">구동 방식에 따라 전/후륜 마모 패턴이 달라 리포트 분석에 사용합니다. (포터·봉고 등 1톤 트럭은 대부분 후륜구동)</div>
+        </div>
+        <div class="field">
           <div class="label">딜러/점포명</div>
           <input type="text" id="fNewDealer" placeholder="딜러명">
         </div>
@@ -497,6 +506,7 @@ const DRIVER_FB_OTHER = [
   { key: 'stone', label: '돌 박힘 저항성' },
   { key: 'appearance', label: '외관 (패턴, 색상 등)' },
 ];
+const DRIVE_LABEL = { FWD: '전륜구동', RWD: '후륜구동', AWD: '4륜구동' };
 const PREV_BRANDS = ['금호', '한국', '넥센', '콘티넨탈', '미쉐린', '브리지스톤', '굿이어', '피렐리', '던롭', '요코하마', '토요', '기타'];
 let _currentEmail = null;
 let _currentVehicle = null;      // detail view의 대상 차량
@@ -641,6 +651,7 @@ window.showNewVehicleForm = function() {
   document.getElementById('fNewProduct').value = '';
   document.getElementById('fNewFrontOnly').checked = false;
   document.querySelector('input[name="fNewGrooves"][value="3"]').checked = true;
+  document.querySelectorAll('input[name="fNewDrive"]').forEach(r => { r.checked = false; });
   renderProductOptions();
   _selectedProduct = null;
   lockDependentFields();
@@ -658,6 +669,7 @@ function showDetail(vehicle) {
   const meta = [];
   if (vehicle.vehicle_type) meta.push(vehicle.vehicle_type);
   if (vehicle.model_year) meta.push(`${vehicle.model_year}년식`);
+  if (vehicle.drive_type) meta.push(DRIVE_LABEL[vehicle.drive_type] || vehicle.drive_type);
   meta.push(vehicle.product);
   if (vehicle.dealer_name) meta.push(vehicle.dealer_name);
   if (isAdminUser()) meta.push(`담당 ${vehicleOwner(vehicle)}`);
@@ -775,7 +787,8 @@ function lockDependentFields() {
 }
 window.validateNewVehicle = function() {
   const ok = ['fNewNo','fNewModel','fNewYear','fNewInitMileage'].every(id => document.getElementById(id).value.trim())
-    && _selectedProduct != null;
+    && _selectedProduct != null
+    && !!document.querySelector('input[name="fNewDrive"]:checked');
   document.getElementById('btnCreateVehicle').disabled = !ok;
 };
 window.createVehicle = async function() {
@@ -796,6 +809,7 @@ window.createVehicle = async function() {
     speed_index: document.getElementById('fNewSpeedIndex').value.trim() || null,
     front_only: document.getElementById('fNewFrontOnly').checked,
     groove_count: parseInt(document.querySelector('input[name="fNewGrooves"]:checked').value),
+    drive_type: document.querySelector('input[name="fNewDrive"]:checked')?.value || null,
     created_by: _currentEmail,
     assigned_to: _currentEmail
   };
@@ -1037,6 +1051,13 @@ function renderEditBody(n, isRound0, mileage) {
       </div>
       <datalist id="prevBrandList">${PREV_BRANDS.map(b => `<option value="${b}">`).join('')}</datalist>
     </div>
+    <div class="survey-q">
+      <div class="survey-q-label">주로 운행하는 지역과 자주 다니는 도로는 어디인가요?</div>
+      <div class="sub-label" style="margin:-4px 0 8px;">운전자가 말해주는 대로 적어주세요. 노면 사진과 도로 환경은 TCS팀이 별도로 조사합니다.</div>
+      <input type="text" id="routeRegion-${n}" placeholder="운행 지역 * (예: 경기 평택시 · 오산시)" value="${escapeHtml(_roundsState[n]?.survey?.route_region || '')}" oninput="onRouteInput(${n})" style="margin-bottom:8px;">
+      <input type="text" id="routeRoads-${n}" placeholder="자주 다니는 도로·경로 (예: 경부고속도로 평택–수원, 국도 1호선)" value="${escapeHtml(_roundsState[n]?.survey?.route_roads || '')}" oninput="onRouteInput(${n})" style="margin-bottom:8px;">
+      <input type="number" id="dailyKm-${n}" placeholder="하루 평균 주행거리 km (선택)" min="0" value="${_roundsState[n]?.survey?.daily_km ?? ''}" oninput="onRouteInput(${n})">
+    </div>
     <div id="surveyWrap-${n}"></div>` : `
     <div class="section-head">휠 얼라인먼트</div>
     <label class="opt-toggle"><input type="checkbox" id="alchk-${n}" onchange="onAlignToggle(${n})"> 이번 방문에서 얼라인먼트 측정/조정 실시</label>
@@ -1090,7 +1111,7 @@ function renderTireInfoGrid() {
 // ── 0회차: 사전 설문 ──
 function ensureSurveyState(n) {
   const s = _roundsState[n];
-  if (!s.survey) s.survey = { driving_env: null, priorities: new Set(), load_level: null, prev_brand: '', prev_product: '' };
+  if (!s.survey) s.survey = { driving_env: null, priorities: new Set(), load_level: null, prev_brand: '', prev_product: '', route_region: '', route_roads: '', daily_km: null };
   return s.survey;
 }
 function renderSurvey(n) {
@@ -1123,6 +1144,14 @@ window.onPrevTireInput = function(n) {
   sv.prev_product = document.getElementById(`prevProduct-${n}`).value.trim();
   validateRoundSave(n);
 };
+window.onRouteInput = function(n) {
+  const sv = ensureSurveyState(n);
+  sv.route_region = document.getElementById(`routeRegion-${n}`).value.trim();
+  sv.route_roads = document.getElementById(`routeRoads-${n}`).value.trim();
+  const km = parseFloat(document.getElementById(`dailyKm-${n}`).value);
+  sv.daily_km = isNaN(km) ? null : km;
+  validateRoundSave(n);
+};
 function prevTireLabel() {
   const sv = _currentVehicleSurvey;
   return sv && sv.prev_brand ? [sv.prev_brand, sv.prev_product].filter(Boolean).join(' ') : '';
@@ -1136,6 +1165,9 @@ function renderSurveyDone() {
   const sv = _currentVehicleSurvey;
   const body = sv ? `<div style="font-size:13px;line-height:1.7;">
       <div><b>이전 타이어:</b> ${escapeHtml(prevTireLabel() || '—')}</div>
+      <div><b>운행 지역:</b> ${escapeHtml(sv.route_region || '—')}</div>
+      <div><b>자주 다니는 도로:</b> ${escapeHtml(sv.route_roads || '—')}</div>
+      <div><b>하루 평균 주행거리:</b> ${sv.daily_km != null ? escapeHtml(sv.daily_km) + ' km' : '—'}</div>
       <div><b>주행 환경:</b> ${escapeHtml(sv.driving_env || '—')}</div>
       <div><b>중시 항목:</b> ${(sv.priorities || []).map(escapeHtml).join(', ') || '—'}</div>
       <div><b>화물 하중:</b> ${escapeHtml(sv.load_level || '—')}</div>
@@ -1491,7 +1523,8 @@ window.startEditRound = function(n) {
   if (isRound0) {
     const sv = _currentVehicleSurvey;
     s.survey = { driving_env: sv?.driving_env || null, priorities: new Set(sv?.priorities || []), load_level: sv?.load_level || null,
-                 prev_brand: sv?.prev_brand || '', prev_product: sv?.prev_product || '' };
+                 prev_brand: sv?.prev_brand || '', prev_product: sv?.prev_product || '',
+                 route_region: sv?.route_region || '', route_roads: sv?.route_roads || '', daily_km: sv?.daily_km ?? null };
   }
   const card = document.querySelector(`.round-card[data-n="${n}"]`);
   card.classList.add('open');
@@ -1639,6 +1672,7 @@ async function updateRound(n) {
       const { error: svErr } = await _supabase.from('ppmo_survey').insert({
         vehicle_id: _currentVehicle.id, driving_env: sv.driving_env, priorities: [...sv.priorities],
         load_level: sv.load_level, prev_brand: sv.prev_brand || null, prev_product: sv.prev_product || null,
+        route_region: sv.route_region || null, route_roads: sv.route_roads || null, daily_km: sv.daily_km,
         created_by: _currentEmail
       });
       if (svErr) throw new Error('[설문] ' + svErr.message);
@@ -1907,7 +1941,7 @@ window.validateRoundSave = function(n) {
   let surveyOk = true;
   if (isRound0) {
     const sv = ensureSurveyState(n);
-    surveyOk = !!sv.driving_env && sv.priorities.size > 0 && !!sv.load_level && !!sv.prev_brand;
+    surveyOk = !!sv.driving_env && sv.priorities.size > 0 && !!sv.load_level && !!sv.prev_brand && !!sv.route_region;
   }
   // 8. 얼라인먼트: 0회차 필수 / 1~5회차는 체크 시 전·후 모두 필수 + 입력 범위 검사
   let alignOk = true, alignMsg = '';
@@ -2057,6 +2091,9 @@ window.saveRound = async function(n) {
         load_level: sv.load_level,
         prev_brand: sv.prev_brand || null,
         prev_product: sv.prev_product || null,
+        route_region: sv.route_region || null,
+        route_roads: sv.route_roads || null,
+        daily_km: sv.daily_km,
         created_by: _currentEmail
       });
       if (svErr) throw new Error('[설문 저장] ' + svErr.message);
