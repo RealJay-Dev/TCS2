@@ -187,6 +187,14 @@
   .rot-warn { margin-top: 8px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--bg-danger); color: var(--text-danger); font-size: 12px; }
   .opt-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 10px 12px; margin-top: 4px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer; }
   .opt-toggle input { width: 16px; height: 16px; flex-shrink: 0; }
+  /* Edit mode (관리자 전용) */
+  .edit-banner { margin: 12px 0; padding: 10px 12px; background: var(--bg-warning); color: var(--text-warning); border-radius: var(--radius-sm); font-size: 12.5px; line-height: 1.5; display: flex; align-items: center; gap: 10px; }
+  .edit-banner b { font-weight: 700; }
+  .done-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; gap: 8px; }
+  .done-actions .upd-meta { font-size: 11px; color: var(--text-tertiary); }
+  .photo-slot .saved-badge { position: absolute; bottom: 4px; left: 4px; background: var(--text-success); color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 8px; font-weight: 600; }
+  .photo-slot .replace-hint { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.6); color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 8px; }
+  .admin-pill { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--bg-warning); color: var(--text-warning); margin-left: 6px; }
   .photo-skip-check { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 10.5px; color: var(--text-tertiary); cursor: pointer; line-height: 1.2; user-select: none; }
   .photo-skip-check input { width: 13px; height: 13px; flex-shrink: 0; margin: 0; }
   .photo-slot.skipped .photo-slot-body { background: var(--bg-secondary); border: 0.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-tertiary); opacity: 0.7; }
@@ -381,6 +389,8 @@
 const SUPABASE_URL = 'https://thosddtgtffapakvmrhn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_HmrBU9WFhkCTM_TquLM31g_IPovXtXm';
 const ALLOWED_DOMAIN = 'continental.com';
+// 관리자: 전체 차량 조회 + 저장된 데이터 수정 (실제 권한은 Supabase RLS v10에서 강제)
+const ADMIN_EMAILS = ['jaehong.park@continental.com', 'sangyong.2.jung@continental.com'];
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     storage: window.sessionStorage,   // 탭 닫으면 세션 소멸 (딜러 기기 오용 방지)
@@ -430,7 +440,7 @@ const SLOT_BY_ID = Object.fromEntries([...PHOTO_SLOTS, ALIGN_PHOTO_SLOT].map(s =
 function needsAlignPhoto(n) {
   if (n === 0) return true;
   const st = _roundsState[n];
-  if (st && st.round) return !!st.round.alignment_done;              // 저장된 회차
+  if (st && st.round && !st.editing) return !!st.round.alignment_done;   // 저장된 회차 (조회)
   return !!document.getElementById(`alchk-${n}`)?.checked;          // 입력 중인 회차
 }
 
@@ -645,6 +655,7 @@ function showDetail(vehicle) {
   if (vehicle.model_year) meta.push(`${vehicle.model_year}년식`);
   meta.push(vehicle.product);
   if (vehicle.dealer_name) meta.push(vehicle.dealer_name);
+  if (isAdminUser()) meta.push(`담당 ${vehicleOwner(vehicle)}`);
   // 타이어 스펙 조립: "195/70R15 106/104R"
   const tireSpec = [
     vehicle.tire_size,
@@ -672,7 +683,7 @@ async function loadVehicles() {
   try {
     const { data: vehicles, error } = await _supabase.from('ppmo_vehicles').select('*').order('created_at', { ascending: false });
     if (error) throw error;
-    document.getElementById('listCount').textContent = `${vehicles.length}대`;
+    document.getElementById('listCount').innerHTML = `${vehicles.length}대${isAdminUser() ? '<span class="admin-pill">관리자 · 전체 차량</span>' : ''}`;
     if (!vehicles.length) {
       wrap.innerHTML = '<div class="empty-state">아직 등록된 차량이 없습니다.<br>위 버튼으로 첫 차량을 생성해보세요.</div>';
       return;
@@ -693,6 +704,7 @@ async function loadVehicles() {
         <div class="vehicle-item-main">
           <div class="vehicle-item-title">${escapeHtml(v.vehicle_no)}<span class="vehicle-progress">${done}/${TOTAL_ROUNDS}</span></div>
           <div class="vehicle-item-meta">${escapeHtml(modelStr || '모델 정보 없음')} · ${escapeHtml(v.product)}${initStr ? ' · ' + initStr : ''}</div>
+          ${isAdminUser() ? `<div class="vehicle-item-meta">담당: ${escapeHtml(vehicleOwner(v))}</div>` : ''}
         </div>
         <div class="vehicle-item-arrow">›</div>
       </div>`;
@@ -830,7 +842,8 @@ window.createVehicle = async function() {
     speed_index: document.getElementById('fNewSpeedIndex').value.trim(),
     front_only: document.getElementById('fNewFrontOnly').checked,
     groove_count: parseInt(document.querySelector('input[name="fNewGrooves"]:checked').value),
-    created_by: _currentEmail
+    created_by: _currentEmail,
+    assigned_to: _currentEmail
   };
   try {
     const { data, error } = await _supabase.from('ppmo_vehicles').insert(payload).select().single();
@@ -999,6 +1012,7 @@ function renderDoneBody(n) {
     : '<div class="sub-label">입력된 피드백 없음</div>';
 
   return `
+    ${renderDoneActions(n)}
     <div class="section-head">기본 정보</div>
     <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;line-height:1.8;">
       <div>검사일: <b>${new Date(s.round.inspected_at).toLocaleDateString('ko-KR')}</b></div>
@@ -1028,7 +1042,9 @@ function renderDoneBody(n) {
 
 function renderEditBody(n, isRound0, mileage) {
   const today = new Date().toISOString().slice(0, 10);
+  const editing = !!_roundsState[n]?.editing;
   return `
+    ${editing ? `<div class="edit-banner">✏️ <span><b>관리자 수정 모드</b> · 저장된 값이 채워져 있습니다. 바꿀 항목만 고친 뒤 '수정 저장'을 누르세요. 사진은 칸을 눌러 교체하거나 ✕로 삭제할 수 있습니다.</span></div>` : ''}
     ${isRound0
       ? `<div class="sub-label" style="margin:12px 0;padding:10px 12px;background:var(--bg-info);color:var(--text-info);border-radius:var(--radius-sm);">타이어 장착 시점의 초기 상태를 기록합니다. 주행거리는 차량 생성 시 입력한 <b>${fmtKm(mileage)}</b>이 자동 적용됩니다.</div>`
       : ''}
@@ -1082,7 +1098,8 @@ function renderEditBody(n, isRound0, mileage) {
     <label class="opt-toggle"><input type="checkbox" id="rot-${n}" onchange="onRotToggle(${n})"> 이번 방문에서 타이어 위치교환(로테이션) 실시</label>
     <div id="rotWrap-${n}" class="hidden" style="margin-top:10px;"></div>` : ''}
 
-    <button class="btn full" id="save-${n}" onclick="saveRound(${n})" disabled style="margin-top:12px;">${isRound0 ? '초기 데이터 저장' : n + '회차 저장'}</button>`;
+    <button class="btn full" id="save-${n}" onclick="saveRound(${n})" disabled style="margin-top:12px;">${saveLabel(n)}</button>
+    ${_roundsState[n]?.editing ? `<button class="btn full outline" onclick="cancelEditRound(${n})" style="margin-top:8px;">수정 취소</button>` : ''}`;
 }
 
 window.toggleRound = function(n) {
@@ -1226,6 +1243,10 @@ window.onAlignToggle = function(n) {
   document.getElementById(`alWrap-${n}`).classList.toggle('hidden', !on);
   // 얼라인먼트 증빙 사진 칸 추가/제거
   const s = _roundsState[n];
+  if (s.editing && s.removedSlots) {
+    if (on) s.removedSlots.delete(ALIGN_PHOTO_SLOT.id);
+    else if (s.photosBySlot[ALIGN_PHOTO_SLOT.id]) s.removedSlots.add(ALIGN_PHOTO_SLOT.id);
+  }
   if (!on) {
     if (s.pendingBySlot[ALIGN_PHOTO_SLOT.id]) {
       URL.revokeObjectURL(s.pendingBySlot[ALIGN_PHOTO_SLOT.id].previewUrl);
@@ -1368,6 +1389,262 @@ function renderRotationDone(n) {
     <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:8px 14px;font-size:12.5px;line-height:1.6;">${body}</div>`;
 }
 
+// ── 권한 / 담당자 ──
+function isAdminUser() { return ADMIN_EMAILS.includes((_currentEmail || '').toLowerCase()); }
+function vehicleOwner(v) { return v?.assigned_to || v?.created_by || '—'; }
+
+// ── 저장된 회차 수정 (관리자 전용) ──
+// 담당자는 수정 불가 → 수정할 내용을 관리자에게 전달해서 관리자가 반영
+function canEditRound(n) { return !!_roundsState[n]?.round && isAdminUser(); }
+// 이후 회차가 이미 저장돼 있으면 위치교환은 수정 불가 (뒤 회차의 타이어 위치 계산이 어긋나므로)
+function isRotationLocked(n) {
+  return Object.values(_roundsState).some(st => st.round && st.round.round_no > n);
+}
+function saveLabel(n) {
+  if (_roundsState[n]?.editing) return '수정 저장';
+  return n === 0 ? '초기 데이터 저장' : `${n}회차 저장`;
+}
+function keptExistingPhoto(n, slotId) {
+  const s = _roundsState[n];
+  if (!s || !s.editing) return null;
+  const p = s.photosBySlot[slotId];
+  if (!p || !p.path || !p.signedUrl) return null;
+  if (s.removedSlots?.has(slotId) || s.pendingBySlot[slotId] || s.skippedSlots?.has(slotId)) return null;
+  return p;
+}
+window.removeExistingPhoto = function(n, slotId) {
+  if (!confirm('이 사진을 삭제할까요? (수정 저장 시 실제 삭제됩니다)')) return;
+  _roundsState[n].removedSlots.add(slotId);
+  renderPhotoSlots(n);
+  validateRoundSave(n);
+};
+function renderDoneActions(n) {
+  const r = _roundsState[n].round;
+  const upd = r.updated_at
+    ? `<span class="upd-meta">입력 ${escapeHtml(r.inspected_by || '—')} · 최종 수정 ${new Date(r.updated_at).toLocaleString('ko-KR')}${r.updated_by ? ' (' + escapeHtml(r.updated_by) + ')' : ''}</span>`
+    : `<span class="upd-meta">입력 ${escapeHtml(r.inspected_by || '—')}</span>`;
+  const btn = canEditRound(n)
+    ? `<button class="btn outline sm" onclick="startEditRound(${n})">✏️ 수정</button>`
+    : `<span class="upd-meta">수정이 필요하면 관리자에게 요청</span>`;
+  return `<div class="done-actions">${upd}${btn}</div>`;
+}
+function toLocalDateStr(iso) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+window.startEditRound = function(n) {
+  const s = _roundsState[n];
+  if (!canEditRound(n)) return;
+  const isRound0 = n === 0;
+  s.editing = true;
+  s.retry = false;
+  s.pendingBySlot = {};
+  s.skippedSlots = new Set();
+  s.removedSlots = new Set();
+  s.pendingChips = new Set();
+  s.feedback.forEach(f => {
+    const idx = FEEDBACK_CHIPS.findIndex(c => c.label === f.note);
+    if (idx >= 0) s.pendingChips.add(idx);
+  });
+  if (isRound0) {
+    const sv = _currentVehicleSurvey;
+    s.survey = { driving_env: sv?.driving_env || null, priorities: new Set(sv?.priorities || []), load_level: sv?.load_level || null };
+  }
+  const card = document.querySelector(`.round-card[data-n="${n}"]`);
+  card.classList.add('open');
+  const mileage = isRound0 ? (_currentVehicle.initial_mileage_km || 0) : s.round.mileage_km;
+  card.querySelector('.round-body').innerHTML = renderEditBody(n, isRound0, mileage);
+
+  buildRtdGrid(n);
+  if (isRound0) { renderTireInfoGrid(); renderSurvey(n); }
+  renderFeedbackChips(n);
+
+  document.getElementById(`date-${n}`).value = toLocalDateStr(s.round.inspected_at);
+  const notesEl = document.getElementById(`notes-${n}`);
+  if (notesEl) notesEl.value = s.round.notes || '';
+
+  s.measurements.forEach(m => {
+    const el = document.querySelector(`.rtdInput-${n}[data-pos="${CSS.escape(m.position)}"][data-point="${CSS.escape(m.point)}"]`);
+    if (el && m.rtd_mm != null) el.value = m.rtd_mm;
+  });
+  getPositions().forEach(pos => onRtdInput(n, pos));
+
+  if (!isRound0 && s.round.alignment_done) {
+    document.getElementById(`alchk-${n}`).checked = true;
+    document.getElementById(`alWrap-${n}`).classList.remove('hidden');
+  }
+  _vehicleAlignment.filter(a => a.round_id === s.round.id).forEach(a => ['camber_deg', 'caster_deg', 'toe_deg'].forEach(f => {
+    const el = document.getElementById(`al-${n}-${a.phase}-${a.wheel}-${f}`);
+    if (el && a[f] != null) el.value = a[f];
+  }));
+  onAlignInput(n);
+
+  if (!isRound0) {
+    const rotChk = document.getElementById(`rot-${n}`);
+    const rotWrap = document.getElementById(`rotWrap-${n}`);
+    if (isRotationLocked(n)) {
+      rotChk.checked = !!s.round.rotated;
+      rotChk.disabled = true;
+      rotWrap.classList.remove('hidden');
+      rotWrap.innerHTML = `<div class="sub-label" style="color:var(--text-warning);margin-bottom:6px;">🔒 이후 회차가 이미 저장돼 있어 위치교환은 수정할 수 없습니다. (뒤 회차의 타이어 위치 계산이 어긋남)</div>${renderRotationDone(n)}`;
+    } else {
+      renderRotationEditor(n);
+      if (s.round.rotated) {
+        rotChk.checked = true;
+        rotWrap.classList.remove('hidden');
+        _vehicleRotations.filter(r => r.round_id === s.round.id).forEach(m => {
+          const sel = document.querySelector(`.rotSel-${n}[data-key="${CSS.escape(m.tire_key)}"]`);
+          if (sel) sel.value = m.to_position;
+        });
+      }
+    }
+  }
+  renderPhotoSlots(n);
+  updatePhotoHead(n);
+  validateRoundSave(n);
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+window.cancelEditRound = function(n) {
+  const s = _roundsState[n];
+  Object.values(s.pendingBySlot || {}).forEach(p => URL.revokeObjectURL(p.previewUrl));
+  s.editing = false; s.retry = false;
+  s.pendingBySlot = {}; s.skippedSlots = new Set(); s.removedSlots = new Set();
+  s.pendingChips = new Set(); s.survey = null;
+  document.querySelector(`.round-card[data-n="${n}"] .round-body`).innerHTML = renderDoneBody(n);
+};
+// 삭제 후 행 수 확인 (RLS로 막히면 에러 없이 0행 삭제되므로)
+async function deleteRows(table, col, val, expectAny, label) {
+  const { data, error } = await _supabase.from(table).delete().eq(col, val).select('id');
+  if (error) throw new Error(`[${label}] ${error.message}`);
+  if (expectAny && !(data || []).length) throw new Error(`[${label}] 기존 데이터 삭제 권한이 없습니다 (관리자 계정 / v10 SQL 확인)`);
+}
+async function updateRound(n) {
+  const btn = document.getElementById(`save-${n}`);
+  btn.disabled = true; btn.textContent = '수정 저장 중...';
+  const s = _roundsState[n];
+  const isRound0 = n === 0;
+  const roundId = s.round.id;
+  const rotLocked = isRotationLocked(n);
+  const strict = !s.retry;   // 재시도 시엔 이미 지워진 행이 있을 수 있어 삭제 행 수 검사 생략
+  const mileage = isRound0 ? _currentVehicle.initial_mileage_km : parseFloat(document.getElementById(`mile-${n}`).value);
+  const rotated = isRound0 ? false : !!document.getElementById(`rot-${n}`)?.checked;
+  const alignDone = isRound0 ? true : !!document.getElementById(`alchk-${n}`)?.checked;
+  const alignRows = isRound0 ? (collectAlign(n, 'initial') || [])
+    : (alignDone ? [...(collectAlign(n, 'before') || []), ...(collectAlign(n, 'after') || [])] : []);
+  const rotMoves = (!rotLocked && rotated) ? (checkRotation(n).moves || []) : [];
+  const notes = isRound0 ? null : (document.getElementById(`notes-${n}`)?.value.trim() || null);
+  const inspectedAt = new Date(document.getElementById(`date-${n}`).value + 'T12:00:00').toISOString();
+  try {
+    // 1. 회차 기본 정보
+    const upd = { mileage_km: mileage, inspected_at: inspectedAt, notes, alignment_done: alignDone,
+                  updated_at: new Date().toISOString(), updated_by: _currentEmail };
+    if (!rotLocked) upd.rotated = rotated;
+    const { data: ur, error: uErr } = await _supabase.from('ppmo_rounds').update(upd).eq('id', roundId).select('id');
+    if (uErr) throw new Error('[회차 수정] ' + uErr.message);
+    if (!ur || !ur.length) throw new Error('[회차 수정] 수정 권한이 없습니다 (관리자 계정 / v10 SQL 확인)');
+
+    // 2. RTD 전체 교체
+    await deleteRows('ppmo_measurements', 'round_id', roundId, strict && s.measurements.length > 0, 'RTD');
+    const measurements = [...document.querySelectorAll(`.rtdInput-${n}`)].map(i => ({
+      round_id: roundId, position: i.dataset.pos, point: i.dataset.point, rtd_mm: parseFloat(i.value)
+    }));
+    if (measurements.length) {
+      const { error } = await _supabase.from('ppmo_measurements').insert(measurements);
+      if (error) throw new Error('[RTD] ' + error.message);
+    }
+
+    // 3. 사진: 새 사진 업로드 → 기존(교체/삭제/미첨부) 정리 → 새 기록
+    const newPaths = [];
+    const slotEntries = Object.entries(s.pendingBySlot);
+    for (let i = 0; i < slotEntries.length; i++) {
+      const [slotId, p] = slotEntries[i];
+      btn.textContent = `사진 업로드 ${i + 1}/${slotEntries.length}`;
+      const path = `${_currentVehicle.id}/${roundId}/${slotId}_${Date.now()}.jpg`;
+      const { error } = await _supabase.storage.from('ppmo-photos').upload(path, p.file, { contentType: 'image/jpeg', cacheControl: '3600', upsert: false });
+      if (error) throw new Error('[사진 업로드 · Storage] ' + error.message);
+      newPaths.push({ slotId, path });
+    }
+    const oldRows = Object.entries(s.photosBySlot).filter(([slotId]) =>
+      s.pendingBySlot[slotId] || s.removedSlots.has(slotId) || s.skippedSlots.has(slotId) ||
+      (slotId === ALIGN_PHOTO_SLOT.id && !alignDone)
+    ).map(([, p]) => p);
+    if (oldRows.length) {
+      const ids = oldRows.map(p => p.id).filter(Boolean);
+      const { data: dp, error } = await _supabase.from('ppmo_photos').delete().in('id', ids).select('id');
+      if (error) throw new Error('[사진 기록 삭제] ' + error.message);
+      if (strict && ids.length && !(dp || []).length) throw new Error('[사진 기록 삭제] 권한이 없습니다 (v10 SQL 확인)');
+      const oldPaths = oldRows.map(p => p.path).filter(Boolean);
+      if (oldPaths.length) {
+        const { error: rmErr } = await _supabase.storage.from('ppmo-photos').remove(oldPaths);
+        if (rmErr) console.warn('기존 사진 파일 삭제 실패 (기록은 삭제됨):', rmErr.message);
+      }
+    }
+    for (const np of newPaths) {
+      const { error } = await _supabase.from('ppmo_photos').insert({ round_id: roundId, photo_type: np.slotId, url: np.path });
+      if (error) throw new Error('[사진 기록] ' + error.message);
+    }
+
+    // 4. 피드백 (1~5회차)
+    if (!isRound0) {
+      await deleteRows('ppmo_feedback', 'round_id', roundId, strict && s.feedback.length > 0, '피드백');
+      const rows = [...s.pendingChips].map(i => ({ round_id: roundId, category: FEEDBACK_CHIPS[i].category, note: FEEDBACK_CHIPS[i].label }));
+      if (rows.length) {
+        const { error } = await _supabase.from('ppmo_feedback').insert(rows);
+        if (error) throw new Error('[피드백] ' + error.message);
+      }
+    }
+
+    // 5. 초기 회차: DOT/바코드 + 설문
+    if (isRound0) {
+      const tireRows = getTirePositions().map(t => ({
+        vehicle_id: _currentVehicle.id, position: t.pos,
+        dot_code: document.getElementById(`dot-${t.pos}`).value.trim(),
+        barcode: document.getElementById(`barcode-${t.pos}`).value.trim()
+      }));
+      const { error: tErr } = await _supabase.from('ppmo_tires').upsert(tireRows, { onConflict: 'vehicle_id,position' });
+      if (tErr) throw new Error('[타이어 정보] ' + tErr.message);
+      const sv = ensureSurveyState(n);
+      await _supabase.from('ppmo_survey').delete().eq('vehicle_id', _currentVehicle.id);
+      const { error: svErr } = await _supabase.from('ppmo_survey').insert({
+        vehicle_id: _currentVehicle.id, driving_env: sv.driving_env, priorities: [...sv.priorities],
+        load_level: sv.load_level, created_by: _currentEmail
+      });
+      if (svErr) throw new Error('[설문] ' + svErr.message);
+    }
+
+    // 6. 얼라인먼트 전체 교체
+    const hadAlign = _vehicleAlignment.some(a => a.round_id === roundId);
+    await deleteRows('ppmo_alignment', 'round_id', roundId, strict && hadAlign, '얼라인먼트');
+    if (alignRows.length) {
+      const { error } = await _supabase.from('ppmo_alignment')
+        .insert(alignRows.map(r => ({ ...r, vehicle_id: _currentVehicle.id, round_id: roundId })));
+      if (error) throw new Error('[얼라인먼트] ' + error.message);
+    }
+
+    // 7. 위치교환 (최신 회차만)
+    if (!rotLocked) {
+      const hadRot = _vehicleRotations.some(r => r.round_id === roundId);
+      await deleteRows('ppmo_rotations', 'round_id', roundId, strict && hadRot, '위치교환');
+      if (rotMoves.length) {
+        const { error } = await _supabase.from('ppmo_rotations')
+          .insert(rotMoves.map(m => ({ ...m, vehicle_id: _currentVehicle.id, round_id: roundId })));
+        if (error) throw new Error('[위치교환] ' + error.message);
+      }
+    }
+
+    Object.values(s.pendingBySlot).forEach(p => URL.revokeObjectURL(p.previewUrl));
+    logAccess(_currentEmail, `PPMo 수정 · ${_currentVehicle.vehicle_no} · ${isRound0 ? '초기' : n + '회차'}`);
+    toast(`${isRound0 ? '초기 데이터' : n + '회차'}가 수정되었습니다`);
+    await renderRounds();
+    document.querySelector(`.round-card[data-n="${n}"]`)?.classList.add('open');
+  } catch(e) {
+    console.error('updateRound 실패:', e);
+    s.retry = true;
+    toast('수정 실패: ' + e.message + ' · 다시 저장하면 나머지가 반영됩니다', true);
+    btn.disabled = false; btn.textContent = saveLabel(n);
+  }
+}
+
 // ── Photo slots ──
 function updatePhotoHead(n) {
   const h = document.getElementById(`photoHead-${n}`);
@@ -1382,6 +1659,7 @@ function renderPhotoSlots(n) {
   wrap.innerHTML = slots.map(slot => {
     const pending = s.pendingBySlot[slot.id];
     const skipped = s.skippedSlots.has(slot.id);
+    const kept = keptExistingPhoto(n, slot.id);
     const skipBox = `<label class="photo-skip-check">
         <input type="checkbox" ${skipped ? 'checked' : ''} onchange="toggleSkipSlot(${n},'${slot.id}')">
         업로드하지 않고 진행
@@ -1393,6 +1671,18 @@ function renderPhotoSlots(n) {
           <img src="${pending.previewUrl}">
           <div class="del" onclick="removeSlotPhoto(${n},'${slot.id}')">✕</div>
           <div class="pending-badge">대기</div>
+        </div>
+        ${skipBox}
+      </div>`;
+    }
+    if (kept && !skipped) {
+      return `<div class="photo-slot filled">
+        <div class="photo-slot-label">${escapeHtml(slot.label)}</div>
+        <div class="photo-slot-body">
+          <img src="${kept.signedUrl}" onclick="triggerSlotUpload(${n},'${slot.id}')">
+          <div class="del" onclick="removeExistingPhoto(${n},'${slot.id}')">✕</div>
+          <div class="replace-hint">눌러서 교체</div>
+          <div class="saved-badge">저장됨</div>
         </div>
         ${skipBox}
       </div>`;
@@ -1410,15 +1700,18 @@ function renderPhotoSlots(n) {
       ${skipBox}
     </div>`;
   }).join('');
-  const uploaded = Object.keys(s.pendingBySlot).length;
+  const uploaded = slots.filter(sl => s.pendingBySlot[sl.id]).length;
+  const keptCnt = slots.filter(sl => !s.pendingBySlot[sl.id] && !s.skippedSlots.has(sl.id) && keptExistingPhoto(n, sl.id)).length;
+  const skippedCnt = slots.filter(sl => s.skippedSlots.has(sl.id)).length;
   const prog = document.getElementById(`progress-${n}`);
-  if (prog) prog.textContent = `${uploaded + s.skippedSlots.size}/${slots.length} 처리됨 (업로드 ${uploaded} · 미첨부 ${s.skippedSlots.size})`;
+  if (prog) prog.textContent = `${uploaded + keptCnt + skippedCnt}/${slots.length} 처리됨 (${keptCnt ? `기존 ${keptCnt} · ` : ''}새 사진 ${uploaded} · 미첨부 ${skippedCnt})`;
 }
 window.toggleSkipSlot = function(n, slotId) {
   const s = _roundsState[n];
   if (!s.skippedSlots) s.skippedSlots = new Set();
   if (s.skippedSlots.has(slotId)) {
     s.skippedSlots.delete(slotId);
+    if (s.removedSlots) s.removedSlots.delete(slotId);   // 수정 모드: 기존 사진 복원
   } else {
     s.skippedSlots.add(slotId);
     // 미첨부로 바꾸면 대기 중인 사진은 제거
@@ -1533,7 +1826,7 @@ window.validateRoundSave = function(n) {
   // 3. 사진 전 슬롯 채움 (모든 회차 동일)
   const slotsRequired = getSlots(n);
   if (!s.skippedSlots) s.skippedSlots = new Set();
-  const photoDone = slotsRequired.filter(sl => s.pendingBySlot[sl.id] || s.skippedSlots.has(sl.id)).length;
+  const photoDone = slotsRequired.filter(sl => s.pendingBySlot[sl.id] || s.skippedSlots.has(sl.id) || keptExistingPhoto(n, sl.id)).length;
   const photoOk = photoDone === slotsRequired.length;
   // 4. RTD 측정 — 모든 회차 (0회차 포함) 그루브별 실측 필수
   const rtdInputs = document.querySelectorAll(`.rtdInput-${n}`);
@@ -1569,7 +1862,7 @@ window.validateRoundSave = function(n) {
     }
   }
   let rotOk = true;
-  if (!isRound0 && document.getElementById(`rot-${n}`)?.checked) {
+  if (!isRound0 && document.getElementById(`rot-${n}`)?.checked && !(s.editing && isRotationLocked(n))) {
     const chk = checkRotation(n);
     rotOk = chk.ok;
     const w = document.getElementById(`rotWarn-${n}`);
@@ -1593,7 +1886,7 @@ window.validateRoundSave = function(n) {
     if (!rotOk) missing.push('위치교환');
     btn.textContent = `미완료: ${missing.join(', ')}`;
   } else {
-    btn.textContent = isRound0 ? '초기 데이터 저장' : `${n}회차 저장`;
+    btn.textContent = saveLabel(n);
   }
 };
 
@@ -1624,6 +1917,7 @@ window.onFileChosen = null; // (deprecated - slot 방식으로 대체)
 
 // ── Save round ──
 window.saveRound = async function(n) {
+  if (_roundsState[n]?.editing) return updateRound(n);
   const btn = document.getElementById(`save-${n}`);
   btn.disabled = true; btn.textContent = '저장 중...';
   const isRound0 = n === 0;
@@ -1742,7 +2036,7 @@ window.saveRound = async function(n) {
       if (createdRoundId) await _supabase.from('ppmo_rounds').delete().eq('id', createdRoundId);
     } catch(rbErr) { console.warn('롤백 실패:', rbErr); }
     toast('저장 실패: ' + e.message, true);
-    btn.disabled = false; btn.textContent = isRound0 ? '초기 데이터 저장' : `${n}회차 저장`;
+    btn.disabled = false; btn.textContent = saveLabel(n);
   }
 };
 

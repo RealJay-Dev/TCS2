@@ -984,7 +984,7 @@ async function loadPpmoData() {
     ppmoRounds = rRes.error ? [] : (rRes.data || []);
     ppmoLoaded = true;
     // 담당자 필터 옵션 채우기
-    const sales = [...new Set(ppmoVehicles.map(v => v.created_by).filter(Boolean))].sort();
+    const sales = [...new Set(ppmoVehicles.map(v => ppmoOwner(v)).filter(Boolean))].sort();
     const sel = document.getElementById('ppmoFilterSales');
     const currentVal = sel.value;
     sel.innerHTML = '<option value="">전체 담당자 (' + sales.length + '명)</option>' +
@@ -999,7 +999,7 @@ async function loadPpmoData() {
 
 function renderPpmoStats() {
   const totalVehicles = ppmoVehicles.length;
-  const uniqueSales = new Set(ppmoVehicles.map(v => v.created_by).filter(Boolean)).size;
+  const uniqueSales = new Set(ppmoVehicles.map(v => ppmoOwner(v)).filter(Boolean)).size;
   const totalRounds = ppmoRounds.length;
   // 평균 진행률
   const progressPerVehicle = {};
@@ -1025,7 +1025,7 @@ function renderPpmoTable() {
     const t = r.inspected_at ? new Date(r.inspected_at).getTime() : 0;
     if (!lastDateMap[r.vehicle_id] || t > lastDateMap[r.vehicle_id]) lastDateMap[r.vehicle_id] = t;
   });
-  let filtered = ppmoVehicles.filter(v => !salesFilter || v.created_by === salesFilter);
+  let filtered = ppmoVehicles.filter(v => !salesFilter || ppmoOwner(v) === salesFilter);
   if (statusFilter === 'in_progress') filtered = filtered.filter(v => (progressMap[v.id] || 0) < TOTAL_PPMO_ROUNDS);
   else if (statusFilter === 'complete') filtered = filtered.filter(v => (progressMap[v.id] || 0) >= TOTAL_PPMO_ROUNDS);
 
@@ -1045,7 +1045,9 @@ function renderPpmoTable() {
     const model = [v.vehicle_type, v.model_year && `'${String(v.model_year).slice(-2)}`].filter(Boolean).join(' ') || '—';
     return `<div class="table-row" style="grid-template-columns:1.2fr 1.6fr 1.4fr 0.8fr 1fr 1fr 0.6fr;">
       <div style="font-weight:700;cursor:pointer;color:var(--text-info);" onclick="showPpmoDetail('${v.id}')">${escapeHtmlAdm(v.vehicle_no)}</div>
-      <div style="font-size:12px;color:var(--text-secondary);">${escapeHtmlAdm(v.created_by || '—')}</div>
+      <div style="font-size:12px;color:var(--text-secondary);">${escapeHtmlAdm(ppmoOwner(v) || '—')}
+        <a href="javascript:void(0)" onclick="openReassign('${v.id}')" style="display:inline-block;margin-left:6px;font-size:11px;color:var(--text-info);text-decoration:none;">변경</a>
+        ${v.assigned_to && v.created_by && v.assigned_to.toLowerCase() !== v.created_by.toLowerCase() ? `<span style="display:block;font-size:10.5px;color:var(--text-tertiary);">최초 생성 ${escapeHtmlAdm(v.created_by)}</span>` : ''}</div>
       <div style="font-size:12px;">${escapeHtmlAdm(model)}</div>
       <div>${progressBar}</div>
       <div style="font-size:12px;color:var(--text-secondary);">${lastDate}</div>
@@ -1153,6 +1155,8 @@ window.showPpmoDetail = async function(vehicleId) {
       _supabase.from('ppmo_rotations').select('*').eq('vehicle_id', vehicleId)
     ]);
     const alignRows = alRes.data || [];
+    const { data: asgData } = await _supabase.from('ppmo_vehicle_assignments').select('*').eq('vehicle_id', vehicleId).order('changed_at', { ascending: true });
+    const assignHist = asgData || [];
     const rotRows = roRes.data || [];
     fullRounds = rRes.data || [];
     tires = tRes.data || [];
@@ -1180,7 +1184,8 @@ window.showPpmoDetail = async function(vehicleId) {
     // 차량 정보 요약 + 액션 버튼
     const info = [
       ['차량번호', v.vehicle_no],
-      ['담당자', v.created_by],
+      ['담당자', ppmoOwner(v)],
+      ['최초 생성자', v.created_by || '—'],
       ['모델·연식', [v.vehicle_type, v.model_year && `${v.model_year}년식`].filter(Boolean).join(' · ') || '—'],
       ['모니터링 범위', v.front_only ? '🔧 전륜만 (2본)' : '전체 (6본)'],
       ['그루브 수', `${v.groove_count || 3}개`],
@@ -1196,6 +1201,7 @@ window.showPpmoDetail = async function(vehicleId) {
         info.map(([k, val]) => `<div style="display:flex;padding:3px 0;"><span style="color:var(--text-tertiary);min-width:130px;">${k}</span><span>${escapeHtmlAdm(val)}</span></div>`).join('')
       }</div>
       <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+        <button onclick="openReassign('${v.id}')" style="padding:7px 14px;background:none;color:var(--text);border:0.5px solid var(--border-strong);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">👤 담당자 변경</button>
         <button onclick="downloadVehicleExcel('${v.id}')" style="padding:7px 14px;background:var(--text);color:var(--bg);border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">📊 이 차량 Excel</button>
         <button onclick="downloadVehiclePhotosZip('${v.id}')" ${!realPhotoCount ? 'disabled style="opacity:0.4;"' : ''} style="padding:7px 14px;background:none;color:var(--text);border:0.5px solid var(--border-strong);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">🗂 사진 전체 ZIP (${realPhotoCount}장)</button>
       </div>`;
@@ -1336,7 +1342,11 @@ window.showPpmoDetail = async function(vehicleId) {
         <div style="font-size:12px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">🔄 타이어 위치 이력</div>
         ${tpos.map(t => `<div>${admTireName(t.pos, tireByPos, v.front_only)} : ${hist[t.pos].join(' → ')} <span style="color:var(--text-tertiary);">· 현재 ${admPosLabel(posNow[t.pos])}</span></div>`).join('')}
       </div>` : '';
-    document.getElementById('ppmoDetailContent').innerHTML = infoHtml + surveyHtml + tireHistHtml + predHtml + roundsHtml;
+    const assignHtml = assignHist.length ? `<div style="background:var(--bg-secondary);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:12.5px;line-height:1.7;">
+        <div style="font-size:12px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">👤 담당자 변경 이력</div>
+        ${assignHist.map(h => `<div>${new Date(h.changed_at).toLocaleString('ko-KR')} · ${escapeHtmlAdm(h.from_email || '—')} → <b>${escapeHtmlAdm(h.to_email)}</b> <span style="color:var(--text-tertiary);">(${escapeHtmlAdm(h.changed_by || '')}${h.reason ? ' · ' + escapeHtmlAdm(h.reason) : ''})</span></div>`).join('')}
+      </div>` : '';
+    document.getElementById('ppmoDetailContent').innerHTML = infoHtml + assignHtml + surveyHtml + tireHistHtml + predHtml + roundsHtml;
   } catch(e) {
     document.getElementById('ppmoDetailContent').innerHTML = `<div class="empty-state">불러오기 실패: ${e.message}</div>`;
   }
@@ -1401,7 +1411,8 @@ window.exportPpmoExcel = async function() {
     ppmoRounds.forEach(r => { progressMap[r.vehicle_id] = (progressMap[r.vehicle_id] || 0) + 1; });
     const vehicleRows = ppmoVehicles.map(v => ({
       '차량번호': v.vehicle_no,
-      '담당자': v.created_by || '',
+      '담당자': ppmoOwner(v),
+      '최초 생성자': v.created_by || '',
       '모델': v.vehicle_type || '',
       '연식': v.model_year || '',
       '모니터링 범위': v.front_only ? '전륜만' : '전체',
@@ -1441,7 +1452,7 @@ window.exportPpmoExcel = async function() {
       const avgRtd = measN.length ? (measN.reduce((a,x) => a+x, 0) / measN.length) : null;
       return {
         '차량번호': v.vehicle_no,
-        '담당자': v.created_by || '',
+        '담당자': ppmoOwner(v),
         '회차': r.round_no === 0 ? '초기 설치' : `${r.round_no}회차`,
         '검사일': r.inspected_at ? new Date(r.inspected_at).toLocaleDateString('ko-KR') : '',
         '주행거리 (km)': r.mileage_km,
@@ -1494,7 +1505,7 @@ window.exportPpmoExcel = async function() {
       const { data: svAll } = await _supabase.from('ppmo_survey').select('*');
       const svRows = (svAll || []).map(sv => {
         const v = ppmoVehicles.find(x => x.id === sv.vehicle_id) || {};
-        return { '차량번호': v.vehicle_no || '', '담당자': v.created_by || '', '주행 환경': sv.driving_env || '',
+        return { '차량번호': v.vehicle_no || '', '담당자': ppmoOwner(v), '주행 환경': sv.driving_env || '',
                  '중시 항목': (sv.priorities || []).join(', '), '화물 하중': sv.load_level || '' };
       });
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(svRows.length ? svRows : [{ '차량번호': '응답 없음' }]), '사전 설문');
@@ -1525,7 +1536,8 @@ window.downloadVehicleExcel = async function(vehicleId) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
       ['항목', '값'],
       ['차량번호', v.vehicle_no],
-      ['담당자', v.created_by],
+      ['담당자', ppmoOwner(v)],
+      ['최초 생성자', v.created_by || '—'],
       ['모델·연식', `${v.vehicle_type || ''} ${v.model_year || ''}`],
       ['모니터링 범위', v.front_only ? '전륜만 (2본)' : '전체 (6본)'],
       ['그루브 수', `${v.groove_count || 3}개`],
@@ -1661,7 +1673,7 @@ window.exportPpmoCSV = function() {
   });
   const headers = ['차량번호','담당자','모델','연식','제품','사이즈','하중지수','속도지수','장착주행거리','진행회차','최근검사일','등록일'];
   const rows = ppmoVehicles.map(v => [
-    v.vehicle_no, v.created_by || '', v.vehicle_type || '', v.model_year || '',
+    v.vehicle_no, ppmoOwner(v), v.vehicle_type || '', v.model_year || '',
     v.product || '', v.tire_size || '', v.load_index || '', v.speed_index || '',
     v.initial_mileage_km || '', (progressMap[v.id] || 0) + '/' + TOTAL_PPMO_ROUNDS,
     lastDateMap[v.id] ? new Date(lastDateMap[v.id]).toLocaleDateString('ko-KR') : '',
@@ -1708,6 +1720,61 @@ function admAlignBlock(title, before, after, frontOnly) {
     ${wheels.map(w => `<tr><td ${td}><b>${w.label}</b></td><td ${td}>${cell(w, 'camber_deg')}</td><td ${td}>${cell(w, 'caster_deg')}</td><td ${td}>${cell(w, 'toe_deg')}</td></tr>`).join('')}
     </table></div>`;
 }
+function ppmoOwner(v) { return (v && (v.assigned_to || v.created_by)) || ''; }
+
+// ── 담당자 변경 (관리자) ──
+window.openReassign = function(vehicleId) {
+  const v = ppmoVehicles.find(x => x.id === vehicleId);
+  if (!v) return;
+  const cur = ppmoOwner(v);
+  // 후보: 접속 로그 사용자 + 기존 담당자/생성자 (Ban 사용자 제외)
+  const cands = [...new Set([
+    ...allLogs.map(l => l.email),
+    ...ppmoVehicles.map(x => ppmoOwner(x)),
+    ...ppmoVehicles.map(x => x.created_by)
+  ].filter(e => e && e.endsWith('@continental.com') && !bannedUsers.has(e)).map(e => e.toLowerCase()))].sort();
+  document.getElementById('reassignVehicleId').value = vehicleId;
+  document.getElementById('reassignTitle').textContent = `${v.vehicle_no} · 담당자 변경`;
+  document.getElementById('reassignCurrent').textContent = cur || '—';
+  document.getElementById('reassignSelect').innerHTML = '<option value="">— 목록에서 선택 —</option>' +
+    cands.filter(e => e !== (cur || '').toLowerCase()).map(e => `<option value="${escapeAttr(e)}">${escapeHtmlAdm(e)}</option>`).join('');
+  document.getElementById('reassignInput').value = '';
+  document.getElementById('reassignReason').value = '';
+  document.getElementById('reassignModal').style.display = 'flex';
+};
+window.closeReassign = function() { document.getElementById('reassignModal').style.display = 'none'; };
+window.submitReassign = async function() {
+  const vehicleId = document.getElementById('reassignVehicleId').value;
+  const v = ppmoVehicles.find(x => x.id === vehicleId);
+  const to = (document.getElementById('reassignInput').value.trim() || document.getElementById('reassignSelect').value).toLowerCase();
+  const reason = document.getElementById('reassignReason').value.trim() || null;
+  if (!to) return alert('새 담당자를 선택하거나 이메일을 입력하세요.');
+  if (!to.endsWith('@continental.com')) return alert('@continental.com 이메일만 지정할 수 있습니다.');
+  const from = ppmoOwner(v);
+  if (to === (from || '').toLowerCase()) return alert('현재 담당자와 같습니다.');
+  if (!confirm(`${v.vehicle_no}\n\n담당자: ${from || '—'} → ${to}\n\n변경 후 기존 담당자는 이 차량을 볼 수 없습니다. 진행할까요?`)) return;
+  const btn = document.getElementById('reassignBtn');
+  btn.disabled = true; btn.textContent = '변경 중...';
+  try {
+    const me = document.getElementById('adminEmail').textContent;
+    const { data, error } = await _supabase.from('ppmo_vehicles').update({ assigned_to: to }).eq('id', vehicleId).select('id');
+    if (error) throw error;
+    if (!data || !data.length) throw new Error('변경된 행이 없습니다 (v10 SQL 실행 / 관리자 계정 확인)');
+    const { error: hErr } = await _supabase.from('ppmo_vehicle_assignments').insert({
+      vehicle_id: vehicleId, from_email: from || null, to_email: to, changed_by: me, reason
+    });
+    if (hErr) console.warn('변경 이력 저장 실패:', hErr.message);
+    closeReassign();
+    await loadPpmoData();
+    const modal = document.getElementById('ppmoDetailModal');
+    if (modal.style.display === 'flex') showPpmoDetail(vehicleId);
+    alert(`담당자가 ${to}(으)로 변경되었습니다.`);
+  } catch(e) {
+    alert('변경 실패: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '변경';
+  }
+};
 function isNum(x) { return x !== null && x !== undefined && x !== '' && !isNaN(Number(x)); }
 function escapeHtmlAdm(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(s) { return String(s ?? '').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
@@ -1767,5 +1834,27 @@ window.downloadPhotoByPath = downloadPhotoByPath;
   </div>
 </div>
 
+<!-- 담당자 변경 모달 -->
+<div id="reassignModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg);border-radius:var(--radius);max-width:420px;width:100%;padding:20px 22px;border:0.5px solid var(--border);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div id="reassignTitle" style="font-size:16px;font-weight:800;"></div>
+      <button onclick="closeReassign()" style="background:none;border:none;font-size:22px;color:var(--text-tertiary);cursor:pointer;">×</button>
+    </div>
+    <input type="hidden" id="reassignVehicleId">
+    <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:4px;">현재 담당자</div>
+    <div id="reassignCurrent" style="font-size:14px;font-weight:600;margin-bottom:14px;"></div>
+    <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:4px;">새 담당자</div>
+    <select id="reassignSelect" style="width:100%;padding:10px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:14px;background:var(--bg);color:var(--text);margin-bottom:6px;"></select>
+    <input type="text" id="reassignInput" placeholder="목록에 없으면 이메일 직접 입력" style="width:100%;padding:10px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:14px;background:var(--bg);color:var(--text);margin-bottom:12px;">
+    <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:4px;">변경 사유 (선택)</div>
+    <input type="text" id="reassignReason" placeholder="예: 담당 지역 변경" style="width:100%;padding:10px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:14px;background:var(--bg);color:var(--text);margin-bottom:14px;">
+    <div style="font-size:11.5px;color:var(--text-warning);background:var(--bg-warning);padding:8px 10px;border-radius:6px;margin-bottom:14px;line-height:1.5;">변경 후에는 새 담당자만 이 차량을 보고 다음 회차를 입력할 수 있습니다. 기존 입력 기록(입력자)은 그대로 유지됩니다.</div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="closeReassign()" style="flex:1;padding:11px;background:none;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);color:var(--text);font-size:14px;cursor:pointer;">취소</button>
+      <button id="reassignBtn" onclick="submitReassign()" style="flex:1;padding:11px;background:var(--text);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:14px;font-weight:600;cursor:pointer;">변경</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
