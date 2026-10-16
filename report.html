@@ -27,9 +27,10 @@
   .tool.on { border-color: var(--ink); color: var(--ink); font-weight: 700; }
   .controls { position: sticky; top: 0; z-index: 20; background: var(--tint); border-bottom: 1px solid var(--rule); margin: 0 -32px; padding: 12px 32px; display: grid; grid-template-columns: 1fr auto auto auto; gap: 28px; align-items: start; }
   .ctl-l { font-size: 11px; font-weight: 700; color: var(--ink3); margin-bottom: 6px; }
-  .prods { display: flex; flex-wrap: wrap; gap: 4px 16px; }
-  .prod { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer; user-select: none; }
-  .prod input { width: 15px; height: 15px; accent-color: var(--ink); cursor: pointer; }
+  .prods { display: grid; grid-template-columns: repeat(2, max-content); gap: 5px 22px; }
+  .prod { display: flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer; user-select: none; white-space: nowrap; line-height: 18px; }
+  .prod input { width: 15px; height: 15px; margin: 0; accent-color: var(--ink); cursor: pointer; flex-shrink: 0; }
+  .prod .sw { margin: 0; flex-shrink: 0; }
   .prod.off { color: var(--ink3); }
   .seg { display: inline-flex; border: 1px solid var(--rule2); background: var(--bg); }
   .seg button { border: none; border-right: 1px solid var(--rule2); background: none; padding: 5px 11px; font-size: 12px; cursor: pointer; color: var(--ink2); min-width: 34px; }
@@ -88,9 +89,13 @@
   .al-h { font-size: 13px; font-weight: 700; }
   .al-s { font-size: 11px; color: var(--ink3); }
   .comments { columns: 2; column-gap: 28px; }
-  .cm { break-inside: avoid; margin-bottom: 14px; }
+  .cm { break-inside: avoid; margin-bottom: 18px; }
   .cm-h { font-size: 12.5px; font-weight: 700; margin-bottom: 4px; }
+  .cm-cnt { font-size: 11px; color: var(--ink3); font-weight: 400; margin-left: 6px; }
+  .cm-grp { font-size: 11px; font-weight: 700; margin: 8px 0 3px; }
+  .cm-grp.pos { color: var(--ok); } .cm-grp.neg { color: var(--bad); } .cm-grp.neu { color: var(--ink3); }
   .cm li { list-style: none; font-size: 12px; color: var(--ink2); padding: 3px 0 3px 10px; border-left: 2px solid var(--rule); margin-bottom: 3px; }
+  .cm li.pos { border-left-color: var(--ok); } .cm li.neg { border-left-color: var(--bad); }
   .cm li span { color: var(--ink3); font-size: 11px; margin-right: 6px; }
   ul.read li { font-size: 12px; color: var(--ink2); margin: 0 0 5px 16px; }
   .disc { font-size: 11px; color: var(--ink3); margin-top: 12px; line-height: 1.7; }
@@ -172,7 +177,8 @@
     <div id="fbOther"></div>
     <div class="note" data-i="s8on"></div>
     <div class="sub-h" data-i="s8c"></div>
-    <div class="comments" id="fbComments"></div></div>
+    <div class="comments" id="fbComments"></div>
+    <div class="note" data-i="s8cn"></div></div>
 
   <div class="sec"><div class="sec-h"><span class="sec-n">09</span><span class="sec-t" data-i="s9"></span></div>
     <ul class="read" id="howto"></ul>
@@ -364,7 +370,9 @@ const I18N = {
     alOk: '정상', alWarn: '주의', alBad: '기준 이탈',
     s8: '운전자 피드백', s8d: '장착 타이어 vs 이전 타이어 · 5점이 가장 좋음',
     s8o: '선택 평가 항목', s8on: '선택 항목이라 차량마다 응답 여부가 다릅니다. 괄호 안은 응답 수 / 전체 평가 수이며, 응답이 3건 미만이면 회색으로 표시합니다.',
-    s8c: '운전자 코멘트', s9: '읽는 법 · 면책',
+    s8c: '운전자 코멘트', cPos: '긍정', cNeg: '부정', cNeu: '중립 · 특이사항 없음',
+    s8cn: '코멘트는 단어 규칙으로 자동 분류합니다 (AI 미사용). 항목별 비고는 그 항목 점수(4~5점 긍정, 1~2점 부정)를 우선 적용하고, 자유 메모는 문장 속 부정 표현(미끄러짐, 소음 있음, 마모 빠름 등)과 긍정 표현(안정적, 조용함, 떨림 없음 등)으로 판단합니다. 판단이 어려우면 중립으로 둡니다.',
+    s9: '읽는 법 · 면책',
     prodCol: '제품', sizeCol: '규격', modelCol: '차종', plateCol: '차량 번호', driveCol: '구동', mDateCol: '장착일', mOdoCol: '장착 ODO (km)', ntdCol: '신품 깊이 (mm)', prevCol: '이전 타이어',
     regionCol: '운행 지역', roadsCol: '자주 다니는 도로', envCol: '주행 환경', loadCol: '화물 하중', prioCol: '중시 항목', dailyCol: '일 주행 km',
     vehCol: '차량', tireCol: '타이어', kmCol: '누적 km', lifeCol: '예상 수명 km', monthCol: '장착 후 도달 (개월)', confCol: '신뢰도', diffCol: 'EV 차이',
@@ -421,7 +429,9 @@ const I18N = {
     alOk: 'Normal', alWarn: 'Caution', alBad: 'Out of range',
     s8: 'Driver feedback', s8d: 'Mounted tire vs previous tire · 5 = best',
     s8o: 'Optional items', s8on: 'Optional, so not every vehicle answers. Brackets show answers / total evaluations; fewer than 3 answers are shown in grey.',
-    s8c: 'Driver comments', s9: 'How to read · Disclaimer',
+    s8c: 'Driver comments', cPos: 'Positive', cNeg: 'Negative', cNeu: 'Neutral · no issue',
+    s8cn: 'Comments are classified automatically by word rules (no AI). Item remarks use that item\'s score first (4–5 positive, 1–2 negative); free notes are judged by negative expressions (slipping, noise, fast wear, …) and positive ones (stable, quiet, no vibration, …). Unclear comments stay neutral. Comments are shown in the original Korean.',
+    s9: 'How to read · Disclaimer',
     prodCol: 'Product', sizeCol: 'Size', modelCol: 'Model', plateCol: 'Plate', driveCol: 'Drive', mDateCol: 'Mounted', mOdoCol: 'ODO at mounting', ntdCol: 'New depth (mm)', prevCol: 'Previous tire',
     regionCol: 'Region', roadsCol: 'Frequent roads', envCol: 'Usage', loadCol: 'Load', prioCol: 'Priorities', dailyCol: 'km/day',
     vehCol: 'Vehicles', tireCol: 'Tires', kmCol: 'km run', lifeCol: 'Projected km', monthCol: 'Months from mounting', confCol: 'Confidence', diffCol: 'EV vs ICE',
@@ -472,6 +482,23 @@ const trEnv = s => { if (LANG === 'ko') return s; const i = ENV_KO.indexOf(s); r
 const trLoad = s => { if (LANG === 'ko') return s; const i = LOAD_KO.indexOf(s); return i >= 0 ? LOAD_EN[i] : s; };
 const trPrio = s => { if (LANG === 'ko') return s; const i = PRIO_KO.indexOf(s); return i >= 0 ? PRIO_EN[i] : s; };
 const gLabels = n => Array.from({ length: n }, (_, i) => 'G' + (i + 1));
+
+// ═══════════════ 코멘트 자동 분류 (단어 규칙 · AI 없음) ═══════════════
+// 1) 항목별 비고: 그 항목 점수 4~5 긍정 / 1~2 부정 (3점은 문장으로 판단)
+// 2) 문장: 중립 표현 → 부정 표현 → 긍정 표현 순으로 판단, 해당 없으면 중립
+const NEU_RE = /(특이\s*사항\s*없|별\s*다른\s*(차이|문제)?\s*없|이전과\s*비슷|비슷하|비슷함|차이\s*(없|모르)|체감\s*(못|안|없)|모르겠|보통|변화\s*없)/;
+const NEG_RE = /(미끄|밀림|밀린|소음[이가은]?\s*(조금\s*)?(있|크|발생|심|남|나|들)|시끄|떨림[이가]?\s*(있|발생|심|생)|진동[이가]?\s*(있|발생|심|생)|마모[가는]?\s*(빠|심|많)|빨리\s*닳|닳[는아]|돌\s*박힘[이가]?\s*(자주|많)|박힘[이가]?\s*(자주|많)|불편|딱딱|거칠|나쁘|나빠|안\s*좋|별로|약하|약함|불만|펑크|찢어|손상|크랙|균열|편마모|부족|연비[가]?\s*(떨어|나빠|안\s*좋)|늘어남|아쉽|문제[가]?\s*(있|생)|불안|쏠림|쏠려|길어)/;
+const POS_RE = /(좋|우수|만족|안정|조용|부드럽|편안|짧아|줄어|감소|개선|향상|단단|(떨림|소음|진동|이상|문제)[이가은]?\s*(거의\s*)?없|잘\s*(잡|버티|나가)|괜찮|양호|탁월|확실)/;
+function classify(text, score) {
+  if (score >= 4) return 'pos';
+  if (score != null && score <= 2) return 'neg';
+  const t = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!t) return 'neu';
+  if (NEU_RE.test(t)) return 'neu';
+  if (NEG_RE.test(t)) return 'neg';
+  if (POS_RE.test(t)) return 'pos';
+  return 'neu';
+}
 
 // ═══════════════ 필터 ═══════════════
 const F = { prods: new Set(), pt: 'all', rounds: 'all', limit: 1.6, drive: 'all', axle: 'all' };
@@ -675,6 +702,22 @@ function fbOf(vs) {
 const photoBox = (url, label, sub) => url
   ? `<div class="ph img"><img src="${url}" alt="${esc(label)}"></div><div class="cap">${esc(label)}${sub ? ' · ' + esc(sub) : ''}</div>`
   : `<div class="ph"><b>${esc(label)}</b>${T('phNone')}</div>`;
+const FB4 = ['wet', 'dry', 'comfort', 'fuel'];
+// 제품별 코멘트를 긍정 / 부정 / 중립으로 나눠 표시
+function commentsHtml(s) {
+  const items = s.fb.list.flatMap(f => [
+    f.note && { v: f.v, r: f.round, k: null, x: f.note, c: classify(f.note, null) },
+    ...Object.entries(f.remarks || {}).filter(([, x]) => x).map(([k, x]) => ({ v: f.v, r: f.round, k, x, c: classify(x, FB4.includes(k) ? f[k] : null) }))
+  ]).filter(Boolean);
+  if (!items.length) return '';
+  const li = it => `<li class="${it.c}"><span>${esc(it.v.no)} · R${it.r}${it.k ? ' · ' + (FB4.includes(it.k) ? T(it.k) : T('other')) : ''}</span>${esc(it.x)}</li>`;
+  const cnt = g => items.filter(i => i.c === g).length;
+  const grp = ['pos', 'neg', 'neu'].map(g => {
+    const a = items.filter(i => i.c === g);
+    return a.length ? `<div class="cm-grp ${g}">${T(g === 'pos' ? 'cPos' : g === 'neg' ? 'cNeg' : 'cNeu')} · ${a.length}</div><ul>${a.map(li).join('')}</ul>` : '';
+  }).join('');
+  return `<div class="cm"><div class="cm-h"><span class="sw" style="background:${s.p.color}"></span>${esc(pl(s.p))}<span class="cm-cnt">${T('cPos')} ${cnt('pos')} · ${T('cNeg')} ${cnt('neg')} · ${T('cNeu').split(' ')[0]} ${cnt('neu')}</span></div>${grp}</div>`;
+}
 
 // ═══════════════ 렌더 ═══════════════
 function render() {
@@ -690,7 +733,6 @@ function render() {
   const axTxt = (hasRear && F.axle !== 'front') ? T('axAll') : T('axFront');
   const genTxt = new Date(GENERATED_AT).toLocaleString(LANG === 'ko' ? 'ko-KR' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
   document.getElementById('mastMeta').innerHTML = T('meta')(vs.length, tires, roundTxt(), axTxt, genTxt);
-  // 제목 아래 캡션: 선택된 제품 목록
   document.getElementById('prodCaption').innerHTML = PRODUCTS.filter(p => F.prods.has(p.id))
     .map(p => `<span class="it"><span class="sw" style="background:${p.color}"></span>${esc(p.name)} ${esc(p.size)}${p.ply ? ' ' + esc(p.ply) : ''}</span>`).join('');
   const naN = VEH.filter(v => v.pt === 'NA').length;
@@ -705,7 +747,7 @@ function render() {
   const kmAvg = mean(vs.filter(v => vRounds(v).length > 1).map(v => vLast(v).odo - v.rounds[0].odo));
   const dAvg = mean(vs.map(v => dailyKm(v)).filter(x => x));
   const best = S.filter(s => s.life).sort((a, b) => b.life - a.life)[0];
-  const fbAll = fbOf(vs), fbAvg = mean(['wet', 'dry', 'comfort', 'fuel'].map(k => fbAll[k]).filter(x => x != null));
+  const fbAll = fbOf(vs), fbAvg = mean(FB4.map(k => fbAll[k]).filter(x => x != null));
   document.getElementById('kpis').innerHTML = [
     [T('k1'), vs.length, ''], [T('k2'), tires, ''], [T('k3'), isNaN(kmAvg) ? '—' : fmt(kmAvg), T('k3s')], [T('k4'), isNaN(dAvg) ? '—' : fmt(dAvg), T('k4s')],
     [T('k5'), best ? fmt(best.life) : '—', best ? esc(pl(best.p)) : '', 1], [T('k6'), isNaN(fbAvg) ? '—' : fbAvg.toFixed(1), T('k6s')]
@@ -718,7 +760,7 @@ function render() {
   // 01 요약
   const bc = S.filter(s => s.p.conti && s.life).sort((a, b) => b.life - a.life)[0], cc = S.filter(s => !s.p.conti && s.life).sort((a, b) => b.life - a.life)[0];
   const badW = []; vs.forEach(v => Object.entries(v.align).forEach(([w, a]) => { if ((!isNaN(a.c) && grade.c(a.c) === 'bad') || (!isNaN(a.t) && grade.t(a.t, v.toeUnit) === 'bad')) badW.push(`${v.no} ${T('pos')[w] || w}`); }));
-  const avg4 = o => { const m = mean(['wet', 'dry', 'comfort', 'fuel'].map(k => o[k]).filter(x => x != null)); return isNaN(m) ? '—' : m.toFixed(1); };
+  const avg4 = o => { const m = mean(FB4.map(k => o[k]).filter(x => x != null)); return isNaN(m) ? '—' : m.toFixed(1); };
   const wornPct = Math.round(mean(S.map(s => s.wornAvg / s.ntd * 100)));
   const lrAll = S.flatMap(s => s.lr);
   document.getElementById('summary').innerHTML = (S.length ? T('sum')({
@@ -797,17 +839,11 @@ function render() {
   document.getElementById('fbChart').innerHTML = S.some(s => s.fb.n) ? fbChart(S) : `<div class="note">${T('noData')}</div>`;
   const cell = (v, n, tot) => v == null ? `<td class="r muted">—</td>` : `<td class="r num" style="color:${n < 3 ? '#9a9a9a' : v >= 3.5 ? '#2f7d32' : v < 2.5 ? '#b3261e' : '#161616'};font-weight:700">${v.toFixed(1)}${tot != null ? ` <span class="muted small" style="font-weight:400">(${n}/${tot})</span>` : ''}</td>`;
   document.getElementById('fbTbl').innerHTML = `<table class="t"><tr><th>${T('prodCol')}</th><th class="r">${T('wet')}</th><th class="r">${T('dry')}</th><th class="r">${T('comfort')}</th><th class="r">${T('fuel')}</th><th>${T('prevCol')}</th></tr>${
-    S.map(s => `<tr><td><span class="sw" style="background:${s.p.color}"></span><b>${esc(s.p.name)}</b> <span class="muted small">${esc(s.p.size)}</span></td>${['wet', 'dry', 'comfort', 'fuel'].map(k => cell(s.fb[k], s.fb[k + '_n'])).join('')}<td class="small">${esc([...new Set(s.vs.map(v => v.prev).filter(Boolean))].join(', ') || '—')}</td></tr>`).join('')}</table>`;
+    S.map(s => `<tr><td><span class="sw" style="background:${s.p.color}"></span><b>${esc(s.p.name)}</b> <span class="muted small">${esc(s.p.size)}</span></td>${FB4.map(k => cell(s.fb[k], s.fb[k + '_n'])).join('')}<td class="small">${esc([...new Set(s.vs.map(v => v.prev).filter(Boolean))].join(', ') || '—')}</td></tr>`).join('')}</table>`;
   const ok = ['puncture', 'cut', 'impact', 'stone', 'appearance'];
   document.getElementById('fbOther').innerHTML = `<table class="t"><tr><th></th>${S.map(s => `<th class="r"><span class="sw" style="background:${s.p.color}"></span>${esc(s.p.name.replace('VanContact ', 'VC '))} ${esc(s.p.size)}</th>`).join('')}</tr>${
     ok.map(k => `<tr><td>${T(k)}</td>${S.map(s => cell(s.fb[k], s.fb[k + '_n'], s.fb.n)).join('')}</tr>`).join('')}</table>`;
-  document.getElementById('fbComments').innerHTML = S.map(s => {
-    const items = s.fb.list.flatMap(f => [
-      f.note && `<li><span>${esc(f.v.no)} · R${f.round}</span>${esc(f.note)}</li>`,
-      ...Object.entries(f.remarks || {}).filter(([, x]) => x).map(([k, x]) => `<li><span>${esc(f.v.no)} · R${f.round} · ${['wet', 'dry', 'comfort', 'fuel'].includes(k) ? T(k) : T('other')}</span>${esc(x)}</li>`)
-    ]).filter(Boolean);
-    return items.length ? `<div class="cm"><div class="cm-h"><span class="sw" style="background:${s.p.color}"></span>${esc(pl(s.p))}</div><ul>${items.join('')}</ul></div>` : '';
-  }).join('');
+  document.getElementById('fbComments').innerHTML = S.map(commentsHtml).join('');
 
   document.getElementById('howto').innerHTML = T('howto').map(l => `<li>${l}</li>`).join('');
 }
@@ -828,7 +864,6 @@ window.setLang = l => { LANG = l; render(); };
     drives = [...new Set(VEH.map(v => v.drive).filter(Boolean))];
     pts = ['ICE', 'EV', 'NA'].filter(x => VEH.some(v => v.pt === x));
     if (!EMBED) {
-      // 독립 HTML 파일 생성 → 자동 다운로드
       msg('리포트 파일 만드는 중...');
       const html = await buildStandalone(pkg);
       const d = new Date(pkg.generatedAt);
