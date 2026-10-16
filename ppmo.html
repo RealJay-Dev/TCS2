@@ -321,6 +321,14 @@
           <div id="productInfo" class="product-info hidden"></div>
         </div>
         <div class="field">
+          <div class="label">파워트레인 *</div>
+          <div style="display:flex;gap:8px;">
+            <label style="flex:1;padding:10px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:13.5px;"><input type="radio" name="fNewPt" value="ICE" onchange="validateNewVehicle()"> 내연기관</label>
+            <label style="flex:1;padding:10px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:13.5px;"><input type="radio" name="fNewPt" value="EV" onchange="validateNewVehicle()"> 전기차 (EV)</label>
+          </div>
+          <div class="sub-label">리포트에서 내연/EV 예상 수명을 비교할 때 사용합니다. (예: 포터 II 일렉트릭, 봉고 III EV → 전기차)</div>
+        </div>
+        <div class="field">
           <div class="label">구동 방식 *</div>
           <div style="display:flex;gap:8px;">
             <label style="flex:1;padding:10px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:13.5px;"><input type="radio" name="fNewDrive" value="FWD" onchange="validateNewVehicle()"> 전륜구동</label>
@@ -507,6 +515,7 @@ const DRIVER_FB_OTHER = [
   { key: 'appearance', label: '외관 (패턴, 색상 등)' },
 ];
 const DRIVE_LABEL = { FWD: '전륜구동', RWD: '후륜구동', AWD: '4륜구동' };
+const PT_LABEL = { ICE: '내연기관', EV: '전기차(EV)' };
 const PREV_BRANDS = ['금호', '한국', '넥센', '콘티넨탈', '미쉐린', '브리지스톤', '굿이어', '피렐리', '던롭', '요코하마', '토요', '기타'];
 let _currentEmail = null;
 let _currentVehicle = null;      // detail view의 대상 차량
@@ -652,6 +661,7 @@ window.showNewVehicleForm = function() {
   document.getElementById('fNewFrontOnly').checked = false;
   document.querySelector('input[name="fNewGrooves"][value="3"]').checked = true;
   document.querySelectorAll('input[name="fNewDrive"]').forEach(r => { r.checked = false; });
+  document.querySelectorAll('input[name="fNewPt"]').forEach(r => { r.checked = false; });
   renderProductOptions();
   _selectedProduct = null;
   lockDependentFields();
@@ -669,6 +679,7 @@ function showDetail(vehicle) {
   const meta = [];
   if (vehicle.vehicle_type) meta.push(vehicle.vehicle_type);
   if (vehicle.model_year) meta.push(`${vehicle.model_year}년식`);
+  if (vehicle.powertrain) meta.push(PT_LABEL[vehicle.powertrain] || vehicle.powertrain);
   if (vehicle.drive_type) meta.push(DRIVE_LABEL[vehicle.drive_type] || vehicle.drive_type);
   meta.push(vehicle.product);
   if (vehicle.dealer_name) meta.push(vehicle.dealer_name);
@@ -788,7 +799,8 @@ function lockDependentFields() {
 window.validateNewVehicle = function() {
   const ok = ['fNewNo','fNewModel','fNewYear','fNewInitMileage'].every(id => document.getElementById(id).value.trim())
     && _selectedProduct != null
-    && !!document.querySelector('input[name="fNewDrive"]:checked');
+    && !!document.querySelector('input[name="fNewDrive"]:checked')
+    && !!document.querySelector('input[name="fNewPt"]:checked');
   document.getElementById('btnCreateVehicle').disabled = !ok;
 };
 window.createVehicle = async function() {
@@ -810,6 +822,7 @@ window.createVehicle = async function() {
     front_only: document.getElementById('fNewFrontOnly').checked,
     groove_count: parseInt(document.querySelector('input[name="fNewGrooves"]:checked').value),
     drive_type: document.querySelector('input[name="fNewDrive"]:checked')?.value || null,
+    powertrain: document.querySelector('input[name="fNewPt"]:checked')?.value || null,
     created_by: _currentEmail,
     assigned_to: _currentEmail
   };
@@ -1923,9 +1936,9 @@ window.validateRoundSave = function(n) {
   // 4. RTD 측정 — 모든 회차 (0회차 포함) 그루브별 실측 필수
   const rtdInputs = document.querySelectorAll(`.rtdInput-${n}`);
   const rtdOk = rtdInputs.length > 0 && [...rtdInputs].every(i => i.value !== '' && !isNaN(parseFloat(i.value)));
-  // 5. 피드백 최소 1개 (없음 포함)
+  // 5. 운전자 피드백 4항목 필수 (1~5회차)
   const fbDone = isRound0 ? 0 : DRIVER_FB.filter(c => s.fb && s.fb.scores[c.key]).length;
-  const feedbackOk = isRound0 || fbDone === DRIVER_FB.length;   // 운전자 피드백 4항목 필수 (1~5회차)
+  const feedbackOk = isRound0 || fbDone === DRIVER_FB.length;
   // 6. 타이어 정보 (0회차 전용): 6포지션 × 2필드 = 12개 다 채워야 함
   let tireOk = true;
   let tireFilled = 0;
@@ -1937,7 +1950,7 @@ window.validateRoundSave = function(n) {
     });
     tireOk = tireFilled === getTirePositions().length;
   }
-  // 7. 사전 설문 (0회차 전용): 3문항 모두 응답 (중시 항목은 1개 이상)
+  // 7. 사전 설문 (0회차 전용)
   let surveyOk = true;
   if (isRound0) {
     const sv = ensureSurveyState(n);

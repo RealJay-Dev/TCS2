@@ -81,6 +81,17 @@
   .search-tab { padding: 8px 16px; background: none; border: 0.5px solid var(--border-strong); border-radius: 20px; font-size: 13px; font-weight: 500; color: var(--text-secondary); cursor: pointer; }
   .search-tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
   .search-tab:hover { border-color: var(--text); }
+  /* PPMo 상세: 차량 설정 / 노면 사진 */
+  .adm-box { background: var(--bg-secondary); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; font-size: 13px; }
+  .adm-box-h { font-size: 12px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .adm-box select { padding: 6px 8px; border: 0.5px solid var(--border-strong); border-radius: 6px; font-size: 13px; background: var(--bg); color: var(--text); }
+  .adm-btn { padding: 6px 12px; background: var(--text); color: var(--bg); border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .adm-btn.ol { background: none; color: var(--text); border: 0.5px solid var(--border-strong); }
+  .road-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 8px; }
+  .road-item { position: relative; }
+  .road-item img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 6px; border: 0.5px solid var(--border); display: block; }
+  .road-item .rdel { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: none; background: rgba(0,0,0,0.65); color: #fff; font-size: 12px; cursor: pointer; }
+  .road-item .rcap { font-size: 10.5px; color: var(--text-tertiary); margin-top: 3px; }
   /* Mobile hamburger button (숨김 by default) */
   .admin-hamburger { display: none; width: 34px; height: 34px; border-radius: 8px; border: 0.5px solid var(--border-strong); background: var(--bg); flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; flex-shrink: 0; margin-right: 10px; }
   .admin-hamburger span { width: 16px; height: 1.5px; background: var(--text); border-radius: 1px; }
@@ -91,9 +102,7 @@
     .header { padding: 10px 14px !important; }
     .header-title { font-size: 15px !important; }
     .header-sub { font-size: 11px !important; }
-    /* 햄버거 노출 */
     .admin-hamburger { display: flex; }
-    /* 사이드바를 드로어로 */
     .admin-body { flex-direction: column !important; height: auto !important; overflow: visible !important; }
     .admin-sidebar {
       position: fixed !important;
@@ -107,18 +116,15 @@
     }
     .admin-sidebar.open { transform: translateX(0); }
     .admin-main { padding: 14px !important; }
-    /* Stats 2열 */
     .stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
     .stat-card { padding: 12px 14px !important; }
     .stat-val { font-size: 22px !important; }
     .stat-label { font-size: 11px !important; }
     .stat-sub { font-size: 11px !important; }
-    /* 탭 가로 스크롤 + refresh 별도 줄 */
     .tabs-row { flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch; padding-bottom: 4px; scrollbar-width: none; }
     .tabs-row::-webkit-scrollbar { display: none; }
     .tabs-row .refresh-btn { display: none !important; }
     .mobile-refresh-row { display: flex !important; justify-content: flex-end; margin-bottom: 10px; }
-    /* ─── 테이블: 헤더 숨김, 각 행을 카드로 ─── */
     .table-wrap { background: transparent !important; border: none !important; border-radius: 0 !important; }
     .table-header { display: none !important; }
     .table-row {
@@ -145,15 +151,11 @@
       margin-bottom: 4px;
       padding-top: 0;
     }
-    /* 마지막 셀(주로 액션 버튼)은 상단 우측이나 하단에 */
     .table-row > div:last-child { margin-top: 6px; }
-    /* PPMo stats 그리드 */
     #ppmoStats { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
     #ppmoStats .stat-card { padding: 10px 12px !important; }
-    /* 필터/카운트 줄 세로 배치 */
     .filter-row { flex-direction: column !important; align-items: stretch !important; }
     .filter-row > select, .filter-row > input { width: 100%; }
-    /* PPMo 상세 모달 전체화면 */
     #ppmoDetailModal { padding: 0 !important; align-items: flex-start !important; }
     #ppmoDetailModal > div { max-width: 100% !important; border-radius: 0 !important; min-height: 100vh; margin: 0 !important; padding: 16px !important; }
   }
@@ -280,6 +282,7 @@
           </select>
           <div class="count-info" id="ppmoCountInfo" style="margin:0;"></div>
           <div style="margin-left:auto;display:flex;gap:6px;">
+            <button onclick="openReport()" style="padding:5px 12px;background:var(--text);border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;color:var(--bg);cursor:pointer;">📄 리포트 생성</button>
             <button onclick="exportPpmoCSV()" style="padding:5px 12px;background:none;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);cursor:pointer;">📥 CSV</button>
             <button onclick="exportPpmoExcel()" style="padding:5px 12px;background:none;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);cursor:pointer;">📊 Excel</button>
           </div>
@@ -694,7 +697,6 @@ function renderStats() {
   }).filter(u => !selectedUser || u.email === selectedUser);
   const el = document.getElementById('statsPanel');
   el.innerHTML = `
-    <!-- 절약 시간 설정 -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:12px 16px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-sm);">
       <span style="font-size:13px;color:var(--text-secondary);">계산 1회당 절약 시간:</span>
       <input type="number" id="minsInput" value="${MINS_SAVED_PER_CALC}" min="1" max="60" style="width:60px;padding:6px 10px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:14px;background:var(--bg);color:var(--text);">
@@ -706,7 +708,6 @@ function renderStats() {
         <button onclick="exportPDF()" style="padding:6px 14px;background:none;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:13px;color:var(--text-secondary);cursor:pointer;">🖨️ PDF</button>
       </div>
     </div>
-    <!-- 전체 KPI -->
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;">
       <div class="stat-card"><div class="stat-label">보상계산 횟수</div><div class="stat-val">${totalCalcs}</div><div class="stat-sub">누적</div></div>
       <div class="stat-card"><div class="stat-label">가격조회만</div><div class="stat-val" style="color:var(--text-danger);">${totalPriceOnly}</div><div class="stat-sub">보상계산 없이 종료</div></div>
@@ -714,7 +715,6 @@ function renderStats() {
       <div class="stat-card"><div class="stat-label">총 세션</div><div class="stat-val">${totalSessions}</div><div class="stat-sub">누적</div></div>
       <div class="stat-card"><div class="stat-label">평균 세션 시간</div><div class="stat-val">${avgDuration.toFixed(1)}분</div><div class="stat-sub">포그라운드 기준</div></div>
     </div>
-    <!-- 유저별 테이블 -->
     <div class="table-wrap">
       <div class="table-header" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;">
         <div>이메일</div><div>총 접속</div><div>일평균</div><div>평균 세션</div><div>보상계산</div><div>가격조회만</div><div>절약 시간</div>
@@ -791,10 +791,8 @@ async function renderConsentLogs() {
 window.revokeConsent = async function(id, email) {
   if (!confirm(`${email} 의 해당 동의를 철회하시겠습니까?\n다음 로그인 시 동의서를 다시 작성해야 합니다.`)) return;
   try {
-    // 해당 row만 revoked_at 표시 + consent_revoked에 이메일 기록
     await _supabase.from('consent_logs').update({ revoked_at: new Date().toISOString() }).eq('id', id);
     await _supabase.from('consent_revoked').upsert({ email, revoked_at: new Date().toISOString() });
-    // 로컬 데이터 업데이트
     const target = allConsents.find(c => c.id === id);
     if (target) target.revoked_at = new Date().toISOString();
     renderConsentLogs();
@@ -894,9 +892,24 @@ window.exportPDF = function() {
   printWin.print();
 };
 // ═══════════════════════════════════════════════════════════════
-// PPMo 관리 (담당자별 현황, 차량 삭제, 상세 조회)
+// PPMo 관리 (담당자별 현황, 차량 삭제, 상세 조회, 리포트)
 // ═══════════════════════════════════════════════════════════════
 const TOTAL_PPMO_ROUNDS = 6; // 0(초기) + 1~5
+const PT_LABEL_ADM = { ICE: '내연기관', EV: '전기차(EV)' };
+const DRIVE_LABEL_ADM = { FWD: '전륜구동', RWD: '후륜구동', AWD: '4륜구동' };
+const FB_ITEMS_ADM = [
+  { key: 'wet', label: '젖은 노면' }, { key: 'dry', label: '마른 노면' },
+  { key: 'comfort', label: '승차감/소음' }, { key: 'fuel', label: '연비' }
+];
+const FB_OTHER_ADM = [
+  { key: 'puncture', label: '펑크 저항성' }, { key: 'cut', label: '컷 저항성' }, { key: 'impact', label: '충격 저항성' },
+  { key: 'stone', label: '돌 박힘 저항성' }, { key: 'appearance', label: '외관' }
+];
+// 리포트: 같은 탭 세션(sessionStorage)을 넘기기 위해 window.open 사용 (noopener 금지)
+window.openReport = function() {
+  const w = window.open('report.html', '_blank');
+  if (!w) alert('팝업이 차단되었습니다. 브라우저에서 이 사이트의 팝업을 허용해 주세요.');
+};
 async function loadPpmoData() {
   document.getElementById('ppmoTable').innerHTML = '<div class="loading-state">로딩 중...</div>';
   try {
@@ -908,7 +921,6 @@ async function loadPpmoData() {
     ppmoVehicles = vRes.data || [];
     ppmoRounds = rRes.error ? [] : (rRes.data || []);
     ppmoLoaded = true;
-    // 담당자 필터 옵션 채우기
     const sales = [...new Set(ppmoVehicles.map(v => ppmoOwner(v)).filter(Boolean))].sort();
     const sel = document.getElementById('ppmoFilterSales');
     const currentVal = sel.value;
@@ -925,17 +937,18 @@ function renderPpmoStats() {
   const totalVehicles = ppmoVehicles.length;
   const uniqueSales = new Set(ppmoVehicles.map(v => ppmoOwner(v)).filter(Boolean)).size;
   const totalRounds = ppmoRounds.length;
-  // 평균 진행률
   const progressPerVehicle = {};
   ppmoRounds.forEach(r => { progressPerVehicle[r.vehicle_id] = (progressPerVehicle[r.vehicle_id] || 0) + 1; });
   const avgProgress = totalVehicles ? (Object.values(progressPerVehicle).reduce((a,b) => a+b, 0) / totalVehicles) : 0;
   const completeCount = Object.values(progressPerVehicle).filter(n => n >= TOTAL_PPMO_ROUNDS).length;
+  const noPt = ppmoVehicles.filter(v => !v.powertrain).length;
   document.getElementById('ppmoStats').innerHTML = `
     <div class="stat-card"><div class="stat-num">${totalVehicles}</div><div class="stat-sub">총 차량 수</div></div>
     <div class="stat-card"><div class="stat-num">${uniqueSales}</div><div class="stat-sub">담당자 수</div></div>
     <div class="stat-card"><div class="stat-num">${totalRounds}</div><div class="stat-sub">총 회차 기록</div></div>
     <div class="stat-card"><div class="stat-num">${avgProgress.toFixed(1)}/${TOTAL_PPMO_ROUNDS}</div><div class="stat-sub">평균 진행률</div></div>
-    <div class="stat-card"><div class="stat-num">${completeCount}</div><div class="stat-sub">완료 차량 (6/6)</div></div>`;
+    <div class="stat-card"><div class="stat-num">${completeCount}</div><div class="stat-sub">완료 차량 (6/6)</div></div>
+    ${noPt ? `<div class="stat-card" style="background:var(--bg-warning);"><div class="stat-num" style="color:var(--text-warning);">${noPt}</div><div class="stat-sub">파워트레인 미지정 (리포트 내연/EV 비교 제외)</div></div>` : ''}`;
 }
 function renderPpmoTable() {
   const salesFilter = document.getElementById('ppmoFilterSales').value;
@@ -961,13 +974,13 @@ function renderPpmoTable() {
     const progressBar = `<div style="display:flex;align-items:center;gap:6px;font-size:12px;"><div style="flex:1;height:6px;background:var(--bg-secondary);border-radius:3px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${done >= TOTAL_PPMO_ROUNDS ? 'var(--text-success)' : 'var(--text-info)'};"></div></div><span style="font-weight:600;min-width:28px;">${done}/${TOTAL_PPMO_ROUNDS}</span></div>`;
     const lastDate = lastDateMap[v.id] ? new Date(lastDateMap[v.id]).toLocaleDateString('ko-KR') : '—';
     const createDate = v.created_at ? new Date(v.created_at).toLocaleDateString('ko-KR') : '—';
-    const model = [v.vehicle_type, v.model_year && `'${String(v.model_year).slice(-2)}`].filter(Boolean).join(' ') || '—';
+    const model = [v.vehicle_type, v.model_year && `'${String(v.model_year).slice(-2)}`, v.powertrain === 'EV' ? 'EV' : ''].filter(Boolean).join(' ') || '—';
     return `<div class="table-row" style="grid-template-columns:1.2fr 1.6fr 1.4fr 0.8fr 1fr 1fr 0.6fr;">
       <div style="font-weight:700;cursor:pointer;color:var(--text-info);" onclick="showPpmoDetail('${v.id}')">${escapeHtmlAdm(v.vehicle_no)}</div>
       <div style="font-size:12px;color:var(--text-secondary);">${escapeHtmlAdm(ppmoOwner(v) || '—')}
         <a href="javascript:void(0)" onclick="openReassign('${v.id}')" style="display:inline-block;margin-left:6px;font-size:11px;color:var(--text-info);text-decoration:none;">변경</a>
         ${v.assigned_to && v.created_by && v.assigned_to.toLowerCase() !== v.created_by.toLowerCase() ? `<span style="display:block;font-size:10.5px;color:var(--text-tertiary);">최초 생성 ${escapeHtmlAdm(v.created_by)}</span>` : ''}</div>
-      <div style="font-size:12px;">${escapeHtmlAdm(model)}</div>
+      <div style="font-size:12px;">${escapeHtmlAdm(model)}${v.powertrain ? '' : ' <span style="color:var(--text-warning);font-size:10.5px;">· 파워트레인 미지정</span>'}</div>
       <div>${progressBar}</div>
       <div style="font-size:12px;color:var(--text-secondary);">${lastDate}</div>
       <div style="font-size:12px;color:var(--text-secondary);">${createDate}</div>
@@ -999,14 +1012,13 @@ const SLOT_LABEL_BY_ID = Object.fromEntries([...PPMO_PHOTO_SLOTS, PPMO_ALIGN_PHO
 const REAR_TIRE_SLOT_IDS = ['tire_rl_outer','tire_rl_inner','tire_rr_outer','tire_rr_inner'];
 const RTD_SLOTS_EXCLUDED_FRONT_ONLY = ['rtd_4','rtd_5','rtd_6','rtd_7','rtd_8'];
 function getPpmoSlots(n, frontOnly, alignDone) {
-  let slots = PPMO_PHOTO_SLOTS;   // ppmo.html과 동일: 0회차도 RTD 사진 포함
+  let slots = PPMO_PHOTO_SLOTS;
   if (frontOnly) {
     slots = slots.filter(s => !REAR_TIRE_SLOT_IDS.includes(s.id) && !RTD_SLOTS_EXCLUDED_FRONT_ONLY.includes(s.id));
   }
   if (n === 0 || alignDone) slots = [...slots, PPMO_ALIGN_PHOTO_SLOT];
   return slots;
 }
-// 6개 타이어 포지션 (DB 코드 + 표시 라벨)
 const PPMO_TIRE_POSITIONS = [
   { pos: '1축-좌',   label: '전륜좌측' },
   { pos: '1축-우',   label: '전륜우측' },
@@ -1019,9 +1031,6 @@ function getPpmoTirePositions(frontOnly) {
   return frontOnly ? PPMO_TIRE_POSITIONS.filter(t => t.pos.startsWith('1축')) : PPMO_TIRE_POSITIONS;
 }
 const MTD_MM = 1.6;  // 법정 최저 트레드 깊이
-// 예상 마일리지 계산: 모든 회차의 (mileage_km, min RTD)로 선형 회귀
-// - 0회차 NTD 측정값이 시작점, 1~5회차 RTD가 추세 데이터
-// 반환: { points, slope, intercept, kmAtMtd, remainingKm, totalLifeKm, currentMinRtd }
 function calcMileagePrediction(vehicle, rounds, measurements) {
   const points = [];
   rounds.forEach(r => {
@@ -1045,6 +1054,95 @@ function calcMileagePrediction(vehicle, rounds, measurements) {
   const remainingKm = kmAtMtd - latest.km;
   return { points, slope, intercept, kmAtMtd, remainingKm, totalLifeKm, currentMinRtd: latest.rtd };
 }
+// ── 차량 설정 (파워트레인 · 구동) 저장 ──
+window.saveVehicleSettings = async function(vehicleId) {
+  const pt = document.getElementById('admPt').value || null;
+  const dr = document.getElementById('admDrive').value || null;
+  try {
+    const { data, error } = await _supabase.from('ppmo_vehicles').update({ powertrain: pt, drive_type: dr }).eq('id', vehicleId).select('id');
+    if (error) throw error;
+    if (!data || !data.length) throw new Error('변경된 행이 없습니다 (v14 SQL 실행 / 관리자 계정 확인)');
+    const v = ppmoVehicles.find(x => x.id === vehicleId);
+    if (v) { v.powertrain = pt; v.drive_type = dr; }
+    renderPpmoStats(); renderPpmoTable();
+    alert('차량 설정이 저장되었습니다.');
+  } catch(e) { alert('저장 실패: ' + e.message); }
+};
+// ── 리포트용 노면 사진 (차량별) ──
+async function loadRoadPhotos(vehicleId) {
+  const { data, error } = await _supabase.from('ppmo_road_photos').select('*').eq('vehicle_id', vehicleId).order('created_at');
+  if (error) { console.warn('ppmo_road_photos 로드 실패 (v14 SQL 실행 필요):', error.message); return null; }
+  const rows = data || [];
+  const urls = await getSignedUrls(rows.map(r => r.path), 3600);
+  rows.forEach(r => { r.signedUrl = urls[r.path] || null; });
+  return rows;
+}
+function roadPhotosHtml(vehicleId, rows) {
+  if (rows === null) return `<div class="adm-box"><div class="adm-box-h">🛣 리포트용 노면 사진</div><div style="color:var(--text-warning);font-size:12px;">v14 SQL을 먼저 실행해 주세요.</div></div>`;
+  return `<div class="adm-box" id="roadBox">
+    <div style="display:flex;align-items:center;gap:8px;"><div class="adm-box-h" style="margin:0;flex:1;">🛣 리포트용 노면 사진 (${rows.length}장)</div>
+      <label class="adm-btn ol" style="cursor:pointer;">＋ 사진 추가<input type="file" accept="image/*" multiple style="display:none" onchange="uploadRoadPhotos('${vehicleId}', this)"></label></div>
+    <div style="font-size:11.5px;color:var(--text-tertiary);margin-top:4px;">운전자가 답한 운행 지역·도로를 TCS팀이 조사해 올리는 사진입니다. 리포트 '운행 지역' 섹션에 차량별로 표시됩니다 (첫 장이 대표 사진).</div>
+    <div class="road-grid">${rows.map(r => `<div class="road-item">${r.signedUrl ? `<a href="${r.signedUrl}" target="_blank" rel="noopener"><img src="${r.signedUrl}"></a>` : '<div style="aspect-ratio:4/3;background:var(--bg);border-radius:6px;"></div>'}
+      <button class="rdel" title="삭제" onclick="deleteRoadPhoto('${vehicleId}','${r.id}','${escapeAttr(r.path)}')">✕</button>
+      <div class="rcap">${escapeHtmlAdm(r.caption || '')}</div></div>`).join('')}</div>
+  </div>`;
+}
+window.uploadRoadPhotos = async function(vehicleId, input) {
+  const files = [...(input.files || [])];
+  if (!files.length) return;
+  const caption = prompt('사진 설명 (선택 · 예: 경부고속도로 평택 구간)', '') || null;
+  const me = document.getElementById('adminEmail').textContent;
+  try {
+    for (const f of files) {
+      const blob = await compressImageAdm(f);
+      const path = `${vehicleId}/road/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.jpg`;
+      const { error: upErr } = await _supabase.storage.from('ppmo-photos').upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+      if (upErr) throw new Error('[Storage] ' + upErr.message);
+      const { error } = await _supabase.from('ppmo_road_photos').insert({ vehicle_id: vehicleId, path, caption, uploaded_by: me });
+      if (error) throw new Error('[기록] ' + error.message);
+    }
+    const rows = await loadRoadPhotos(vehicleId);
+    document.getElementById('roadBox').outerHTML = roadPhotosHtml(vehicleId, rows);
+  } catch(e) { alert('업로드 실패: ' + e.message); }
+};
+window.deleteRoadPhoto = async function(vehicleId, id, path) {
+  if (!confirm('이 노면 사진을 삭제할까요?')) return;
+  try {
+    const { error } = await _supabase.from('ppmo_road_photos').delete().eq('id', id);
+    if (error) throw error;
+    await _supabase.storage.from('ppmo-photos').remove([path]);
+    const rows = await loadRoadPhotos(vehicleId);
+    document.getElementById('roadBox').outerHTML = roadPhotosHtml(vehicleId, rows);
+  } catch(e) { alert('삭제 실패: ' + e.message); }
+};
+async function compressImageAdm(file, maxDim = 1600, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        if (width >= height) { height = Math.round(height * maxDim / width); width = maxDim; }
+        else { width = Math.round(width * maxDim / height); height = maxDim; }
+      }
+      const c = document.createElement('canvas'); c.width = width; c.height = height;
+      c.getContext('2d').drawImage(img, 0, 0, width, height);
+      c.toBlob(b => b ? resolve(b) : reject(new Error('압축 실패')), 'image/jpeg', quality);
+    };
+    img.onerror = () => reject(new Error('이미지 로드 실패'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+function driverFbHtmlAdm(d, notes) {
+  if (!d) return '';
+  const rm = d.remarks || {};
+  const main = FB_ITEMS_ADM.map(c => `<span style="display:inline-block;margin:2px 10px 2px 0;">${c.label} <b>${d[c.key] ?? '—'}</b>${rm[c.key] ? ` <span style="color:var(--text-tertiary);">(${escapeHtmlAdm(rm[c.key])})</span>` : ''}</span>`).join('');
+  const other = FB_OTHER_ADM.filter(c => d[c.key] != null).map(c => `${c.label} ${d[c.key]}`).join(' · ');
+  return `<div style="margin-top:8px;padding:8px 10px;background:var(--bg-secondary);border-radius:6px;font-size:11.5px;line-height:1.7;">
+    <div style="font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;font-size:10px;">운전자 피드백 · 이전 타이어(${escapeHtmlAdm(d.prev_tire || '미입력')}) 대비 · 5점 만점</div>
+    <div>${main}</div>${other ? `<div style="color:var(--text-secondary);">기타: ${escapeHtmlAdm(other)}</div>` : ''}${rm.other ? `<div style="color:var(--text-tertiary);">기타 비고: ${escapeHtmlAdm(rm.other)}</div>` : ''}
+  </div>`;
+}
 window.showPpmoDetail = async function(vehicleId) {
   const v = ppmoVehicles.find(x => x.id === vehicleId);
   if (!v) return;
@@ -1054,7 +1152,7 @@ window.showPpmoDetail = async function(vehicleId) {
   document.getElementById('ppmoDetailTitle').textContent = `${v.vehicle_no} · ${v.vehicle_type || ''}`;
   document.getElementById('ppmoDetailContent').innerHTML = '<div class="loading-state">회차 데이터 로딩 중...</div>';
   try {
-    let measurements = [], photos = [], feedback = [], tires = [], fullRounds = [];
+    let measurements = [], photos = [], feedback = [], tires = [], fullRounds = [], driverFb = [];
     const [rRes, tRes] = await Promise.all([
       _supabase.from('ppmo_rounds').select('*').eq('vehicle_id', vehicleId).order('round_no'),
       _supabase.from('ppmo_tires').select('*').eq('vehicle_id', vehicleId)
@@ -1073,30 +1171,32 @@ window.showPpmoDetail = async function(vehicleId) {
     tires = tRes.data || [];
     if (fullRounds.length) {
       const roundIdsFromFull = fullRounds.map(r => r.id);
-      const [m, p, f] = await Promise.all([
+      const [m, p, f, d] = await Promise.all([
         _supabase.from('ppmo_measurements').select('*').in('round_id', roundIdsFromFull),
         _supabase.from('ppmo_photos').select('*').in('round_id', roundIdsFromFull),
-        _supabase.from('ppmo_feedback').select('*').in('round_id', roundIdsFromFull)
+        _supabase.from('ppmo_feedback').select('*').in('round_id', roundIdsFromFull),
+        _supabase.from('ppmo_driver_feedback').select('*').in('round_id', roundIdsFromFull)
       ]);
       measurements = m.data || [];
       photos = p.data || [];
       feedback = f.data || [];
+      driverFb = d.data || [];
     }
-    // 사진 path 정규화 + signed URL 일괄 생성
+    const roadRows = await loadRoadPhotos(vehicleId);
     photos.forEach(p => { p.path = extractPathAdm(p.url); });
     const photoPaths = photos.map(p => p.path).filter(Boolean);
     const signedUrlMap = await getSignedUrls(photoPaths, 3600);
     const realPhotoCount = photos.filter(p => p.path).length;
     photos.forEach(p => { p.signedUrl = signedUrlMap[p.path] || null; });
-    // 타이어 정보를 position 키로 매핑
     const tireByPos = {};
     tires.forEach(t => { tireByPos[t.position] = t; });
-    // 차량 정보 요약 + 액션 버튼
     const info = [
       ['차량번호', v.vehicle_no],
       ['담당자', ppmoOwner(v)],
       ['최초 생성자', v.created_by || '—'],
       ['모델·연식', [v.vehicle_type, v.model_year && `${v.model_year}년식`].filter(Boolean).join(' · ') || '—'],
+      ['파워트레인', PT_LABEL_ADM[v.powertrain] || '미지정'],
+      ['구동 방식', DRIVE_LABEL_ADM[v.drive_type] || '미지정'],
       ['모니터링 범위', v.front_only ? '🔧 전륜만 (2본)' : '전체 (6본)'],
       ['그루브 수', `${v.groove_count || 3}개`],
       ['제품', v.product || '—'],
@@ -1110,6 +1210,12 @@ window.showPpmoDetail = async function(vehicleId) {
       <div style="background:var(--bg-secondary);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;">${
         info.map(([k, val]) => `<div style="display:flex;padding:3px 0;"><span style="color:var(--text-tertiary);min-width:130px;">${k}</span><span>${escapeHtmlAdm(val)}</span></div>`).join('')
       }</div>
+      <div class="adm-box"><div class="adm-box-h">⚙ 차량 설정 (리포트 필터용)</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span>파워트레인</span><select id="admPt"><option value="">미지정</option><option value="ICE" ${v.powertrain === 'ICE' ? 'selected' : ''}>내연기관</option><option value="EV" ${v.powertrain === 'EV' ? 'selected' : ''}>전기차(EV)</option></select>
+          <span style="margin-left:8px;">구동</span><select id="admDrive"><option value="">미지정</option>${Object.entries(DRIVE_LABEL_ADM).map(([k, l]) => `<option value="${k}" ${v.drive_type === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+          <button class="adm-btn" onclick="saveVehicleSettings('${v.id}')">저장</button>
+        </div></div>
       <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
         <button onclick="openReassign('${v.id}')" style="padding:7px 14px;background:none;color:var(--text);border:0.5px solid var(--border-strong);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">👤 담당자 변경</button>
         <button onclick="downloadVehicleExcel('${v.id}')" style="padding:7px 14px;background:var(--text);color:var(--bg);border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">📊 이 차량 Excel</button>
@@ -1117,11 +1223,14 @@ window.showPpmoDetail = async function(vehicleId) {
       </div>`;
     const surveyHtml = `<div style="background:var(--bg-secondary);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.7;">
         <div style="font-size:12px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">📝 사전 설문조사</div>
-        ${survey ? `<div><b>주행 환경:</b> ${escapeHtmlAdm(survey.driving_env || '—')}</div>
+        ${survey ? `<div><b>이전 타이어:</b> ${escapeHtmlAdm([survey.prev_brand, survey.prev_product].filter(Boolean).join(' ') || '—')}</div>
+        <div><b>운행 지역:</b> ${escapeHtmlAdm(survey.route_region || '—')}</div>
+        <div><b>자주 다니는 도로:</b> ${escapeHtmlAdm(survey.route_roads || '—')}</div>
+        <div><b>하루 평균 주행거리 (응답):</b> ${survey.daily_km != null ? escapeHtmlAdm(survey.daily_km) + ' km' : '—'}</div>
+        <div><b>주행 환경:</b> ${escapeHtmlAdm(survey.driving_env || '—')}</div>
         <div><b>중시 항목:</b> ${(survey.priorities || []).map(escapeHtmlAdm).join(', ') || '—'}</div>
         <div><b>화물 하중:</b> ${escapeHtmlAdm(survey.load_level || '—')}</div>` : '<div style="color:var(--text-tertiary);">응답 없음</div>'}
       </div>`;
-    // 예상 마일리지 분석 카드
     const prediction = calcMileagePrediction(v, fullRounds, measurements);
     let predHtml = '';
     if (prediction) {
@@ -1130,7 +1239,7 @@ window.showPpmoDetail = async function(vehicleId) {
       } else if (prediction.invalid) {
         predHtml = `<div style="padding:12px 14px;background:var(--bg-warning);color:var(--text-warning);border-radius:8px;font-size:12.5px;margin-bottom:12px;">마모율이 감소하지 않는 패턴입니다 (측정 오차 또는 로테이션 영향 가능). 데이터 축적 후 재분석 권장.</div>`;
       } else {
-        const wearRate = Math.abs(prediction.slope) * 1000; // mm per 1000km
+        const wearRate = Math.abs(prediction.slope) * 1000;
         predHtml = `
           <div style="padding:14px 16px;background:linear-gradient(135deg,var(--bg-info),var(--bg-secondary));border-radius:10px;margin-bottom:16px;">
             <div style="font-size:12px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">📈 예상 마일리지 분석 (1.6mm까지)</div>
@@ -1144,7 +1253,6 @@ window.showPpmoDetail = async function(vehicleId) {
           </div>`;
       }
     }
-    // 회차별 요약 + 사진 그리드
     let roundsHtml = '<div style="font-size:12px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">회차별 기록</div>';
     for (let n = 0; n < TOTAL_PPMO_ROUNDS; n++) {
       const r = fullRounds.find(x => x.round_no === n);
@@ -1157,10 +1265,8 @@ window.showPpmoDetail = async function(vehicleId) {
       const rFeed = feedback.filter(f => f.round_id === r.id);
       const photosBySlot = {};
       rPhotos.forEach(p => { photosBySlot[p.photo_type] = p; });
-      // 그루브별 RTD 표 (포지션 × G1~Gn + 최소, 1~5회차는 초기 대비 마모량/마모율)
       const grooveHtml = admGrooveTable(v, r, measurements, fullRounds, rotRows);
       const feedbackTags = rFeed.map(f => `<span style="display:inline-block;background:var(--bg-info);color:var(--text-info);padding:2px 8px;border-radius:8px;font-size:11px;margin:2px 3px 0 0;">${escapeHtmlAdm(f.note || f.category)}</span>`).join('');
-      // 사진 그리드
       const slotsForThisRound = getPpmoSlots(n, v.front_only, r.alignment_done);
       const photoGridHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin-top:8px;">${
         slotsForThisRound.map(slot => {
@@ -1185,7 +1291,6 @@ window.showPpmoDetail = async function(vehicleId) {
           </div>`;
         }).join('')
       }</div>`;
-      // 현재 슬롯 정의에 없는 사진(구버전 슬롯 ID 등)도 빠짐없이 표시
       const knownIds = new Set(slotsForThisRound.map(sl => sl.id));
       const extraPhotos = rPhotos.filter(p => p.path && p.signedUrl && !knownIds.has(p.photo_type));
       const extraHtml = extraPhotos.length ? `<div style="margin-top:8px;font-size:10px;font-weight:700;color:var(--text-tertiary);">기타/구버전 슬롯 사진 (${extraPhotos.length})</div>
@@ -1197,14 +1302,13 @@ window.showPpmoDetail = async function(vehicleId) {
         }</div>` : '';
       const rAl = alignRows.filter(a => a.round_id === r.id);
       const alignHtml = n === 0
-        ? (rAl.length ? admAlignBlock('휠 얼라인먼트 (초기)', rAl.filter(a => a.phase === 'initial'), null, v.front_only) : '')
+        ? (rAl.length ? admAlignBlock('휠 얼라인먼트 (장착 시 조정 완료)', rAl.filter(a => a.phase === 'initial'), null, v.front_only) : '')
         : (r.alignment_done ? admAlignBlock('휠 얼라인먼트 · 조정 전 → 후', rAl.filter(a => a.phase === 'before'), rAl.filter(a => a.phase === 'after'), v.front_only) : '');
       const rRot = rotRows.filter(x => x.round_id === r.id);
       const rotHtml = rRot.length ? `<div style="margin-top:8px;padding:8px 10px;background:var(--bg-secondary);border-radius:6px;font-size:11.5px;line-height:1.7;">
           <div style="font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;font-size:10px;">타이어 위치교환</div>
           ${rRot.map(m => `<div>${admTireName(m.tire_key, tireByPos, v.front_only)} : <b>${admPosLabel(m.from_position)}</b> → <b>${admPosLabel(m.to_position)}</b></div>`).join('')}
         </div>` : '';
-      // 0회차만 타이어 DOT/바코드 표시
       const tireInfoHtml = n === 0 && tires.length ? `
         <div style="margin-top:8px;padding:8px 10px;background:var(--bg-secondary);border-radius:6px;font-size:11.5px;line-height:1.7;">
           <div style="font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;font-size:10px;">타이어 정보 (DOT · 바코드)</div>
@@ -1214,10 +1318,11 @@ window.showPpmoDetail = async function(vehicleId) {
             return `<div><b>${t.label}</b> · <span style="font-family:monospace;">DOT ${escapeHtmlAdm(tire.dot_code || '—')} · BC ${escapeHtmlAdm(tire.barcode || '—')}</span></div>`;
           }).join('')}
         </div>` : '';
+      const dfHtml = n > 0 ? driverFbHtmlAdm(driverFb.find(x => x.round_id === r.id)) : '';
       roundsHtml += `<div style="padding:12px 14px;margin-bottom:8px;background:var(--bg);border:0.5px solid var(--border);border-radius:8px;font-size:12.5px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <div style="font-weight:700;font-size:14px;">${title} · ${new Date(r.inspected_at).toLocaleDateString('ko-KR')}</div>
-          <div style="font-size:11px;color:var(--text-tertiary);">${Number(r.mileage_km).toLocaleString('ko-KR')} km${r.rotated ? ' · 로테이션' : ''}${n > 0 && r.alignment_done ? ' · 얼라인먼트' : ''}</div>
+          <div style="font-size:11px;color:var(--text-tertiary);">${Number(r.mileage_km).toLocaleString('ko-KR')} km${r.rotated ? ' · 로테이션' : ''}${n > 0 && r.alignment_done ? ' · 얼라인먼트' : ''}${r.updated_at ? ` · <span style="color:var(--text-warning);">✏️ 수정 ${new Date(r.updated_at).toLocaleDateString('ko-KR')}</span>` : ''}</div>
         </div>
         ${grooveHtml || `<div style="color:var(--text-tertiary);">${n === 0 ? 'NTD' : 'RTD'} 측정값 없음</div>`}
         <div style="margin-top:6px;">사진: ${rPhotos.filter(p => p.path).length}/${slotsForThisRound.length}${feedbackTags ? ' · ' + feedbackTags : ''}</div>
@@ -1226,6 +1331,7 @@ window.showPpmoDetail = async function(vehicleId) {
         ${tireInfoHtml}
         ${alignHtml}
         ${rotHtml}
+        ${dfHtml}
         ${r.notes ? `<div style="margin-top:8px;padding:6px 10px;background:var(--bg-secondary);border-radius:6px;color:var(--text-secondary);font-style:italic;">📝 ${escapeHtmlAdm(r.notes)}</div>` : ''}
       </div>`;
     }
@@ -1243,7 +1349,7 @@ window.showPpmoDetail = async function(vehicleId) {
         <div style="font-size:12px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">👤 담당자 변경 이력</div>
         ${assignHist.map(h => `<div>${new Date(h.changed_at).toLocaleString('ko-KR')} · ${escapeHtmlAdm(h.from_email || '—')} → <b>${escapeHtmlAdm(h.to_email)}</b> <span style="color:var(--text-tertiary);">(${escapeHtmlAdm(h.changed_by || '')}${h.reason ? ' · ' + escapeHtmlAdm(h.reason) : ''})</span></div>`).join('')}
       </div>` : '';
-    document.getElementById('ppmoDetailContent').innerHTML = infoHtml + assignHtml + surveyHtml + tireHistHtml + predHtml + roundsHtml;
+    document.getElementById('ppmoDetailContent').innerHTML = infoHtml + assignHtml + surveyHtml + roadPhotosHtml(vehicleId, roadRows) + tireHistHtml + predHtml + roundsHtml;
   } catch(e) {
     document.getElementById('ppmoDetailContent').innerHTML = `<div class="empty-state">불러오기 실패: ${e.message}</div>`;
   }
@@ -1258,25 +1364,19 @@ window.deletePpmoVehicle = async function(vehicleId, vehicleNo) {
   const msg = `정말 삭제할까요?\n\n차량: ${vehicleNo}\n회차: ${roundIds.length}건\n사진 등: 함께 삭제됨\n\n※ 이 작업은 되돌릴 수 없습니다.`;
   if (!confirm(msg)) return;
   try {
-    // 1. Storage 사진 파일 삭제
+    const paths = [];
     if (roundIds.length) {
       const { data: photos } = await _supabase.from('ppmo_photos').select('url').in('round_id', roundIds);
-      if (photos && photos.length) {
-        const paths = photos.map(p => extractPathAdm(p.url)).filter(Boolean);
-        if (paths.length) {
-          const { error: rmErr } = await _supabase.storage.from('ppmo-photos').remove(paths);
-          if (rmErr) console.warn('사진 파일 일부 삭제 실패 (계속 진행):', rmErr.message);
-        }
-      }
+      (photos || []).forEach(p => { const x = extractPathAdm(p.url); if (x) paths.push(x); });
     }
-    // 2. Vehicle 삭제 (CASCADE로 rounds → measurements/photos/feedback 자동 삭제)
-    //    RLS 정책이 없으면 Postgres는 에러 없이 0행을 삭제하므로,
-    //    .select()로 반환된 행 수를 반드시 확인
-    const { data: deleted, error } = await _supabase
-      .from('ppmo_vehicles')
-      .delete()
-      .eq('id', vehicleId)
-      .select();
+    const { data: road } = await _supabase.from('ppmo_road_photos').select('path').eq('vehicle_id', vehicleId);
+    (road || []).forEach(r => paths.push(r.path));
+    if (paths.length) {
+      const { error: rmErr } = await _supabase.storage.from('ppmo-photos').remove(paths);
+      if (rmErr) console.warn('사진 파일 일부 삭제 실패 (계속 진행):', rmErr.message);
+    }
+    // CASCADE로 rounds → measurements/photos/feedback 자동 삭제. RLS로 막히면 0행이므로 반환 행 수 확인
+    const { data: deleted, error } = await _supabase.from('ppmo_vehicles').delete().eq('id', vehicleId).select();
     if (error) throw error;
     if (!deleted || deleted.length === 0) {
       throw new Error('삭제된 행이 없습니다.\n\n원인: 관리자 삭제 정책(v10)이 아직 실행되지 않았거나, 현재 계정이 관리자 이메일 목록에 없습니다.');
@@ -1287,7 +1387,7 @@ window.deletePpmoVehicle = async function(vehicleId, vehicleNo) {
     alert('삭제 실패: ' + e.message + '\n\n※ RLS 정책 확인 필요 시 관리자에게 문의');
   }
 };
-// ═══ Excel: 전체 차량 (관리자용 리포트) ═══
+// ═══ Excel: 전체 차량 (관리자용) ═══
 window.exportPpmoExcel = async function() {
   if (!window.XLSX) return alert('Excel 라이브러리 로드 실패');
   const btn = event.target;
@@ -1295,7 +1395,6 @@ window.exportPpmoExcel = async function() {
   btn.textContent = '⋯ 생성 중';
   btn.disabled = true;
   try {
-    // 차량 시트
     const wb = XLSX.utils.book_new();
     const progressMap = {};
     ppmoRounds.forEach(r => { progressMap[r.vehicle_id] = (progressMap[r.vehicle_id] || 0) + 1; });
@@ -1305,6 +1404,8 @@ window.exportPpmoExcel = async function() {
       '최초 생성자': v.created_by || '',
       '모델': v.vehicle_type || '',
       '연식': v.model_year || '',
+      '파워트레인': PT_LABEL_ADM[v.powertrain] || '',
+      '구동 방식': DRIVE_LABEL_ADM[v.drive_type] || '',
       '모니터링 범위': v.front_only ? '전륜만' : '전체',
       '그루브 수': v.groove_count || 3,
       '제품': v.product || '',
@@ -1318,20 +1419,20 @@ window.exportPpmoExcel = async function() {
       '등록일': v.created_at ? new Date(v.created_at).toLocaleDateString('ko-KR') : ''
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(vehicleRows), '차량 목록');
-    // 회차별 상세 데이터 로드
     const roundIds = ppmoRounds.map(r => r.id);
-    let allMeas = [], allFeed = [], fullRounds = [];
+    let allMeas = [], allFeed = [], fullRounds = [], allDfb = [];
     if (roundIds.length) {
-      const [rRes, mRes, fRes] = await Promise.all([
+      const [rRes, mRes, fRes, dRes] = await Promise.all([
         _supabase.from('ppmo_rounds').select('*').in('id', roundIds),
         _supabase.from('ppmo_measurements').select('*').in('round_id', roundIds),
-        _supabase.from('ppmo_feedback').select('*').in('round_id', roundIds)
+        _supabase.from('ppmo_feedback').select('*').in('round_id', roundIds),
+        _supabase.from('ppmo_driver_feedback').select('*').in('round_id', roundIds)
       ]);
       fullRounds = rRes.data || [];
       allMeas = mRes.data || [];
       allFeed = fRes.data || [];
+      allDfb = dRes.data || [];
     }
-    // 회차 시트
     const roundRows = fullRounds.map(r => {
       const v = ppmoVehicles.find(x => x.id === r.vehicle_id) || {};
       const meas = allMeas.filter(m => m.round_id === r.id);
@@ -1348,13 +1449,12 @@ window.exportPpmoExcel = async function() {
         '최소 RTD (mm)': minRtd != null ? Number(minRtd.toFixed(2)) : '',
         '평균 RTD (mm)': avgRtd != null ? Number(avgRtd.toFixed(2)) : '',
         '로테이션': r.rotated ? 'O' : '',
-        '피드백': feed.map(f => f.note || f.category).join(' | '),
+        '피드백 (이전 방식)': feed.map(f => f.note || f.category).join(' | '),
         '비고': r.notes || '',
         '기록자': r.inspected_by
       };
     }).sort((a,b) => String(a['차량번호']).localeCompare(String(b['차량번호'])));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(roundRows), '회차 요약');
-    // 측정값 상세 시트 (포지션×점별)
     const measRows = allMeas.map(m => {
       const r = fullRounds.find(x => x.id === m.round_id) || {};
       const v = ppmoVehicles.find(x => x.id === r.vehicle_id) || {};
@@ -1390,18 +1490,33 @@ window.exportPpmoExcel = async function() {
       });
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(roSheet.length ? roSheet : [{ '차량번호': '데이터 없음' }]), '위치교환');
     } catch(e) { console.warn('얼라인먼트/위치교환 시트 생성 실패:', e); }
-    // 그루브별 RTD 시트 (회차 × 포지션 × 그루브 + 초기 대비 마모량/마모율)
     try {
       const gRows = admGrooveSheet(ppmoVehicles, fullRounds, allMeas, rotAll);
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(gRows.length ? gRows : [{ '차량번호': '데이터 없음' }]), '그루브별 RTD');
     } catch(e) { console.warn('그루브별 RTD 시트 생성 실패:', e); }
-    // 사전 설문 시트
+    // 운전자 피드백 시트
+    try {
+      const rById = Object.fromEntries(fullRounds.map(x => [x.id, x]));
+      const dRows = allDfb.map(d => {
+        const r = rById[d.round_id] || {}; const v = ppmoVehicles.find(x => x.id === d.vehicle_id) || {};
+        const row = { '차량번호': v.vehicle_no || '', '제품': [v.product, v.tire_size].filter(Boolean).join(' '), '파워트레인': PT_LABEL_ADM[v.powertrain] || '',
+          '회차': `${r.round_no}회차`, '이전 타이어': d.prev_tire || '' };
+        [...FB_ITEMS_ADM, ...FB_OTHER_ADM].forEach(c => { row[c.label] = d[c.key] ?? ''; });
+        const rm = d.remarks || {};
+        row['비고'] = Object.entries(rm).map(([k, x]) => `${(FB_ITEMS_ADM.find(c => c.key === k) || { label: '기타' }).label}: ${x}`).join(' | ');
+        row['자유 메모'] = r.notes || '';
+        return row;
+      }).sort((x, y) => (x['차량번호'] + x['회차']).localeCompare(y['차량번호'] + y['회차']));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dRows.length ? dRows : [{ '차량번호': '데이터 없음' }]), '운전자 피드백');
+    } catch(e) { console.warn('운전자 피드백 시트 생성 실패:', e); }
     try {
       const { data: svAll } = await _supabase.from('ppmo_survey').select('*');
       const svRows = (svAll || []).map(sv => {
         const v = ppmoVehicles.find(x => x.id === sv.vehicle_id) || {};
-        return { '차량번호': v.vehicle_no || '', '담당자': ppmoOwner(v), '주행 환경': sv.driving_env || '',
-                 '중시 항목': (sv.priorities || []).join(', '), '화물 하중': sv.load_level || '' };
+        return { '차량번호': v.vehicle_no || '', '담당자': ppmoOwner(v),
+                 '이전 타이어': [sv.prev_brand, sv.prev_product].filter(Boolean).join(' '),
+                 '운행 지역': sv.route_region || '', '자주 다니는 도로': sv.route_roads || '', '하루 평균 km (응답)': sv.daily_km ?? '',
+                 '주행 환경': sv.driving_env || '', '중시 항목': (sv.priorities || []).join(', '), '화물 하중': sv.load_level || '' };
       });
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(svRows.length ? svRows : [{ '차량번호': '응답 없음' }]), '사전 설문');
     } catch(e) { console.warn('설문 시트 생성 실패:', e); }
@@ -1419,20 +1534,22 @@ window.downloadVehicleExcel = async function(vehicleId) {
   if (!v || !window.XLSX) return;
   try {
     const rIds = ppmoRounds.filter(r => r.vehicle_id === vehicleId).map(r => r.id);
-    const [rRes, mRes, fRes] = await Promise.all([
+    const [rRes, mRes, fRes, dRes] = await Promise.all([
       _supabase.from('ppmo_rounds').select('*').eq('vehicle_id', vehicleId).order('round_no'),
       rIds.length ? _supabase.from('ppmo_measurements').select('*').in('round_id', rIds) : { data: [] },
-      rIds.length ? _supabase.from('ppmo_feedback').select('*').in('round_id', rIds) : { data: [] }
+      rIds.length ? _supabase.from('ppmo_feedback').select('*').in('round_id', rIds) : { data: [] },
+      rIds.length ? _supabase.from('ppmo_driver_feedback').select('*').in('round_id', rIds) : { data: [] }
     ]);
-    const rounds = rRes.data || [], meas = mRes.data || [], feed = fRes.data || [];
+    const rounds = rRes.data || [], meas = mRes.data || [], feed = fRes.data || [], dfb = dRes.data || [];
     const wb = XLSX.utils.book_new();
-    // 차량 정보 시트
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
       ['항목', '값'],
       ['차량번호', v.vehicle_no],
       ['담당자', ppmoOwner(v)],
       ['최초 생성자', v.created_by || '—'],
       ['모델·연식', `${v.vehicle_type || ''} ${v.model_year || ''}`],
+      ['파워트레인', PT_LABEL_ADM[v.powertrain] || '미지정'],
+      ['구동 방식', DRIVE_LABEL_ADM[v.drive_type] || '미지정'],
       ['모니터링 범위', v.front_only ? '전륜만 (2본)' : '전체 (6본)'],
       ['그루브 수', `${v.groove_count || 3}개`],
       ['제품', v.product || ''],
@@ -1444,7 +1561,6 @@ window.downloadVehicleExcel = async function(vehicleId) {
       ['딜러', v.dealer_name || ''],
       ['등록일', v.created_at ? new Date(v.created_at).toLocaleString('ko-KR') : '']
     ]), '차량 정보');
-    // 회차별 요약 시트
     const summary = rounds.map(r => {
       const m = meas.filter(x => x.round_id === r.id && isNum(x.rtd_mm)).map(x => Number(x.rtd_mm));
       const f = feed.filter(x => x.round_id === r.id);
@@ -1455,12 +1571,11 @@ window.downloadVehicleExcel = async function(vehicleId) {
         '최소 RTD': m.length ? Number(Math.min(...m).toFixed(2)) : '',
         '평균 RTD': m.length ? Number((m.reduce((a,x) => a+x, 0)/m.length).toFixed(2)) : '',
         '로테이션': r.rotated ? 'O' : '',
-        '피드백': f.map(x => x.note || x.category).join(' | '),
+        '피드백 (이전 방식)': f.map(x => x.note || x.category).join(' | '),
         '비고': r.notes || ''
       };
     });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), '회차별 요약');
-    // 측정 상세
     const detail = meas.map(m => {
       const r = rounds.find(x => x.id === m.round_id) || {};
       return {
@@ -1472,13 +1587,22 @@ window.downloadVehicleExcel = async function(vehicleId) {
       };
     });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detail), 'RTD 상세');
+    if (dfb.length) {
+      const rb = Object.fromEntries(rounds.map(x => [x.id, x]));
+      const dRows = dfb.map(d => {
+        const row = { '회차': `${rb[d.round_id]?.round_no}회차`, '이전 타이어': d.prev_tire || '' };
+        [...FB_ITEMS_ADM, ...FB_OTHER_ADM].forEach(c => { row[c.label] = d[c.key] ?? ''; });
+        row['비고'] = Object.values(d.remarks || {}).join(' | ');
+        return row;
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dRows), '운전자 피드백');
+    }
     try {
       const [alR, roR] = await Promise.all([
         _supabase.from('ppmo_alignment').select('*').eq('vehicle_id', vehicleId),
         _supabase.from('ppmo_rotations').select('*').eq('vehicle_id', vehicleId)
       ]);
       const rb = Object.fromEntries(rounds.map(x => [x.id, x]));
-      // 그루브별 RTD 시트
       const gRows = admGrooveSheet([v], rounds, meas, roR.data || []);
       if (gRows.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(gRows), '그루브별 RTD');
       const al = (alR.data || []).map(a => ({ '회차': rb[a.round_id]?.round_no === 0 ? '초기' : `${rb[a.round_id]?.round_no}회차`,
@@ -1494,7 +1618,7 @@ window.downloadVehicleExcel = async function(vehicleId) {
     alert('Excel 생성 실패: ' + e.message);
   }
 };
-// ═══ ZIP: 차량 전체 사진 (signed URL로 다운로드 후 압축) ═══
+// ═══ ZIP: 차량 전체 사진 ═══
 window.downloadVehiclePhotosZip = async function(vehicleId) {
   const v = ppmoVehicles.find(x => x.id === vehicleId);
   if (!v || !window.JSZip) return alert('ZIP 라이브러리 로드 실패');
@@ -1510,9 +1634,8 @@ window.downloadVehiclePhotosZip = async function(vehicleId) {
       _supabase.from('ppmo_photos').select('*').in('round_id', rIds)
     ]);
     const rounds = rRes.data || [];
-    const photos = (pRes.data || []).filter(p => p.url);   // '첨부 안 함'(url null) 행 제외
+    const photos = (pRes.data || []).filter(p => p.url);
     if (!photos.length) { alert('업로드된 사진 없음'); return; }
-    // 모든 사진에 대해 signed URL 일괄 생성
     photos.forEach(p => { p.path = extractPathAdm(p.url); });
     const paths = photos.map(p => p.path).filter(Boolean);
     const signedUrlMap = await getSignedUrls(paths, 3600);
@@ -1528,7 +1651,6 @@ window.downloadVehiclePhotosZip = async function(vehicleId) {
         const res = await fetch(signedUrl);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const blob = await res.blob();
-        // 유효성: JPEG 최소 크기 확인
         if (blob.size < 500) { console.warn(`파일 크기 이상 (${blob.size}B): ${p.path}`); failed++; continue; }
         zip.file(`${roundLabel}/${slotLabel}.jpg`, blob);
         downloaded++;
@@ -1564,9 +1686,10 @@ window.exportPpmoCSV = function() {
     const t = r.inspected_at ? new Date(r.inspected_at).getTime() : 0;
     if (!lastDateMap[r.vehicle_id] || t > lastDateMap[r.vehicle_id]) lastDateMap[r.vehicle_id] = t;
   });
-  const headers = ['차량번호','담당자','모델','연식','제품','사이즈','하중지수','속도지수','장착주행거리','진행회차','최근검사일','등록일'];
+  const headers = ['차량번호','담당자','모델','연식','파워트레인','구동','제품','사이즈','하중지수','속도지수','장착주행거리','진행회차','최근검사일','등록일'];
   const rows = ppmoVehicles.map(v => [
     v.vehicle_no, ppmoOwner(v), v.vehicle_type || '', v.model_year || '',
+    PT_LABEL_ADM[v.powertrain] || '', DRIVE_LABEL_ADM[v.drive_type] || '',
     v.product || '', v.tire_size || '', v.load_index || '', v.speed_index || '',
     v.initial_mileage_km || '', (progressMap[v.id] || 0) + '/' + TOTAL_PPMO_ROUNDS,
     lastDateMap[v.id] ? new Date(lastDateMap[v.id]).toLocaleDateString('ko-KR') : '',
@@ -1580,7 +1703,7 @@ window.exportPpmoCSV = function() {
   a.click();
   URL.revokeObjectURL(url);
 };
-const ADM_PHASE_LABEL = { initial: '초기', before: '조정 전', after: '조정 후' };
+const ADM_PHASE_LABEL = { initial: '장착 시 조정 완료', before: '조정 전', after: '조정 후' };
 const ADM_WHEELS = [
   { w: 'FL', label: '전륜 좌', front: true }, { w: 'FR', label: '전륜 우', front: true },
   { w: 'RL', label: '후륜 좌', front: false }, { w: 'RR', label: '후륜 우', front: false }
@@ -1624,7 +1747,6 @@ function admPointKeys(v, meas) {
   (meas || []).forEach(m => { if (!keys.includes(m.point)) keys.push(m.point); });
   return keys;
 }
-// 회차 roundNo 측정 시점의 { 포지션: 타이어(최초 위치) } — RTD는 위치교환 전 측정 기준
 function admTireAtPos(v, vRounds, rots, roundNo) {
   const rno = Object.fromEntries(vRounds.map(r => [r.id, r.round_no]));
   const cur = Object.fromEntries(getPpmoTirePositions(v.front_only).map(t => [t.pos, t.pos]));
@@ -1635,7 +1757,6 @@ function admTireAtPos(v, vRounds, rots, roundNo) {
   Object.entries(cur).forEach(([k, p]) => { at[p] = k; });
   return at;
 }
-// 차량 1대의 회차 × 포지션 × 그루브 데이터
 function admGrooveRows(v, vRounds, meas, rots) {
   const rIds = new Set(vRounds.map(r => r.id));
   const vMeas = meas.filter(m => rIds.has(m.round_id));
@@ -1673,7 +1794,6 @@ function admGrooveTable(v, r, measurements, fullRounds, rotRows) {
     <div style="font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;font-size:10px;">그루브별 ${r.round_no === 0 ? 'NTD' : 'RTD'} (mm)${r.round_no > 0 ? ' · ▼ 초기 대비 마모량 (마모율)' : ''}</div>
     <table style="border-collapse:collapse;width:100%;"><tr><th ${th}></th>${keys.map(k => `<th ${th}>${ADM_POINT_LABEL[k] || k}</th>`).join('')}<th ${th}>최소</th></tr>${body}</table></div>`;
 }
-// Excel '그루브별 RTD' 시트 행 (여러 차량)
 function admGrooveSheet(vehicles, rounds, meas, rots) {
   const out = [];
   vehicles.forEach(v => {
@@ -1704,7 +1824,6 @@ window.openReassign = function(vehicleId) {
   const v = ppmoVehicles.find(x => x.id === vehicleId);
   if (!v) return;
   const cur = ppmoOwner(v);
-  // 후보: 접속 로그 사용자 + 기존 담당자/생성자 (Ban 사용자 제외)
   const cands = [...new Set([
     ...allLogs.map(l => l.email),
     ...ppmoVehicles.map(x => ppmoOwner(x)),
@@ -1755,7 +1874,6 @@ window.submitReassign = async function() {
 function isNum(x) { return x !== null && x !== undefined && x !== '' && !isNaN(Number(x)); }
 function escapeHtmlAdm(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(s) { return String(s ?? '').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
-// 저장된 값이 전체 URL이든 path든 항상 path만 반환
 function extractPathAdm(urlOrPath) {
   if (!urlOrPath) return null;
   if (urlOrPath.startsWith('http')) {
@@ -1764,7 +1882,6 @@ function extractPathAdm(urlOrPath) {
   }
   return urlOrPath;
 }
-// 다수 path에 대해 signed URL을 한 번에 생성 (1시간 만료)
 async function getSignedUrls(paths, expiresIn = 3600) {
   if (!paths || !paths.length) return {};
   const map = {};
@@ -1777,7 +1894,6 @@ async function getSignedUrls(paths, expiresIn = 3600) {
   }
   return map;
 }
-// 단일 파일 다운로드 (강제 attachment로 지정된 파일명 사용)
 async function downloadPhotoByPath(path, filename) {
   try {
     const { data, error } = await _supabase.storage.from('ppmo-photos')
