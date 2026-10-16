@@ -14,10 +14,13 @@
   .num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
   .bar { height: 4px; background: var(--o); }
   .page { max-width: 1200px; margin: 0 auto; padding: 0 32px 64px; }
-  .mast { display: flex; justify-content: space-between; align-items: flex-end; padding: 28px 0 18px; border-bottom: 2px solid var(--ink); }
+  .mast { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; padding: 28px 0 18px; border-bottom: 2px solid var(--ink); }
   .mast .brand { font-size: 11px; font-weight: 700; letter-spacing: .14em; color: var(--o-d); margin-bottom: 6px; }
   .mast h1 { font-size: 27px; font-weight: 700; letter-spacing: -.01em; }
-  .mast .meta { text-align: right; font-size: 12px; color: var(--ink2); line-height: 1.7; }
+  .mast .cap-prod { font-size: 12.5px; color: var(--ink2); margin-top: 6px; line-height: 1.6; max-width: 760px; }
+  .mast .cap-prod .sw { margin-right: 4px; }
+  .mast .cap-prod span.it { white-space: nowrap; margin-right: 14px; }
+  .mast .meta { text-align: right; font-size: 12px; color: var(--ink2); line-height: 1.7; white-space: nowrap; }
   .mast .meta b { color: var(--ink); font-weight: 600; }
   .tools { display: flex; gap: 6px; justify-content: flex-end; margin-bottom: 6px; }
   .tool { border: 1px solid var(--rule2); background: var(--bg); padding: 4px 10px; font-size: 11.5px; cursor: pointer; color: var(--ink2); }
@@ -34,6 +37,9 @@
   .seg button.on { background: var(--ink); color: #fff; font-weight: 700; }
   .seg button:disabled { color: #c9c9c9; cursor: not-allowed; }
   .hint { font-size: 10.5px; color: var(--ink3); margin-top: 4px; }
+  .banner { margin-top: 14px; padding: 10px 14px; font-size: 12.5px; background: #fff6e0; color: #7a5200; border-left: 3px solid var(--o); }
+  .banner.ok { background: #eef6ea; color: #2f5f22; border-left-color: var(--ok); }
+  .banner button { margin-left: 10px; border: 1px solid currentColor; background: none; color: inherit; padding: 2px 8px; font-size: 12px; cursor: pointer; }
   .kpis { display: grid; grid-template-columns: repeat(6, 1fr); border-bottom: 1px solid var(--rule); margin-top: 22px; }
   .kpi { padding: 4px 18px 16px; border-left: 1px solid var(--rule); }
   .kpi:first-child { border-left: none; padding-left: 0; }
@@ -70,6 +76,8 @@
   .note { font-size: 11.5px; color: var(--ink3); margin-top: 8px; line-height: 1.6; }
   .ph { background: var(--tint); border: 1px dashed var(--rule2); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--ink3); font-size: 11px; aspect-ratio: 4 / 3; padding: 6px; }
   .ph b { color: var(--ink2); font-weight: 600; font-size: 11.5px; }
+  .ph.img { padding: 0; border: 1px solid var(--rule); overflow: hidden; }
+  .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .cap { font-size: 11px; color: var(--ink2); margin-top: 4px; }
   .veh { padding: 18px 0 20px; border-bottom: 1px solid var(--rule); break-inside: avoid; }
   .veh-h { display: flex; gap: 14px; align-items: baseline; margin-bottom: 10px; }
@@ -85,13 +93,10 @@
   .cm li { list-style: none; font-size: 12px; color: var(--ink2); padding: 3px 0 3px 10px; border-left: 2px solid var(--rule); margin-bottom: 3px; }
   .cm li span { color: var(--ink3); font-size: 11px; margin-right: 6px; }
   ul.read li { font-size: 12px; color: var(--ink2); margin: 0 0 5px 16px; }
-  .banner { margin-top: 14px; padding: 10px 14px; font-size: 12.5px; background: #fff6e0; color: #7a5200; border-left: 3px solid var(--o); }
-  .loading { position: fixed; inset: 0; background: #fff; z-index: 50; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; font-size: 14px; color: var(--ink2); }
-  .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .ph.img { padding: 0; border: 1px solid var(--rule); }
   .disc { font-size: 11px; color: var(--ink3); margin-top: 12px; line-height: 1.7; }
+  .loading { position: fixed; inset: 0; background: #fff; z-index: 50; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; font-size: 14px; color: var(--ink2); text-align: center; padding: 24px; }
   @media print {
-    .controls, .tools { display: none; }
+    .controls, .tools, .banner button { display: none; }
     .page { max-width: none; padding: 0; }
     .sec { break-inside: auto; }
     .veh, .al-card, table.t tr { break-inside: avoid; }
@@ -100,11 +105,15 @@
 </style>
 </head>
 <body>
-<div class="loading" id="loading"><b>PPMo 리포트</b><span id="loadMsg">데이터를 불러오는 중...</span></div>
+<div class="loading" id="loading"><b id="loadTitle">PPMo 리포트</b><span id="loadMsg">데이터를 불러오는 중...</span></div>
 <div class="bar"></div>
 <div class="page">
   <div class="mast">
-    <div><div class="brand">CONTINENTAL · TCS KOREA</div><h1 data-i="title"></h1></div>
+    <div>
+      <div class="brand">CONTINENTAL · TCS KOREA</div>
+      <h1 data-i="title"></h1>
+      <div class="cap-prod" id="prodCaption"></div>
+    </div>
     <div>
       <div class="tools">
         <button class="tool" id="lang-ko" onclick="setLang('ko')">한국어</button>
@@ -122,6 +131,7 @@
     <div><div class="ctl-l" data-i="fLimit"></div><div class="seg" id="fLimit"></div></div>
   </div>
 
+  <div id="dlBanner"></div>
   <div id="banner"></div>
   <div class="kpis" id="kpis"></div>
 
@@ -168,16 +178,20 @@
     <ul class="read" id="howto"></ul>
     <div class="disc" data-i="disc"></div></div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!--PPMO_DATA-->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" id="sbLib"></script>
 <script>
 // ═══════════════ 설정 ═══════════════
+// 두 가지 모드
+//  1) 라이브: admin [리포트 생성] → 관리자 세션으로 데이터·사진을 불러와 '독립 HTML'을 만들어 다운로드
+//  2) 독립 파일: 다운로드한 파일. 데이터와 사진이 파일 안에 들어 있어 로그인·인터넷 없이 열림
 const SUPABASE_URL = 'https://thosddtgtffapakvmrhn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_HmrBU9WFhkCTM_TquLM31g_IPovXtXm';
 const ADMIN_EMAILS = ['jaehong.park@continental.com', 'sangyong.2.jung@continental.com'];
-const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
-});
+const EMBED = window.__PPMO_DATA__ || null;
+const _supabase = (!EMBED && typeof supabase !== 'undefined')
+  ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } })
+  : null;
 const DAY = 86400000;
 const POSMAP = { '1축-좌': 'FL', '1축-우': 'FR', '2축-좌외': 'RLo', '2축-좌내': 'RLi', '2축-우외': 'RRo', '2축-우내': 'RRi' };
 const FRONT_POS = ['FL', 'FR'], ALL_POS = ['FL', 'FR', 'RLo', 'RLi', 'RRo', 'RRi'];
@@ -189,9 +203,11 @@ const PRIO_KO = ['구매 가격', '타이어 수명(마일리지)', '마른노�
 const PRIO_EN = ['Price', 'Tire life', 'Dry', 'Wet', 'Noise', 'Fuel economy', 'Appearance'];
 const LOAD_KO = ['최대 적재하중 대비 가벼운 편', '최대 적재하중에 근접하는 편', '최대 적재하중보다 무거운 편'];
 const LOAD_EN = ['Below max load', 'Near max load', 'Above max load'];
-let PRODUCTS = [], VEH = [], MAXR = 0;
+const REPORT_PHOTO_TYPES = ['front', 'rtd_1', 'rtd_2'];
+let PRODUCTS = [], VEH = [], MAXR = 0, GENERATED_AT = Date.now();
+const msg = t => { const el = document.getElementById('loadMsg'); if (el) el.textContent = t; };
 
-// ═══════════════ 데이터 로드 ═══════════════
+// ═══════════════ 라이브 모드: 데이터 수집 ═══════════════
 async function fetchAll(table, build) {
   const out = []; const size = 1000;
   for (let from = 0; ; from += size) {
@@ -202,51 +218,85 @@ async function fetchAll(table, build) {
   }
   return out;
 }
-async function signed(paths) {
-  const map = {}; const uniq = [...new Set(paths.filter(Boolean))];
-  for (let i = 0; i < uniq.length; i += 100) {
-    const { data } = await _supabase.storage.from('ppmo-photos').createSignedUrls(uniq.slice(i, i + 100), 3600 * 3);
-    (data || []).forEach(x => { if (x.path && x.signedUrl) map[x.path] = x.signedUrl; });
-  }
-  return map;
-}
 const pathOf = u => !u ? null : (u.startsWith('http') ? ((u.match(/\/ppmo-photos\/(.+?)(\?|$)/) || [])[1] || null) : u);
-async function loadData() {
-  const msg = t => { document.getElementById('loadMsg').textContent = t; };
+// 사진을 줄여서 data URI로 (독립 파일에 포함)
+async function toDataUri(url, maxDim = 900, q = 0.7) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const bmp = await createImageBitmap(await res.blob());
+  let { width: w, height: h } = bmp;
+  if (w > maxDim || h > maxDim) { if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; } else { w = Math.round(w * maxDim / h); h = maxDim; } }
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  c.getContext('2d').drawImage(bmp, 0, 0, w, h);
+  return c.toDataURL('image/jpeg', q);
+}
+async function collectLive() {
   const { data: { session } } = await _supabase.auth.getSession();
   if (!session || !ADMIN_EMAILS.includes(session.user.email.toLowerCase())) {
-    msg('관리자 로그인이 필요합니다. admin 페이지의 PPMo 탭에서 [리포트 생성] 버튼으로 열어 주세요.');
-    return false;
+    throw new Error('관리자 로그인이 필요합니다. admin 페이지의 PPMo 탭에서 [리포트 생성] 버튼으로 열어 주세요.');
   }
   msg('차량 · 회차 데이터 불러오는 중...');
-  const vehicles = await fetchAll('ppmo_vehicles', q => q.order('created_at'));
-  const rounds = await fetchAll('ppmo_rounds', q => q);
-  const meas = await fetchAll('ppmo_measurements', q => q);
-  const photos = await fetchAll('ppmo_photos', q => q.in('photo_type', ['front', 'rtd_1', 'rtd_2']));
-  const surveys = await fetchAll('ppmo_survey', q => q.order('created_at', { ascending: false }));
-  const aligns = await fetchAll('ppmo_alignment', q => q.eq('phase', 'initial'));
-  const rots = await fetchAll('ppmo_rotations', q => q);
-  let dfb = [], road = [];
-  try { dfb = await fetchAll('ppmo_driver_feedback', q => q); } catch (e) { console.warn(e.message); }
-  try { road = await fetchAll('ppmo_road_photos', q => q.order('created_at')); } catch (e) { console.warn(e.message); }
-  msg('사진 링크 준비 중...');
-  photos.forEach(p => { p.path = pathOf(p.url); });
-  const urls = await signed([...photos.map(p => p.path), ...road.map(r => r.path)]);
+  const T = {};
+  T.vehicles = await fetchAll('ppmo_vehicles', q => q.order('created_at'));
+  T.rounds = await fetchAll('ppmo_rounds', q => q);
+  T.meas = await fetchAll('ppmo_measurements', q => q);
+  T.photos = (await fetchAll('ppmo_photos', q => q.in('photo_type', REPORT_PHOTO_TYPES))).map(p => ({ round_id: p.round_id, photo_type: p.photo_type, path: pathOf(p.url) })).filter(p => p.path);
+  T.surveys = await fetchAll('ppmo_survey', q => q.order('created_at', { ascending: false }));
+  T.aligns = await fetchAll('ppmo_alignment', q => q.eq('phase', 'initial'));
+  T.rots = await fetchAll('ppmo_rotations', q => q);
+  T.dfb = []; T.road = [];
+  try { T.dfb = await fetchAll('ppmo_driver_feedback', q => q); } catch (e) { console.warn(e.message); }
+  try { T.road = await fetchAll('ppmo_road_photos', q => q.order('created_at')); } catch (e) { console.warn(e.message); }
+  // 사진: 서명 URL → 축소 → data URI
+  const paths = [...new Set([...T.photos.map(p => p.path), ...T.road.map(r => r.path)])];
+  const signedMap = {};
+  for (let i = 0; i < paths.length; i += 100) {
+    const { data } = await _supabase.storage.from('ppmo-photos').createSignedUrls(paths.slice(i, i + 100), 3600);
+    (data || []).forEach(x => { if (x.path && x.signedUrl) signedMap[x.path] = x.signedUrl; });
+  }
+  const urls = {}; let done = 0, fail = 0;
+  const queue = paths.filter(p => signedMap[p]);
+  const worker = async () => {
+    while (queue.length) {
+      const p = queue.shift();
+      try { urls[p] = await toDataUri(signedMap[p]); } catch (e) { fail++; console.warn('사진 변환 실패', p, e.message); }
+      done++; msg(`사진 포함 중... ${done}/${paths.length}`);
+    }
+  };
+  await Promise.all(Array.from({ length: 6 }, worker));
+  return { tables: T, urls, generatedAt: Date.now(), photoFail: fail };
+}
+// 독립 HTML 만들기: 현재 파일 원본 + 데이터 삽입 + Supabase 라이브러리 제거
+async function buildStandalone(pkg) {
+  const src = await (await fetch(location.pathname, { cache: 'no-store' })).text();
+  const json = JSON.stringify(pkg).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+  return src
+    .replace(/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2" id="sbLib"><\/script>/, '')
+    .replace('<!--PPMO_DATA-->', `<script>window.__PPMO_DATA__=${json};<\/script>`);
+}
+let _standaloneUrl = null, _standaloneName = '';
+function downloadStandalone() {
+  const a = document.createElement('a'); a.href = _standaloneUrl; a.download = _standaloneName;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+window.downloadStandalone = downloadStandalone;
 
-  // 제품 목록 (Continental 먼저)
+// ═══════════════ 데이터 → 리포트 모델 ═══════════════
+function buildModel(pkg) {
+  const { vehicles, rounds, meas, photos, surveys, aligns, rots, dfb, road } = pkg.tables;
+  const urls = pkg.urls || {};
+  GENERATED_AT = pkg.generatedAt || Date.now();
   const pk = v => `${v.product || '—'}|${v.tire_size || ''}`;
   const keys = [...new Set(vehicles.map(pk))];
   const isConti = name => /vancontact|continental|conti/i.test(name || '');
   let ci = 0, xi = 0;
-  PRODUCTS = keys.map(k => { const [name, size] = k.split('|'); return { id: k, name, size: (size || '').replace(/\s*\d+PR$/i, ''), conti: isConti(name) }; })
-    .sort((a, b) => (b.conti - a.conti) || a.name.localeCompare(b.name) || a.size.localeCompare(b.size))
+  PRODUCTS = keys.map(k => { const [name, size] = k.split('|'); return { id: k, name, size: (size || '').replace(/\s*\d+PR$/i, ''), ply: ((size || '').match(/\d+PR$/i) || [''])[0], conti: isConti(name) }; })
+    .sort((a, b) => (b.conti - a.conti) || (a.conti ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)) || b.size.localeCompare(a.size))
     .map(p => ({ ...p, color: p.conti ? CONTI_COLORS[ci++ % CONTI_COLORS.length] : COMP_COLORS[xi++ % COMP_COLORS.length] }));
-
   VEH = vehicles.map(v => {
     const vr = rounds.filter(r => r.vehicle_id === v.id).sort((a, b) => a.round_no - b.round_no);
     const gc = v.groove_count || 3;
     const gkeys = Array.from({ length: gc }, (_, i) => `groove_${i + 1}`);
-    const pos = v.front_only ? FRONT_POS : ALL_POS;
     const vrot = rots.filter(x => x.vehicle_id === v.id);
     const rno = Object.fromEntries(vr.map(r => [r.id, r.round_no]));
     // 회차 n 측정 시점의 { 현재 위치 → 타이어(최초 위치) }  (RTD는 위치교환 전 측정)
@@ -277,29 +327,28 @@ async function loadData() {
     const al = {};
     aligns.filter(a => a.vehicle_id === v.id).forEach(a => { al[a.wheel] = { c: Number(a.camber_deg), k: a.caster_deg != null ? Number(a.caster_deg) : null, t: Number(a.toe_deg) }; });
     const toeUnit = (aligns.find(a => a.vehicle_id === v.id && a.toe_unit) || {}).toe_unit || 'deg';
-    const fb = dfb.filter(d => d.vehicle_id === v.id).map(d => {
+    const fb = (dfb || []).filter(d => d.vehicle_id === v.id).map(d => {
       const rr = vr.find(r => r.id === d.round_id) || {};
       return { ...d, round: rr.round_no, note: rr.notes || null };
     }).filter(f => f.round != null);
     return {
       id: v.id, no: v.vehicle_no, model: v.vehicle_type || '', drive: v.drive_type || null, pt: v.powertrain || 'NA',
-      prod: pk(v), frontOnly: !!v.front_only, pos, groove: gc, rounds: rs,
+      prod: pk(v), frontOnly: !!v.front_only, pos: v.front_only ? FRONT_POS : ALL_POS, groove: gc, rounds: rs,
       region: sv.route_region || '', roads: sv.route_roads || '', env: sv.driving_env || '', prio: sv.priorities || [], load: sv.load_level || '',
       prev: [sv.prev_brand, sv.prev_product].filter(Boolean).join(' '), fb, align: al, toeUnit,
-      road: road.filter(x => x.vehicle_id === v.id).map(x => ({ url: urls[x.path] || null, caption: x.caption || '' }))
+      road: (road || []).filter(x => x.vehicle_id === v.id).map(x => ({ url: urls[x.path] || null, caption: x.caption || '' }))
     };
   });
   MAXR = Math.max(0, ...VEH.map(v => v.rounds.length ? v.rounds[v.rounds.length - 1].no : 0));
-  return true;
 }
 // ═══════════════ 다국어 ═══════════════
 const I18N = {
   ko: {
-    title: 'PPMo 중간 리포트 · LT 타이어', print: 'PDF 저장',
-    meta: (n, t, r, ax) => `대상 <b>${n}대 · ${t}본</b> (${ax})<br>기준 회차 <b>${r}</b><br>생성 ${new Date().toLocaleString('ko-KR')}`,
+    title: 'PPMo 리포트', print: 'PDF 저장',
+    meta: (n, t, r, ax, g) => `대상 <b>${n}대 · ${t}본</b> (${ax})<br>기준 회차 <b>${r}</b><br>데이터 기준 ${g}`,
     fProduct: '제품', fPt: '파워트레인', fRound: '기준 회차', fLimit: '한계 깊이', fDrive: '구동', fAxle: '포지션',
     roundHint: '클릭: 단일 회차 · Ctrl/⌘ + 클릭: 복수 선택', all: '전체', front: '전륜', rear: '후륜', FWD: '전륜구동', RWD: '후륜구동', AWD: '4륜구동',
-    ICE: '내연', EV: 'EV', NA: '미지정', ICEl: '내연기관 LT', EVl: '전기 LT (EV)', NAl: '파워트레인 미지정',
+    ICE: '내연', EV: 'EV', NA: '미지정', ICEl: '내연기관', EVl: '전기차 (EV)', NAl: '파워트레인 미지정',
     axFront: '전륜', axAll: '전체 포지션',
     k1: '차량', k2: '타이어', k3: '평균 누적 주행', k4: '평균 일 주행', k5: '최고 예상 수명', k6: '운전자 평균 점수',
     k3s: 'km · 장착 후', k4s: 'km/일 · ODO 기준', k6s: '5점 만점 · 이전 타이어 대비',
@@ -320,7 +369,7 @@ const I18N = {
     regionCol: '운행 지역', roadsCol: '자주 다니는 도로', envCol: '주행 환경', loadCol: '화물 하중', prioCol: '중시 항목', dailyCol: '일 주행 km',
     vehCol: '차량', tireCol: '타이어', kmCol: '누적 km', lifeCol: '예상 수명 km', monthCol: '장착 후 도달 (개월)', confCol: '신뢰도', diffCol: 'EV 차이',
     wet: '젖은 노면', dry: '마른 노면', comfort: '승차감/소음', fuel: '연비',
-    puncture: '펑크 저항성', cut: '컷(찢김) 저항성', impact: '충격 저항성', stone: '돌 박힘 저항성', appearance: '외관',
+    puncture: '펑크 저항성', cut: '컷(찢김) 저항성', impact: '충격 저항성', stone: '돌 박힘 저항성', appearance: '외관', other: '기타',
     hi: '높음', mid: '보통', lo: '낮음', best: '최고 Conti',
     shoulder: '숄더 편마모', center: '센터 마모', even: '균일',
     init: '장착', caster: '캐스터', frontView: '전면도 · 캠버', rearView: '후륜 · 캠버', topView: '상부도 · 토',
@@ -330,6 +379,8 @@ const I18N = {
     bannerNone: '아직 1회차 측정이 저장된 차량이 없습니다. 시험 개요·운행 지역·얼라인먼트는 표시되며, 마모·예상 수명·피드백은 1회차 측정 후 표시됩니다.',
     bannerOne: '측정 1회 기준 리포트입니다. 마모가 적은 상태에서 직선을 길게 연장한 예상 수명이라 참고용으로만 보세요.',
     bannerNA: n => `파워트레인이 지정되지 않은 차량 ${n}대는 내연/EV 비교에서 제외됩니다 (admin 차량 상세에서 지정).`,
+    dlDone: (name, fail) => `리포트 파일 <b>${name}</b>을 다운로드했습니다. 이 파일은 로그인이나 인터넷 연결 없이 열리고, 필터·언어 전환도 그대로 됩니다.${fail ? ` (사진 ${fail}장은 불러오지 못해 빠졌습니다)` : ''}`,
+    dlAgain: '다시 다운로드',
     conf: '신뢰도 기준 — 제품별로 선택한 차량의 타이어를 모두 합산해 판정합니다. 높음: 장착 후 측정 3회 이상 · 평균 마모 2.0 mm 이상 · 타이어 4본 이상 / 보통: 측정 2회 이상 · 평균 마모 1.0 mm 이상 / 그 외 낮음.',
     sum: d => [
       d.best && d.comp ? `${d.ax} <b>${d.best.label}</b>의 예상 수명은 <b>${fmt(d.best.life)} km</b>로, 경쟁 제품 중 가장 긴 ${d.comp.label}(${fmt(d.comp.life)} km)의 <b>${d.ratio}배</b>입니다.`
@@ -350,11 +401,11 @@ const I18N = {
     disc: '사내 전용 문서입니다. 고객·딜러·제3자에게 배포할 수 없습니다. 모든 수치는 현장 측정값을 기반으로 한 추정치이며 성능을 보증하지 않습니다. 마모는 적재량, 공기압, 정렬 상태, 노면, 기후, 운전 습관 등에 따라 달라집니다.'
   },
   en: {
-    title: 'PPMo Interim Report · LT Tires', print: 'Save PDF',
-    meta: (n, t, r, ax) => `Scope <b>${n} vehicles · ${t} tires</b> (${ax})<br>Inspections <b>${r}</b><br>Generated ${new Date().toLocaleString('en-GB')}`,
+    title: 'PPMo Report', print: 'Save PDF',
+    meta: (n, t, r, ax, g) => `Scope <b>${n} vehicles · ${t} tires</b> (${ax})<br>Inspections <b>${r}</b><br>Data as of ${g}`,
     fProduct: 'Product', fPt: 'Powertrain', fRound: 'Inspection', fLimit: 'Pull point', fDrive: 'Drive', fAxle: 'Position',
     roundHint: 'Click: single · Ctrl/⌘ + click: multiple', all: 'All', front: 'Front', rear: 'Rear', FWD: 'FWD', RWD: 'RWD', AWD: 'AWD',
-    ICE: 'ICE', EV: 'EV', NA: 'n/a', ICEl: 'ICE LT', EVl: 'Electric LT (EV)', NAl: 'Powertrain not set',
+    ICE: 'ICE', EV: 'EV', NA: 'n/a', ICEl: 'ICE', EVl: 'Electric (EV)', NAl: 'Powertrain not set',
     axFront: 'front axle', axAll: 'all positions',
     k1: 'Vehicles', k2: 'Tires', k3: 'Avg distance', k4: 'Avg daily distance', k5: 'Best projected life', k6: 'Driver score',
     k3s: 'km · since mounting', k4s: 'km/day · from ODO', k6s: 'out of 5 · vs previous tire',
@@ -375,7 +426,7 @@ const I18N = {
     regionCol: 'Region', roadsCol: 'Frequent roads', envCol: 'Usage', loadCol: 'Load', prioCol: 'Priorities', dailyCol: 'km/day',
     vehCol: 'Vehicles', tireCol: 'Tires', kmCol: 'km run', lifeCol: 'Projected km', monthCol: 'Months from mounting', confCol: 'Confidence', diffCol: 'EV vs ICE',
     wet: 'Wet', dry: 'Dry', comfort: 'Comfort/Noise', fuel: 'Fuel',
-    puncture: 'Puncture', cut: 'Cut', impact: 'Impact', stone: 'Stone retention', appearance: 'Appearance',
+    puncture: 'Puncture', cut: 'Cut', impact: 'Impact', stone: 'Stone retention', appearance: 'Appearance', other: 'Other',
     hi: 'High', mid: 'Medium', lo: 'Low', best: 'Best Conti',
     shoulder: 'Shoulder wear', center: 'Center wear', even: 'Even',
     init: 'New', caster: 'Caster', frontView: 'Front · camber', rearView: 'Rear · camber', topView: 'Top · toe',
@@ -385,6 +436,8 @@ const I18N = {
     bannerNone: 'No vehicle has inspection 1 saved yet. Overview, region and alignment are shown; wear, projected life and feedback appear after inspection 1.',
     bannerOne: 'Based on one inspection only. Projected life extends a short trend a long way — treat as indicative.',
     bannerNA: n => `${n} vehicle(s) without powertrain are excluded from the ICE/EV comparison (set it in admin vehicle detail).`,
+    dlDone: (name, fail) => `Downloaded <b>${name}</b>. The file opens without login or internet, with filters and language switch intact.${fail ? ` (${fail} photo(s) could not be loaded and were left out)` : ''}`,
+    dlAgain: 'Download again',
     conf: 'Confidence is judged per product with all tires of the selected vehicles pooled. High: 3+ inspections after mounting · avg wear 2.0 mm+ · 4+ tires / Medium: 2+ inspections · avg wear 1.0 mm+ / otherwise Low.',
     sum: d => [
       d.best && d.comp ? `On the ${d.ax}, <b>${d.best.label}</b> projects <b>${fmt(d.best.life)} km</b>, <b>${d.ratio}×</b> the longest-lasting competitor (${d.comp.label}, ${fmt(d.comp.life)} km).`
@@ -438,9 +491,9 @@ function seg(id, opts, key) {
     `<button class="${F[key] === v ? 'on' : ''}" onclick="F['${key}']=${typeof v === 'number' ? v : `'${v}'`};render()">${l}</button>`).join('');
 }
 function renderFilters() {
-  document.getElementById('fProducts').innerHTML = PRODUCTS.map(p => {
+  document.getElementById('fProducts').innerHTML = PRODUCTS.map((p, i) => {
     const on = F.prods.has(p.id), n = VEH.filter(v => v.prod === p.id).length;
-    return `<label class="prod ${on ? '' : 'off'}"><input type="checkbox" ${on ? 'checked' : ''} onchange="toggleProd('${esc(p.id).replace(/'/g, "\\'")}')"><span class="sw" style="background:${p.color}"></span>${esc(pl(p))} <span class="muted small">(${n})</span></label>`;
+    return `<label class="prod ${on ? '' : 'off'}"><input type="checkbox" ${on ? 'checked' : ''} onchange="toggleProd(${i})"><span class="sw" style="background:${p.color}"></span>${esc(pl(p))} <span class="muted small">(${n})</span></label>`;
   }).join('');
   seg('fPt', [['all', T('all')], ...pts.map(x => [x, T(x)])], 'pt');
   let ex = '';
@@ -452,7 +505,7 @@ function renderFilters() {
   document.getElementById('fRound').innerHTML = rb.join('');
   seg('fLimit', [[1.6, '1.6'], [2, '2.0'], [3, '3.0']], 'limit');
 }
-window.toggleProd = id => { F.prods.has(id) ? F.prods.delete(id) : F.prods.add(id); if (!F.prods.size) F.prods.add(id); render(); };
+window.toggleProd = i => { const id = PRODUCTS[i].id; F.prods.has(id) ? F.prods.delete(id) : F.prods.add(id); if (!F.prods.size) F.prods.add(id); render(); };
 window.pickRound = (e, r) => {
   if (r === 'all') F.rounds = 'all';
   else if (e.ctrlKey || e.metaKey) {
@@ -620,7 +673,7 @@ function fbOf(vs) {
   return o;
 }
 const photoBox = (url, label, sub) => url
-  ? `<a href="${url}" target="_blank" rel="noopener"><div class="ph img"><img src="${url}" alt="${esc(label)}"></div></a><div class="cap">${esc(label)}${sub ? ' · ' + esc(sub) : ''}</div>`
+  ? `<div class="ph img"><img src="${url}" alt="${esc(label)}"></div><div class="cap">${esc(label)}${sub ? ' · ' + esc(sub) : ''}</div>`
   : `<div class="ph"><b>${esc(label)}</b>${T('phNone')}</div>`;
 
 // ═══════════════ 렌더 ═══════════════
@@ -628,19 +681,25 @@ function render() {
   document.documentElement.lang = LANG;
   ['ko', 'en'].forEach(l => document.getElementById('lang-' + l).classList.toggle('on', LANG === l));
   document.querySelectorAll('[data-i]').forEach(el => { const v = T(el.dataset.i); if (typeof v === 'string') el.textContent = v; });
+  document.title = T('title');
   renderFilters();
   const vs = selVeh();
   const S = PRODUCTS.filter(p => F.prods.has(p.id)).map(p => stats(p.id)).filter(Boolean);
   S.forEach(s => s.fb = fbOf(s.vs));
   const tires = vs.reduce((a, v) => a + vPos(v).length, 0);
   const axTxt = (hasRear && F.axle !== 'front') ? T('axAll') : T('axFront');
-  document.getElementById('mastMeta').innerHTML = T('meta')(vs.length, tires, roundTxt(), axTxt);
+  const genTxt = new Date(GENERATED_AT).toLocaleString(LANG === 'ko' ? 'ko-KR' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  document.getElementById('mastMeta').innerHTML = T('meta')(vs.length, tires, roundTxt(), axTxt, genTxt);
+  // 제목 아래 캡션: 선택된 제품 목록
+  document.getElementById('prodCaption').innerHTML = PRODUCTS.filter(p => F.prods.has(p.id))
+    .map(p => `<span class="it"><span class="sw" style="background:${p.color}"></span>${esc(p.name)} ${esc(p.size)}${p.ply ? ' ' + esc(p.ply) : ''}</span>`).join('');
   const naN = VEH.filter(v => v.pt === 'NA').length;
   const bn = [];
   if (!MAXR) bn.push(T('bannerNone'));
   else if (MAXR === 1 || (F.rounds !== 'all' && selRounds().length === 1 && selRounds()[0] === 1)) bn.push(T('bannerOne'));
   if (naN) bn.push(T('bannerNA')(naN));
   document.getElementById('banner').innerHTML = bn.map(b => `<div class="banner">${b}</div>`).join('');
+  if (_standaloneUrl) document.getElementById('dlBanner').innerHTML = `<div class="banner ok">${T('dlDone')(esc(_standaloneName), window._photoFail || 0)}<button onclick="downloadStandalone()">${T('dlAgain')}</button></div>`;
 
   // KPI
   const kmAvg = mean(vs.filter(v => vRounds(v).length > 1).map(v => vLast(v).odo - v.rounds[0].odo));
@@ -678,7 +737,7 @@ function render() {
     const rows = vs.filter(v => v.pt === pt); if (!rows.length) return '';
     return `<tr class="grp"><td colspan="9">${T(pt + 'l')} · ${rows.length}${LANG === 'ko' ? '대' : ' vehicles'}</td></tr>` + rows.map(v => {
       const p = P(v.prod), r0 = v.rounds[0];
-      return `<tr><td><span class="sw" style="background:${p.color}"></span>${esc(p.name)}</td><td>${esc(p.size)}</td><td>${esc(v.model)}</td><td><b>${esc(v.no)}</b></td><td>${v.drive ? T(v.drive) : '—'}</td><td class="num">${r0 ? dstr(r0.date) : '—'}</td><td class="r num">${r0 ? fmt(r0.odo) : '—'}</td>
+      return `<tr><td><span class="sw" style="background:${p.color}"></span>${esc(p.name)}</td><td>${esc(p.size)}${p.ply ? ' ' + esc(p.ply) : ''}</td><td>${esc(v.model)}</td><td><b>${esc(v.no)}</b></td><td>${v.drive ? T(v.drive) : '—'}</td><td class="num">${r0 ? dstr(r0.date) : '—'}</td><td class="r num">${r0 ? fmt(r0.odo) : '—'}</td>
         <td class="r num small">${r0 ? vPos(v).filter(ps => r0.m[ps]).map(ps => `${T('pos')[ps]} ${r0.m[ps].map(d => d.toFixed(1)).join(' / ')}`).join('<br>') : '—'}</td><td class="small">${esc(v.prev || '—')}</td></tr>`;
     }).join('');
   }).join('');
@@ -689,7 +748,7 @@ function render() {
     vs.map(v => { const dk = dailyKm(v); return `<tr><td><b>${esc(v.no)}</b>${ptTag(v.pt)}<div class="muted small">${esc(v.model)}</div></td><td>${esc(v.region || '—')}</td><td class="small">${esc(v.roads || '—')}</td><td class="small">${esc(trEnv(v.env) || '—')}</td><td class="small">${esc(trLoad(v.load) || '—')}</td><td class="small">${esc(v.prio.map(trPrio).join(', ') || '—')}</td><td class="r num">${dk ? fmt(dk) : '—'}</td></tr>`; }).join('')}</table>`;
   document.getElementById('routePhotos').innerHTML = vs.map(v => {
     const r = v.road[0];
-    return `<div>${r && r.url ? `<a href="${r.url}" target="_blank" rel="noopener"><div class="ph img"><img src="${r.url}"></div></a>` : `<div class="ph"><b>${T('phRoad')}</b>${T('phAdmin')}</div>`}<div class="cap"><b>${esc(v.no)}</b> · ${esc(r?.caption || v.region || '')}${v.road.length > 1 ? ` (+${v.road.length - 1})` : ''}</div></div>`;
+    return `<div>${r && r.url ? `<div class="ph img"><img src="${r.url}"></div>` : `<div class="ph"><b>${T('phRoad')}</b>${T('phAdmin')}</div>`}<div class="cap"><b>${esc(v.no)}</b> · ${esc(r?.caption || v.region || '')}${v.road.length > 1 ? ` (+${v.road.length - 1})` : ''}</div></div>`;
   }).join('');
 
   // 04 마모 곡선
@@ -742,11 +801,10 @@ function render() {
   const ok = ['puncture', 'cut', 'impact', 'stone', 'appearance'];
   document.getElementById('fbOther').innerHTML = `<table class="t"><tr><th></th>${S.map(s => `<th class="r"><span class="sw" style="background:${s.p.color}"></span>${esc(s.p.name.replace('VanContact ', 'VC '))} ${esc(s.p.size)}</th>`).join('')}</tr>${
     ok.map(k => `<tr><td>${T(k)}</td>${S.map(s => cell(s.fb[k], s.fb[k + '_n'], s.fb.n)).join('')}</tr>`).join('')}</table>`;
-  const RM = { wet: 'wet', dry: 'dry', comfort: 'comfort', fuel: 'fuel', other: null };
   document.getElementById('fbComments').innerHTML = S.map(s => {
     const items = s.fb.list.flatMap(f => [
       f.note && `<li><span>${esc(f.v.no)} · R${f.round}</span>${esc(f.note)}</li>`,
-      ...Object.entries(f.remarks || {}).filter(([, x]) => x).map(([k, x]) => `<li><span>${esc(f.v.no)} · R${f.round} · ${RM[k] ? T(RM[k]) : (LANG === 'ko' ? '기타' : 'Other')}</span>${esc(x)}</li>`)
+      ...Object.entries(f.remarks || {}).filter(([, x]) => x).map(([k, x]) => `<li><span>${esc(f.v.no)} · R${f.round} · ${['wet', 'dry', 'comfort', 'fuel'].includes(k) ? T(k) : T('other')}</span>${esc(x)}</li>`)
     ]).filter(Boolean);
     return items.length ? `<div class="cm"><div class="cm-h"><span class="sw" style="background:${s.p.color}"></span>${esc(pl(s.p))}</div><ul>${items.join('')}</ul></div>` : '';
   }).join('');
@@ -754,18 +812,37 @@ function render() {
   document.getElementById('howto').innerHTML = T('howto').map(l => `<li>${l}</li>`).join('');
 }
 window.setLang = l => { LANG = l; render(); };
+
+// ═══════════════ 시작 ═══════════════
 (async () => {
   try {
-    if (!(await loadData())) return;
+    let pkg;
+    if (EMBED) pkg = EMBED;
+    else {
+      if (!_supabase) throw new Error('Supabase 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.');
+      pkg = await collectLive();
+    }
+    buildModel(pkg);
     PRODUCTS.forEach(p => F.prods.add(p.id));
     hasRear = VEH.some(v => !v.frontOnly);
     drives = [...new Set(VEH.map(v => v.drive).filter(Boolean))];
     pts = ['ICE', 'EV', 'NA'].filter(x => VEH.some(v => v.pt === x));
+    if (!EMBED) {
+      // 독립 HTML 파일 생성 → 자동 다운로드
+      msg('리포트 파일 만드는 중...');
+      const html = await buildStandalone(pkg);
+      const d = new Date(pkg.generatedAt);
+      const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+      _standaloneName = `PPMo_Report_${stamp}.html`;
+      _standaloneUrl = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+      window._photoFail = pkg.photoFail || 0;
+      downloadStandalone();
+    }
     render();
     document.getElementById('loading').style.display = 'none';
   } catch (e) {
     console.error(e);
-    document.getElementById('loadMsg').textContent = '불러오기 실패: ' + e.message;
+    msg(e.message || String(e));
   }
 })();
 </script>
