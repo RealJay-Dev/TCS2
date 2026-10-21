@@ -87,6 +87,8 @@
   .adm-box select { padding: 6px 8px; border: 0.5px solid var(--border-strong); border-radius: 6px; font-size: 13px; background: var(--bg); color: var(--text); }
   .adm-btn { padding: 6px 12px; background: var(--text); color: var(--bg); border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
   .adm-btn.ol { background: none; color: var(--text); border: 0.5px solid var(--border-strong); }
+  .zip-btn { padding: 4px 9px; background: none; color: var(--text); border: 0.5px solid var(--border-strong); border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .zip-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .road-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 8px; }
   .road-item { position: relative; }
   .road-item img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 6px; border: 0.5px solid var(--border); display: block; }
@@ -1219,8 +1221,9 @@ window.showPpmoDetail = async function(vehicleId) {
       <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
         <button onclick="openReassign('${v.id}')" style="padding:7px 14px;background:none;color:var(--text);border:0.5px solid var(--border-strong);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">👤 담당자 변경</button>
         <button onclick="downloadVehicleExcel('${v.id}')" style="padding:7px 14px;background:var(--text);color:var(--bg);border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">📊 이 차량 Excel</button>
-        <button onclick="downloadVehiclePhotosZip('${v.id}')" ${!realPhotoCount ? 'disabled style="opacity:0.4;"' : ''} style="padding:7px 14px;background:none;color:var(--text);border:0.5px solid var(--border-strong);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">🗂 사진 전체 ZIP (${realPhotoCount}장)</button>
-      </div>`;
+        <button onclick="downloadVehiclePhotosZip('${v.id}', null, this)" ${!realPhotoCount ? 'disabled style="opacity:0.4;"' : ''} style="padding:7px 14px;background:none;color:var(--text);border:0.5px solid var(--border-strong);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">🗂 전체 회차 사진 ZIP (${realPhotoCount}장)</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-tertiary);margin:-10px 0 14px;">회차별 사진만 받으려면 아래 각 회차의 [🗂 이 회차 사진 ZIP] 버튼을 누르세요.</div>`;
     const surveyHtml = `<div style="background:var(--bg-secondary);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.7;">
         <div style="font-size:12px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">📝 사전 설문조사</div>
         ${survey ? `<div><b>이전 타이어:</b> ${escapeHtmlAdm([survey.prev_brand, survey.prev_product].filter(Boolean).join(' ') || '—')}</div>
@@ -1262,6 +1265,7 @@ window.showPpmoDetail = async function(vehicleId) {
         continue;
       }
       const rPhotos = photos.filter(p => p.round_id === r.id);
+      const rPhotoCount = rPhotos.filter(p => p.path).length;
       const rFeed = feedback.filter(f => f.round_id === r.id);
       const photosBySlot = {};
       rPhotos.forEach(p => { photosBySlot[p.photo_type] = p; });
@@ -1320,12 +1324,13 @@ window.showPpmoDetail = async function(vehicleId) {
         </div>` : '';
       const dfHtml = n > 0 ? driverFbHtmlAdm(driverFb.find(x => x.round_id === r.id)) : '';
       roundsHtml += `<div style="padding:12px 14px;margin-bottom:8px;background:var(--bg);border:0.5px solid var(--border);border-radius:8px;font-size:12.5px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
           <div style="font-weight:700;font-size:14px;">${title} · ${new Date(r.inspected_at).toLocaleDateString('ko-KR')}</div>
-          <div style="font-size:11px;color:var(--text-tertiary);">${Number(r.mileage_km).toLocaleString('ko-KR')} km${r.rotated ? ' · 로테이션' : ''}${n > 0 && r.alignment_done ? ' · 얼라인먼트' : ''}${r.updated_at ? ` · <span style="color:var(--text-warning);">✏️ 수정 ${new Date(r.updated_at).toLocaleDateString('ko-KR')}</span>` : ''}</div>
+          <div style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">${Number(r.mileage_km).toLocaleString('ko-KR')} km${r.rotated ? ' · 로테이션' : ''}${n > 0 && r.alignment_done ? ' · 얼라인먼트' : ''}${r.updated_at ? ` · <span style="color:var(--text-warning);">✏️ 수정 ${new Date(r.updated_at).toLocaleDateString('ko-KR')}</span>` : ''}</div>
+          <button class="zip-btn" onclick="downloadVehiclePhotosZip('${v.id}', ${n}, this)" ${rPhotoCount ? '' : 'disabled'}>🗂 이 회차 사진 ZIP (${rPhotoCount}장)</button>
         </div>
         ${grooveHtml || `<div style="color:var(--text-tertiary);">${n === 0 ? 'NTD' : 'RTD'} 측정값 없음</div>`}
-        <div style="margin-top:6px;">사진: ${rPhotos.filter(p => p.path).length}/${slotsForThisRound.length}${feedbackTags ? ' · ' + feedbackTags : ''}</div>
+        <div style="margin-top:6px;">사진: ${rPhotoCount}/${slotsForThisRound.length}${feedbackTags ? ' · ' + feedbackTags : ''}</div>
         ${photoGridHtml}
         ${extraHtml}
         ${tireInfoHtml}
@@ -1618,17 +1623,22 @@ window.downloadVehicleExcel = async function(vehicleId) {
     alert('Excel 생성 실패: ' + e.message);
   }
 };
-// ═══ ZIP: 차량 전체 사진 ═══
-window.downloadVehiclePhotosZip = async function(vehicleId) {
+// ═══ ZIP: 차량 사진 (전체 회차 또는 특정 회차) ═══
+// roundNo = null → 전체 회차 (회차별 폴더) / 숫자 → 해당 회차만
+window.downloadVehiclePhotosZip = async function(vehicleId, roundNo = null, btnEl = null) {
   const v = ppmoVehicles.find(x => x.id === vehicleId);
   if (!v || !window.JSZip) return alert('ZIP 라이브러리 로드 실패');
-  const btn = event.target;
-  const orig = btn.textContent;
-  btn.textContent = '⋯ 준비 중';
-  btn.disabled = true;
+  const btn = btnEl || (window.event && window.event.target) || null;
+  const orig = btn ? btn.textContent : '';
+  const setBtn = t => { if (btn) btn.textContent = t; };
+  setBtn('⋯ 준비 중');
+  if (btn) btn.disabled = true;
+  const single = roundNo !== null && roundNo !== undefined;
+  const roundName = n => n === 0 ? '0_초기' : `${n}회차`;
   try {
-    const rIds = ppmoRounds.filter(r => r.vehicle_id === vehicleId).map(r => r.id);
-    if (!rIds.length) { alert('회차 데이터 없음'); return; }
+    const vRounds = ppmoRounds.filter(r => r.vehicle_id === vehicleId && (!single || r.round_no === roundNo));
+    const rIds = vRounds.map(r => r.id);
+    if (!rIds.length) { alert(single ? `${roundName(roundNo)} 데이터 없음` : '회차 데이터 없음'); return; }
     const [rRes, pRes] = await Promise.all([
       _supabase.from('ppmo_rounds').select('*').in('id', rIds),
       _supabase.from('ppmo_photos').select('*').in('round_id', rIds)
@@ -1643,7 +1653,6 @@ window.downloadVehiclePhotosZip = async function(vehicleId) {
     let downloaded = 0, failed = 0;
     for (const p of photos) {
       const r = rounds.find(x => x.id === p.round_id);
-      const roundLabel = r ? (r.round_no === 0 ? '0_초기' : `${r.round_no}회차`) : 'unknown';
       const slotLabel = SLOT_LABEL_BY_ID[p.photo_type] || p.photo_type;
       const signedUrl = signedUrlMap[p.path];
       if (!signedUrl) { failed++; console.warn(`서명 URL 없음: ${p.path}`); continue; }
@@ -1652,9 +1661,11 @@ window.downloadVehiclePhotosZip = async function(vehicleId) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const blob = await res.blob();
         if (blob.size < 500) { console.warn(`파일 크기 이상 (${blob.size}B): ${p.path}`); failed++; continue; }
-        zip.file(`${roundLabel}/${slotLabel}.jpg`, blob);
+        // 단일 회차: 파일을 ZIP 바로 아래에 / 전체: 회차별 폴더
+        const name = single ? `${slotLabel}.jpg` : `${r ? roundName(r.round_no) : 'unknown'}/${slotLabel}.jpg`;
+        zip.file(name, blob);
         downloaded++;
-        btn.textContent = `⋯ ${downloaded}/${photos.length}`;
+        setBtn(`⋯ ${downloaded}/${photos.length}`);
       } catch(e) {
         failed++;
         console.warn(`Failed: ${p.path}`, e);
@@ -1662,20 +1673,21 @@ window.downloadVehiclePhotosZip = async function(vehicleId) {
     }
     if (!downloaded) { alert(`다운로드 실패 · 전체 ${photos.length}장, 성공 0장 (콘솔 확인)`); return; }
     const zipBlob = await zip.generateAsync({ type: 'blob' }, meta => {
-      if (meta.percent > 0) btn.textContent = `⋯ 압축 ${Math.round(meta.percent)}%`;
+      if (meta.percent > 0) setBtn(`⋯ 압축 ${Math.round(meta.percent)}%`);
     });
     const url = URL.createObjectURL(zipBlob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${v.vehicle_no}_photos_${new Date().toISOString().slice(0,10)}.zip`;
+    const tag = single ? (roundNo === 0 ? '_R0_초기' : `_R${roundNo}`) : '_전체';
+    a.download = `${v.vehicle_no}${tag}_photos_${new Date().toISOString().slice(0,10)}.zip`;
     a.click();
     URL.revokeObjectURL(url);
     if (failed) alert(`전체 ${photos.length}장 중 ${downloaded}장 성공, ${failed}장 실패`);
   } catch(e) {
     alert('ZIP 생성 실패: ' + e.message);
   } finally {
-    btn.textContent = orig;
-    btn.disabled = false;
+    setBtn(orig);
+    if (btn) btn.disabled = false;
   }
 };
 window.exportPpmoCSV = function() {

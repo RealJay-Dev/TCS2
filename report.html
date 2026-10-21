@@ -65,6 +65,7 @@
   .sw { display: inline-block; width: 9px; height: 9px; margin-right: 6px; }
   .pt { display: inline-block; font-size: 10px; font-weight: 700; padding: 0 5px; border: 1px solid var(--rule2); color: var(--ink2); margin-left: 6px; }
   .pt.ev { border-color: var(--ev); color: var(--ev); }
+  .kr { display: inline-block; font-size: 9.5px; font-weight: 700; color: var(--ink3); border: 1px solid var(--rule2); padding: 0 3px; margin-left: 5px; vertical-align: 1px; }
   .muted { color: var(--ink3); }
   .small { font-size: 11.5px; }
   .lvl { font-size: 11px; font-weight: 700; }
@@ -430,7 +431,7 @@ const I18N = {
     s8: 'Driver feedback', s8d: 'Mounted tire vs previous tire · 5 = best',
     s8o: 'Optional items', s8on: 'Optional, so not every vehicle answers. Brackets show answers / total evaluations; fewer than 3 answers are shown in grey.',
     s8c: 'Driver comments', cPos: 'Positive', cNeg: 'Negative', cNeu: 'Neutral · no issue',
-    s8cn: 'Comments are classified automatically by word rules (no AI). Item remarks use that item\'s score first (4–5 positive, 1–2 negative); free notes are judged by negative expressions (slipping, noise, fast wear, …) and positive ones (stable, quiet, no vibration, …). Unclear comments stay neutral. Comments are shown in the original Korean.',
+    s8cn: 'Comments are classified automatically by word rules (no AI). Item remarks use that item\'s score first (4–5 positive, 1–2 negative); free notes are judged by negative expressions (slipping, noise, fast wear, …) and positive ones (stable, quiet, no vibration, …). Unclear comments stay neutral. Driver comments are free text and are shown in the original Korean (marked KR). Vehicle model, region, roads and previous tire are converted with a fixed dictionary and Korean romanization.',
     s9: 'How to read · Disclaimer',
     prodCol: 'Product', sizeCol: 'Size', modelCol: 'Model', plateCol: 'Plate', driveCol: 'Drive', mDateCol: 'Mounted', mOdoCol: 'ODO at mounting', ntdCol: 'New depth (mm)', prevCol: 'Previous tire',
     regionCol: 'Region', roadsCol: 'Frequent roads', envCol: 'Usage', loadCol: 'Load', prioCol: 'Priorities', dailyCol: 'km/day',
@@ -478,10 +479,82 @@ const dstr = t => new Date(t).toLocaleDateString(LANG === 'ko' ? 'ko-KR' : 'en-G
 const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN;
 const minD = a => Math.min(...a);
 const ptTag = pt => `<span class="pt ${pt === 'EV' ? 'ev' : ''}">${T(pt)}</span>`;
-const trEnv = s => { if (LANG === 'ko') return s; const i = ENV_KO.indexOf(s); return i >= 0 ? ENV_EN[i] : s; };
-const trLoad = s => { if (LANG === 'ko') return s; const i = LOAD_KO.indexOf(s); return i >= 0 ? LOAD_EN[i] : s; };
-const trPrio = s => { if (LANG === 'ko') return s; const i = PRIO_KO.indexOf(s); return i >= 0 ? PRIO_EN[i] : s; };
+const trEnv = s => { if (LANG === 'ko') return s; const i = ENV_KO.indexOf(s); return i >= 0 ? ENV_EN[i] : trKo(s); };
+const trLoad = s => { if (LANG === 'ko') return s; const i = LOAD_KO.indexOf(s); return i >= 0 ? LOAD_EN[i] : trKo(s); };
+const trPrio = s => { if (LANG === 'ko') return s; const i = PRIO_KO.indexOf(s); return i >= 0 ? PRIO_EN[i] : trKo(s); };
 const gLabels = n => Array.from({ length: n }, (_, i) => 'G' + (i + 1));
+
+// ═══════════════ 한글 자유 입력값 → 영문 (사전 + 로마자 표기 · AI 없음) ═══════════════
+// 차종 · 이전 타이어 · 운행 지역 · 도로 · 노면 사진 설명에 적용. 영문 모드에서만 동작
+const KO_DICT = [
+  // 타이어 브랜드
+  ['한국타이어', 'Hankook Tire'], ['금호타이어', 'Kumho Tire'], ['넥센타이어', 'Nexen Tire'], ['콘티넨탈', 'Continental'], ['컨티넨탈', 'Continental'], ['콘티', 'Conti'],
+  ['금호', 'Kumho'], ['한국', 'Hankook'], ['한타', 'Hankook'], ['넥센', 'Nexen'], ['미쉐린', 'Michelin'], ['브리지스톤', 'Bridgestone'], ['브릿지스톤', 'Bridgestone'],
+  ['굿이어', 'Goodyear'], ['피렐리', 'Pirelli'], ['던롭', 'Dunlop'], ['요코하마', 'Yokohama'], ['토요', 'Toyo'], ['순정', 'OE'],
+  // 차종
+  ['포터', 'Porter'], ['봉고', 'Bongo'], ['일렉트릭', 'Electric'], ['전기차', 'EV'], ['스타리아', 'Staria'], ['스타렉스', 'Starex'], ['마이티', 'Mighty'],
+  ['쏠라티', 'Solati'], ['카운티', 'County'], ['라보', 'Labo'], ['다마스', 'Damas'], ['마스터', 'Master'], ['스프린터', 'Sprinter'], ['카고', 'Cargo'], ['탑차', 'box truck'], ['냉동탑차', 'refrigerated truck'],
+  // 시·도
+  ['서울', 'Seoul'], ['부산', 'Busan'], ['대구', 'Daegu'], ['인천', 'Incheon'], ['광주', 'Gwangju'], ['대전', 'Daejeon'], ['울산', 'Ulsan'], ['세종', 'Sejong'],
+  ['경기', 'Gyeonggi'], ['강원', 'Gangwon'], ['충북', 'Chungbuk'], ['충남', 'Chungnam'], ['전북', 'Jeonbuk'], ['전남', 'Jeonnam'], ['경북', 'Gyeongbuk'], ['경남', 'Gyeongnam'], ['제주', 'Jeju'],
+  // 도로 · 일반 단어
+  ['시내', 'downtown'], ['도심', 'city center'], ['배송', 'delivery'], ['택배', 'parcel delivery'], ['납품', 'delivery'], ['인근', 'nearby'], ['근처', 'nearby'], ['구간', 'section'],
+  ['위주', 'mainly'], ['일대', 'area'], ['주변', 'around'], ['외곽', 'outskirts'], ['및', 'and'], ['기타', 'other'], ['진입로', 'access road'], ['국도', 'national road'],
+  ['지방도', 'local road'], ['고속도로', 'expressway'], ['일반도로', 'local roads'], ['도로', 'road'], ['산업단지', 'industrial complex'], ['공단', 'industrial complex'],
+  ['물류센터', 'logistics center'], ['물류', 'logistics'], ['시장', 'market'], ['골목', 'alleys'], ['방면', 'direction'], ['출퇴근', 'commute'], ['왕복', 'round trip'], ['전역', 'entire area'], ['일원', 'area']
+];
+const KO_SUFFIX = [
+  ['특별자치시', ''], ['특별자치도', ''], ['광역시', ''], ['특별시', ''], ['고속도로', ' Expressway'], ['간선도로', ' Arterial Road'], ['순환로', ' Ring Road'],
+  ['대로', '-daero'], ['로', '-ro'], ['길', '-gil'], ['시', '-si'], ['군', '-gun'], ['구', '-gu'], ['동', '-dong'], ['읍', '-eup'], ['면', '-myeon'], ['도', ''],
+  ['항', ' Port'], ['역', ' Station'], ['공단', ' Industrial Complex'], ['IC', ' IC']
+];
+const KO_MAP = new Map(KO_DICT);
+const HANGUL = /[\uac00-\ud7a3]/;
+const RI = ['g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '', 'j', 'jj', 'ch', 'k', 't', 'p', 'h'];
+const RV = ['a', 'ae', 'ya', 'yae', 'eo', 'e', 'yeo', 'ye', 'o', 'wa', 'wae', 'oe', 'yo', 'u', 'wo', 'we', 'wi', 'yu', 'eu', 'ui', 'i'];
+const RF = ['', 'k', 'k', 'k', 'n', 'n', 'n', 't', 'l', 'k', 'm', 'l', 'l', 'l', 'p', 'l', 'm', 'p', 'p', 't', 't', 'ng', 't', 't', 'k', 't', 'p', 't'];
+const RF_NEXT = { 1: 'g', 2: 'kk', 4: 'n', 7: 'd', 8: 'r', 16: 'm', 17: 'b', 19: 's', 20: 'ss', 22: 'j', 23: 'ch', 25: 't', 26: 'p', 27: 'h' };
+// 국어의 로마자 표기법 (단순화: 연음·ㄹㄹ 처리)
+function romanize(s) {
+  const ch = [...s]; let out = '', forceL = false;
+  const code = c => { const x = c ? c.charCodeAt(0) - 0xAC00 : -1; return x >= 0 && x <= 11171 ? x : -1; };
+  for (let i = 0; i < ch.length; i++) {
+    const c = code(ch[i]);
+    if (c < 0) { out += ch[i]; forceL = false; continue; }
+    const ini = Math.floor(c / 588), med = Math.floor((c % 588) / 28), fin = c % 28;
+    out += (forceL && ini === 5 ? 'l' : RI[ini]) + RV[med];
+    forceL = false;
+    if (fin) {
+      const n = code(ch[i + 1]); const nIni = n >= 0 ? Math.floor(n / 588) : -1;
+      if (nIni === 11 && RF_NEXT[fin]) out += RF_NEXT[fin];
+      else if (fin === 8 && nIni === 5) { out += 'l'; forceL = true; }
+      else out += RF[fin];
+    }
+  }
+  return out;
+}
+const cap1 = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+function koStem(w) {
+  if (KO_MAP.has(w)) return KO_MAP.get(w);
+  for (const [k, en] of KO_DICT) if (w.length > k.length && w.startsWith(k)) return en + ' ' + koWord(w.slice(k.length));
+  return cap1(romanize(w));
+}
+function koWord(w) {
+  if (KO_MAP.has(w)) return KO_MAP.get(w);
+  for (const [sfx, en] of KO_SUFFIX) {
+    if (w.length > sfx.length && w.endsWith(sfx)) return koStem(w.slice(0, -sfx.length)) + en;
+  }
+  return koStem(w);
+}
+function trKo(s) {
+  if (LANG === 'ko' || !s || !HANGUL.test(s)) return s || '';
+  const t = String(s).replace(/국도\s*(\d+)\s*호선/g, 'National Route $1').replace(/(\d+)\s*호선/g, 'Route $1');
+  return t.split(/(\s+|[,·/()+&~–-]+)/).map(tok => !HANGUL.test(tok) ? tok
+    : tok.replace(/[\uac00-\ud7a3]+/g, w => koWord(w)).replace(/([A-Za-z])(\d)/g, '$1 $2').replace(/(\d)([A-Za-z])/g, '$1 $2')
+  ).join('').replace(/\s{2,}/g, ' ').trim();
+}
+// 운전자 자유 코멘트는 번역하지 않고 원문 + KR 표시
+const krMark = s => (LANG !== 'ko' && HANGUL.test(s || '')) ? '<span class="kr">KR</span>' : '';
 
 // ═══════════════ 코멘트 자동 분류 (단어 규칙 · AI 없음) ═══════════════
 // 1) 항목별 비고: 그 항목 점수 4~5 긍정 / 1~2 부정 (3점은 문장으로 판단)
@@ -703,14 +776,14 @@ const photoBox = (url, label, sub) => url
   ? `<div class="ph img"><img src="${url}" alt="${esc(label)}"></div><div class="cap">${esc(label)}${sub ? ' · ' + esc(sub) : ''}</div>`
   : `<div class="ph"><b>${esc(label)}</b>${T('phNone')}</div>`;
 const FB4 = ['wet', 'dry', 'comfort', 'fuel'];
-// 제품별 코멘트를 긍정 / 부정 / 중립으로 나눠 표시
+// 제품별 코멘트를 긍정 / 부정 / 중립으로 나눠 표시 (코멘트 원문은 번역하지 않음)
 function commentsHtml(s) {
   const items = s.fb.list.flatMap(f => [
     f.note && { v: f.v, r: f.round, k: null, x: f.note, c: classify(f.note, null) },
     ...Object.entries(f.remarks || {}).filter(([, x]) => x).map(([k, x]) => ({ v: f.v, r: f.round, k, x, c: classify(x, FB4.includes(k) ? f[k] : null) }))
   ]).filter(Boolean);
   if (!items.length) return '';
-  const li = it => `<li class="${it.c}"><span>${esc(it.v.no)} · R${it.r}${it.k ? ' · ' + (FB4.includes(it.k) ? T(it.k) : T('other')) : ''}</span>${esc(it.x)}</li>`;
+  const li = it => `<li class="${it.c}"><span>${esc(it.v.no)} · R${it.r}${it.k ? ' · ' + (FB4.includes(it.k) ? T(it.k) : T('other')) : ''}</span>${esc(it.x)}${krMark(it.x)}</li>`;
   const cnt = g => items.filter(i => i.c === g).length;
   const grp = ['pos', 'neg', 'neu'].map(g => {
     const a = items.filter(i => i.c === g);
@@ -734,7 +807,7 @@ function render() {
   const genTxt = new Date(GENERATED_AT).toLocaleString(LANG === 'ko' ? 'ko-KR' : 'en-GB', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
   document.getElementById('mastMeta').innerHTML = T('meta')(vs.length, tires, roundTxt(), axTxt, genTxt);
   document.getElementById('prodCaption').innerHTML = PRODUCTS.filter(p => F.prods.has(p.id))
-    .map(p => `<span class="it"><span class="sw" style="background:${p.color}"></span>${esc(p.name)} ${esc(p.size)}${p.ply ? ' ' + esc(p.ply) : ''}</span>`).join('');
+    .map(p => `<span class="it"><span class="sw" style="background:${p.color}"></span>${esc(trKo(p.name))} ${esc(p.size)}${p.ply ? ' ' + esc(p.ply) : ''}</span>`).join('');
   const naN = VEH.filter(v => v.pt === 'NA').length;
   const bn = [];
   if (!MAXR) bn.push(T('bannerNone'));
@@ -777,20 +850,20 @@ function render() {
   // 02 시험 개요
   const ovRows = ['ICE', 'EV', 'NA'].map(pt => {
     const rows = vs.filter(v => v.pt === pt); if (!rows.length) return '';
-    return `<tr class="grp"><td colspan="9">${T(pt + 'l')} · ${rows.length}${LANG === 'ko' ? '대' : ' vehicles'}</td></tr>` + rows.map(v => {
+    return `<tr class="grp"><td colspan="9">${T(pt + 'l')} · ${rows.length}${LANG === 'ko' ? '대' : (rows.length > 1 ? ' vehicles' : ' vehicle')}</td></tr>` + rows.map(v => {
       const p = P(v.prod), r0 = v.rounds[0];
-      return `<tr><td><span class="sw" style="background:${p.color}"></span>${esc(p.name)}</td><td>${esc(p.size)}${p.ply ? ' ' + esc(p.ply) : ''}</td><td>${esc(v.model)}</td><td><b>${esc(v.no)}</b></td><td>${v.drive ? T(v.drive) : '—'}</td><td class="num">${r0 ? dstr(r0.date) : '—'}</td><td class="r num">${r0 ? fmt(r0.odo) : '—'}</td>
-        <td class="r num small">${r0 ? vPos(v).filter(ps => r0.m[ps]).map(ps => `${T('pos')[ps]} ${r0.m[ps].map(d => d.toFixed(1)).join(' / ')}`).join('<br>') : '—'}</td><td class="small">${esc(v.prev || '—')}</td></tr>`;
+      return `<tr><td><span class="sw" style="background:${p.color}"></span>${esc(trKo(p.name))}</td><td>${esc(p.size)}${p.ply ? ' ' + esc(p.ply) : ''}</td><td>${esc(trKo(v.model))}</td><td><b>${esc(v.no)}</b></td><td>${v.drive ? T(v.drive) : '—'}</td><td class="num">${r0 ? dstr(r0.date) : '—'}</td><td class="r num">${r0 ? fmt(r0.odo) : '—'}</td>
+        <td class="r num small">${r0 ? vPos(v).filter(ps => r0.m[ps]).map(ps => `${T('pos')[ps]} ${r0.m[ps].map(d => d.toFixed(1)).join(' / ')}`).join('<br>') : '—'}</td><td class="small">${esc(trKo(v.prev) || '—')}</td></tr>`;
     }).join('');
   }).join('');
   document.getElementById('overview').innerHTML = `<table class="t"><tr><th>${T('prodCol')}</th><th>${T('sizeCol')}</th><th>${T('modelCol')}</th><th>${T('plateCol')}</th><th>${T('driveCol')}</th><th>${T('mDateCol')}</th><th class="r">${T('mOdoCol')}</th><th class="r">${T('ntdCol')}</th><th>${T('prevCol')}</th></tr>${ovRows}</table>`;
 
   // 03 운행 지역
   document.getElementById('routeTbl').innerHTML = `<table class="t"><tr><th>${T('plateCol')}</th><th>${T('regionCol')}</th><th>${T('roadsCol')}</th><th>${T('envCol')}</th><th>${T('loadCol')}</th><th>${T('prioCol')}</th><th class="r">${T('dailyCol')}</th></tr>${
-    vs.map(v => { const dk = dailyKm(v); return `<tr><td><b>${esc(v.no)}</b>${ptTag(v.pt)}<div class="muted small">${esc(v.model)}</div></td><td>${esc(v.region || '—')}</td><td class="small">${esc(v.roads || '—')}</td><td class="small">${esc(trEnv(v.env) || '—')}</td><td class="small">${esc(trLoad(v.load) || '—')}</td><td class="small">${esc(v.prio.map(trPrio).join(', ') || '—')}</td><td class="r num">${dk ? fmt(dk) : '—'}</td></tr>`; }).join('')}</table>`;
+    vs.map(v => { const dk = dailyKm(v); return `<tr><td><b>${esc(v.no)}</b>${ptTag(v.pt)}<div class="muted small">${esc(trKo(v.model))}</div></td><td>${esc(trKo(v.region) || '—')}</td><td class="small">${esc(trKo(v.roads) || '—')}</td><td class="small">${esc(trEnv(v.env) || '—')}</td><td class="small">${esc(trLoad(v.load) || '—')}</td><td class="small">${esc(v.prio.map(trPrio).join(', ') || '—')}</td><td class="r num">${dk ? fmt(dk) : '—'}</td></tr>`; }).join('')}</table>`;
   document.getElementById('routePhotos').innerHTML = vs.map(v => {
     const r = v.road[0];
-    return `<div>${r && r.url ? `<div class="ph img"><img src="${r.url}"></div>` : `<div class="ph"><b>${T('phRoad')}</b>${T('phAdmin')}</div>`}<div class="cap"><b>${esc(v.no)}</b> · ${esc(r?.caption || v.region || '')}${v.road.length > 1 ? ` (+${v.road.length - 1})` : ''}</div></div>`;
+    return `<div>${r && r.url ? `<div class="ph img"><img src="${r.url}"></div>` : `<div class="ph"><b>${T('phRoad')}</b>${T('phAdmin')}</div>`}<div class="cap"><b>${esc(v.no)}</b> · ${esc(trKo(r?.caption || v.region || ''))}${v.road.length > 1 ? ` (+${v.road.length - 1})` : ''}</div></div>`;
   }).join('');
 
   // 04 마모 곡선
@@ -812,7 +885,7 @@ function render() {
   document.getElementById('profiles').innerHTML = S.filter(s => s.prof.length).map(s => grooveChart(pl(s.p), shapeSub(s.shape), s.prof.map(p => ({ label: p.r === 0 ? T('init') : 'R' + p.r, g: p.g })), s.p.color)).join('');
   document.getElementById('vehDetail').innerHTML = vs.map(v => {
     const p = P(v.prod), rs = vRounds(v), last = rs[rs.length - 1], pos = vPos(v);
-    if (rs.length < 2) return `<div class="veh"><div class="veh-h"><b>${esc(v.no)}</b><span>${esc(v.model)}${ptTag(v.pt)} · ${esc(pl(p))}</span><span class="muted">${T('noData')}</span></div></div>`;
+    if (rs.length < 2) return `<div class="veh"><div class="veh-h"><b>${esc(v.no)}</b><span>${esc(trKo(v.model))}${ptTag(v.pt)} · ${esc(pl(p))}</span><span class="muted">${T('noData')}</span></div></div>`;
     const rdLabel = 'R' + last.no;
     const charts = pos.filter(ps => rs.filter(r => r.m[ps]).length > 1).map(ps => {
       const prs = rs.filter(r => r.m[ps]);
@@ -821,7 +894,7 @@ function render() {
         <table class="t small" style="margin-top:4px"><tr><th></th><th class="r">km</th>${gLabels(v.groove).map(g => `<th class="r">${g}</th>`).join('')}<th class="r">${T('min')}</th></tr>${prs.map(r => `<tr><td>${r.no === 0 ? T('init') : 'R' + r.no} <span class="muted">${dstr(r.date)}</span></td><td class="r num">${fmt(r.odo - rs[0].odo)}</td>${r.m[ps].map(d => `<td class="r num">${d.toFixed(1)}</td>`).join('')}<td class="r num"><b>${minD(r.m[ps]).toFixed(1)}</b></td></tr>`).join('')}</table></div>`;
     }).join('');
     const ph = last.ph || {};
-    return `<div class="veh"><div class="veh-h"><b>${esc(v.no)}</b><span>${esc(v.model)}${ptTag(v.pt)} · <span class="sw" style="background:${p.color}"></span>${esc(pl(p))}</span><span class="muted">${fmt(last.odo - rs[0].odo)} km · ${rdLabel} ${dstr(last.date)}</span></div>
+    return `<div class="veh"><div class="veh-h"><b>${esc(v.no)}</b><span>${esc(trKo(v.model))}${ptTag(v.pt)} · <span class="sw" style="background:${p.color}"></span>${esc(pl(p))}</span><span class="muted">${fmt(last.odo - rs[0].odo)} km · ${rdLabel} ${dstr(last.date)}</span></div>
       <div class="veh-body"><div class="veh-photos">${photoBox(ph.front, T('phVeh'), rdLabel)}${photoBox(ph.rtd_1, T('phL'), rdLabel)}${photoBox(ph.rtd_2, T('phR'), rdLabel)}</div>
       <div style="display:grid;grid-template-columns:repeat(${Math.min(pos.length, 2)},1fr);gap:24px">${charts}</div></div></div>`;
   }).join('');
@@ -831,7 +904,7 @@ function render() {
     const p = P(v.prod), al = v.align;
     if (!Object.keys(al).length) return `<div class="al-card"><div class="al-h">${esc(v.no)}${ptTag(v.pt)}</div><div class="al-s">${T('noAlign')}</div></div>`;
     const cs = ['FL', 'FR'].map(w => al[w]?.k).filter(x => x != null && !isNaN(x));
-    return `<div class="al-card"><div class="al-h">${esc(v.no)}${ptTag(v.pt)}</div><div class="al-s">${esc(v.model)} · ${esc(pl(p))}${cs.length ? ` · ${T('caster')} ${cs.map(c => c.toFixed(2) + '°').join(' / ')}` : ''}</div>
+    return `<div class="al-card"><div class="al-h">${esc(v.no)}${ptTag(v.pt)}</div><div class="al-s">${esc(trKo(v.model))} · ${esc(pl(p))}${cs.length ? ` · ${T('caster')} ${cs.map(c => c.toFixed(2) + '°').join(' / ')}` : ''}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px"><div>${frontView(al, 'F')}<div class="cap" style="text-align:center">${T('frontView')}</div>${al.RL || al.RR ? frontView(al, 'R') + `<div class="cap" style="text-align:center">${T('rearView')}</div>` : ''}</div><div>${topView(al, v.toeUnit)}<div class="cap" style="text-align:center">${T('topView')} (${v.toeUnit === 'mm' ? 'mm' : '°'})</div></div></div></div>`;
   }).join('');
 
@@ -839,7 +912,7 @@ function render() {
   document.getElementById('fbChart').innerHTML = S.some(s => s.fb.n) ? fbChart(S) : `<div class="note">${T('noData')}</div>`;
   const cell = (v, n, tot) => v == null ? `<td class="r muted">—</td>` : `<td class="r num" style="color:${n < 3 ? '#9a9a9a' : v >= 3.5 ? '#2f7d32' : v < 2.5 ? '#b3261e' : '#161616'};font-weight:700">${v.toFixed(1)}${tot != null ? ` <span class="muted small" style="font-weight:400">(${n}/${tot})</span>` : ''}</td>`;
   document.getElementById('fbTbl').innerHTML = `<table class="t"><tr><th>${T('prodCol')}</th><th class="r">${T('wet')}</th><th class="r">${T('dry')}</th><th class="r">${T('comfort')}</th><th class="r">${T('fuel')}</th><th>${T('prevCol')}</th></tr>${
-    S.map(s => `<tr><td><span class="sw" style="background:${s.p.color}"></span><b>${esc(s.p.name)}</b> <span class="muted small">${esc(s.p.size)}</span></td>${FB4.map(k => cell(s.fb[k], s.fb[k + '_n'])).join('')}<td class="small">${esc([...new Set(s.vs.map(v => v.prev).filter(Boolean))].join(', ') || '—')}</td></tr>`).join('')}</table>`;
+    S.map(s => `<tr><td><span class="sw" style="background:${s.p.color}"></span><b>${esc(s.p.name)}</b> <span class="muted small">${esc(s.p.size)}</span></td>${FB4.map(k => cell(s.fb[k], s.fb[k + '_n'])).join('')}<td class="small">${esc([...new Set(s.vs.map(v => trKo(v.prev)).filter(Boolean))].join(', ') || '—')}</td></tr>`).join('')}</table>`;
   const ok = ['puncture', 'cut', 'impact', 'stone', 'appearance'];
   document.getElementById('fbOther').innerHTML = `<table class="t"><tr><th></th>${S.map(s => `<th class="r"><span class="sw" style="background:${s.p.color}"></span>${esc(s.p.name.replace('VanContact ', 'VC '))} ${esc(s.p.size)}</th>`).join('')}</tr>${
     ok.map(k => `<tr><td>${T(k)}</td>${S.map(s => cell(s.fb[k], s.fb[k + '_n'], s.fb.n)).join('')}</tr>`).join('')}</table>`;
